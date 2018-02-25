@@ -1,0 +1,137 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{AAB47149-073B-45D9-BC4F-717536509E78}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>MahjongCore</RootNamespace>
+    <AssemblyName>MahjongCore</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile>Unity Full v3.5</TargetFrameworkProfile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Common\Attributes\EnumAttributes.cs" />
+    <Compile Include="Common\Attributes\EnumHelper.cs" />
+    <Compile Include="Common\Attributes\IAttribute.cs" />
+    <Compile Include="Common\CommonHelpers.cs" />
+    <Compile Include="Common\ListExtensions.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Riichi\IRMahjongAI.cs" />
+    <Compile Include="Riichi\Attributes\AdvancePlayer.cs" />
+    <Compile Include="Riichi\Attributes\BitfieldMask.cs" />
+    <Compile Include="Riichi\Attributes\CommandMeldState.cs" />
+    <Compile Include="Riichi\Attributes\DefaultClosedHan.cs" />
+    <Compile Include="Riichi\Attributes\DefaultOpenHan.cs" />
+    <Compile Include="Riichi\Attributes\DefaultOptionValue.cs" />
+    <Compile Include="Riichi\Attributes\DescriptionName.cs" />
+    <Compile Include="Riichi\Attributes\Evaluator.cs" />
+    <Compile Include="Riichi\Attributes\GameOptionSetting.cs" />
+    <Compile Include="Riichi\Attributes\IsDiscard.cs" />
+    <Compile Include="Riichi\Attributes\IsHonor.cs" />
+    <Compile Include="Riichi\Attributes\IsRealTile.cs" />
+    <Compile Include="Riichi\Attributes\IsRedDora.cs" />
+    <Compile Include="Riichi\Attributes\IsSinglePlayer.cs" />
+    <Compile Include="Riichi\Attributes\IsSuit.cs" />
+    <Compile Include="Riichi\Attributes\IsTerminal.cs" />
+    <Compile Include="Riichi\Attributes\IsYakuman.cs" />
+    <Compile Include="Riichi\Attributes\MeldCalled.cs" />
+    <Compile Include="Riichi\Attributes\MeldCode.cs" />
+    <Compile Include="Riichi\Attributes\MeldFlippedTileCount.cs" />
+    <Compile Include="Riichi\Attributes\MeldNonSimpleFu.cs" />
+    <Compile Include="Riichi\Attributes\MeldOpen.cs" />
+    <Compile Include="Riichi\Attributes\MeldSimpleFu.cs" />
+    <Compile Include="Riichi\Attributes\MeldTileCount.cs" />
+    <Compile Include="Riichi\Attributes\MeldTypeAttribute.cs" />
+    <Compile Include="Riichi\Attributes\NextRound.cs" />
+    <Compile Include="Riichi\Attributes\NextState.cs" />
+    <Compile Include="Riichi\Attributes\OptionValueType.cs" />
+    <Compile Include="Riichi\Attributes\Place1Value.cs" />
+    <Compile Include="Riichi\Attributes\Place2Value.cs" />
+    <Compile Include="Riichi\Attributes\Place3Value.cs" />
+    <Compile Include="Riichi\Attributes\Place4Value.cs" />
+    <Compile Include="Riichi\Attributes\PlayerValue.cs" />
+    <Compile Include="Riichi\Attributes\PointLoss.cs" />
+    <Compile Include="Riichi\Attributes\RedDoraManzu.cs" />
+    <Compile Include="Riichi\Attributes\RedDoraPinzu.cs" />
+    <Compile Include="Riichi\Attributes\RedDoraSouzu.cs" />
+    <Compile Include="Riichi\Attributes\RoundOffset.cs" />
+    <Compile Include="Riichi\Attributes\RuleValue.cs" />
+    <Compile Include="Riichi\Attributes\SkyValue.cs" />
+    <Compile Include="Riichi\Attributes\TargetTypeKey.cs" />
+    <Compile Include="Riichi\Attributes\TargetTypeValue.cs" />
+    <Compile Include="Riichi\Attributes\TextValue.cs" />
+    <Compile Include="Riichi\Attributes\TileOrder.cs" />
+    <Compile Include="Riichi\Attributes\TileSuit.cs" />
+    <Compile Include="Riichi\Attributes\TileValue.cs" />
+    <Compile Include="Riichi\Attributes\YakitoriDelta.cs" />
+    <Compile Include="Riichi\Attributes\YakuValue.cs" />
+    <Compile Include="Riichi\Attributes\ZeroIndex.cs" />
+    <Compile Include="Riichi\Impl\CallOption.cs" />
+    <Compile Include="Riichi\Evaluator\CandidateHand.cs" />
+    <Compile Include="Riichi\Evaluator\FourteenHand.cs" />
+    <Compile Include="Riichi\Evaluator\HandEvaluator.cs" />
+    <Compile Include="Riichi\Evaluator\RiichiScoring.cs" />
+    <Compile Include="Riichi\Evaluator\SevenPairsCandidateHand.cs" />
+    <Compile Include="Riichi\Evaluator\StandardCandidateHand.cs" />
+    <Compile Include="Riichi\Evaluator\ThirteenHand.cs" />
+    <Compile Include="Riichi\Evaluator\WaitCandidateHand.cs" />
+    <Compile Include="Riichi\Evaluator\YakuEvaluators.cs" />
+    <Compile Include="Riichi\Impl\GameResults.cs" />
+    <Compile Include="Riichi\Impl\GameSettings.cs" />
+    <Compile Include="Riichi\Impl\GameState.cs" />
+    <Compile Include="Riichi\Impl\Hand.cs" />
+    <Compile Include="Riichi\Helpers\GameStateHelpers.cs" />
+    <Compile Include="Riichi\Helpers\RiichiHandHelpers.cs" />
+    <Compile Include="Riichi\Helpers\TileHelpers.cs" />
+    <Compile Include="Riichi\Impl\Meld.cs" />
+    <Compile Include="Riichi\Impl\RiichiGlobal.cs" />
+    <Compile Include="Riichi\Impl\SaveState.cs" />
+    <Compile Include="Riichi\Impl\Tile.cs" />
+    <Compile Include="Riichi\Impl\TileCommand.cs" />
+    <Compile Include="Riichi\Impl\TutorialSettings.cs" />
+    <Compile Include="Riichi\Impl\WinResults.cs" />
+    <Compile Include="Riichi\Impl\Yaku.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Riichi\AI\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
