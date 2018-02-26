@@ -13,7 +13,7 @@ using System.Reflection;
 namespace MahjongCore.Riichi
 {
     #region GameAction
-        public enum GameAction
+        internal enum GameAction
         {
             [SkyValue(0)]  Nothing,
             [SkyValue(1)]  Discard,
@@ -32,7 +32,7 @@ namespace MahjongCore.Riichi
             [SkyValue(14)] OpenRiichiDiscard,   // Will need to update marshalling if this goes over 0xf
         }
 
-        public static class GameActionExtentionMethods
+        internal static class GameActionExtentionMethods
         {
             public static int  GetSkyValue(this GameAction ga)                  { return EnumAttributes.GetAttributeValue<SkyValue, int>(ga); }
             public static bool TryGetGameAction(string text, out GameAction ga) { return EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga); }
@@ -40,264 +40,7 @@ namespace MahjongCore.Riichi
         }
     #endregion
 
-    #region PlayState
-        // If AdvancePlayer is true, should advance the player upon starting the round.
-        public enum PlayState
-        {
-            [SkyValue(0)]                                                     NA,
-            [SkyValue(1),  NextState(RandomizingBreak), AdvancePlayer(false)] PreGame,
-            [SkyValue(2),  NextState(PreTilePick1),     AdvancePlayer(false)] RandomizingBreak,
-            [SkyValue(3),  NextState(TilePick1),        AdvancePlayer(false)] PreTilePick1,      // Pick 4
-            [SkyValue(4),  NextState(PreTilePick2),     AdvancePlayer(false)] TilePick1,
-            [SkyValue(5),  NextState(TilePick2),        AdvancePlayer(true) ] PreTilePick2,
-            [SkyValue(6),  NextState(PreTilePick3),     AdvancePlayer(false)] TilePick2,
-            [SkyValue(7),  NextState(TilePick3),        AdvancePlayer(true) ] PreTilePick3,
-            [SkyValue(8),  NextState(PreTilePick4),     AdvancePlayer(false)] TilePick3,
-            [SkyValue(9),  NextState(TilePick4),        AdvancePlayer(true) ] PreTilePick4,
-            [SkyValue(10), NextState(PreTilePick5),     AdvancePlayer(false)] TilePick4,
-            [SkyValue(11), NextState(TilePick5),        AdvancePlayer(true) ] PreTilePick5,      // Pick another 4
-            [SkyValue(12), NextState(PreTilePick6),     AdvancePlayer(false)] TilePick5,
-            [SkyValue(13), NextState(TilePick6),        AdvancePlayer(true) ] PreTilePick6,
-            [SkyValue(14), NextState(PreTilePick7),     AdvancePlayer(false)] TilePick6,
-            [SkyValue(15), NextState(TilePick7),        AdvancePlayer(true) ] PreTilePick7,
-            [SkyValue(16), NextState(PreTilePick8),     AdvancePlayer(false)] TilePick7,
-            [SkyValue(17), NextState(TilePick8),        AdvancePlayer(true) ] PreTilePick8,
-            [SkyValue(18), NextState(PreTilePick9),     AdvancePlayer(false)] TilePick8,
-            [SkyValue(19), NextState(TilePick9),        AdvancePlayer(true) ] PreTilePick9,      // Pick another 4
-            [SkyValue(20), NextState(PreTilePick10),    AdvancePlayer(false)] TilePick9,
-            [SkyValue(21), NextState(TilePick10),       AdvancePlayer(true) ] PreTilePick10,
-            [SkyValue(22), NextState(PreTilePick11),    AdvancePlayer(false)] TilePick10,
-            [SkyValue(23), NextState(TilePick11),       AdvancePlayer(true) ] PreTilePick11,
-            [SkyValue(24), NextState(PreTilePick12),    AdvancePlayer(false)] TilePick11,
-            [SkyValue(25), NextState(TilePick12),       AdvancePlayer(true) ] PreTilePick12,
-            [SkyValue(26), NextState(PreTilePick13),    AdvancePlayer(false)] TilePick12,
-            [SkyValue(27), NextState(TilePick13),       AdvancePlayer(true) ] PreTilePick13,     // Pick the last 1.
-            [SkyValue(28), NextState(PreTilePick14),    AdvancePlayer(false)] TilePick13,
-            [SkyValue(29), NextState(TilePick14),       AdvancePlayer(true) ] PreTilePick14,
-            [SkyValue(30), NextState(PreTilePick15),    AdvancePlayer(false)] TilePick14,
-            [SkyValue(31), NextState(TilePick15),       AdvancePlayer(true) ] PreTilePick15,
-            [SkyValue(32), NextState(PreTilePick16),    AdvancePlayer(false)] TilePick15,
-            [SkyValue(33), NextState(TilePick16),       AdvancePlayer(true) ] PreTilePick16,
-            [SkyValue(34), NextState(DeadWallMove),     AdvancePlayer(false)] TilePick16,
-            [SkyValue(35), NextState(PrePickTile),      AdvancePlayer(false)] DeadWallMove,      // Move the dead wall over.
-            [SkyValue(36), NextState(PickTile),         AdvancePlayer(true) ] PrePickTile,
-            [SkyValue(37), NextState(DecideMove),       AdvancePlayer(false)] PickTile,          // Pick the tile.
-            [SkyValue(38),                              AdvancePlayer(false)] DecideMove,        // Decide your move. This can goto GatherDecisions or KanChosenTile.
-            [SkyValue(39), NextState(PerformDecision),  AdvancePlayer(false)] GatherDecisions,   // Discard occurred. Decisions on NoAction/Chii/Pon/Kan/Ron are made.
-            [SkyValue(40), NextState(PrePickTile),      AdvancePlayer(false)] PerformDecision,   // Winning decision occurs. This can goto PickTile, HandEnd, or DecideMove.
-            [SkyValue(41)]                                                    NextTurn,          // Clear to move to the next turn. Advances the state to HandEnd or PickTile.
-            [SkyValue(42), NextState(TableCleanup)]                           HandEnd,           // End of the hand. Can move to TableCleanup.
-            [SkyValue(43)]                                                    TableCleanup,      // Clean up the table. Advances round. Can advance to GameEnd or RandomizingBreak.
-            [SkyValue(44)]                                                    GameEnd,           // End of game. Cannot advance!
-            [SkyValue(45), NextState(KanPerformDecision)]                     KanChosenTile,
-            [SkyValue(46)]                                                    KanPerformDecision,
-        }
-
-        public static class PlayStateExtentionMethods
-        {
-            public static PlayState GetNext(this PlayState s)
-            {
-                PlayState nextState = PlayState.NA;
-                if (EnumAttributes.HasAttributeValue(s, typeof(NextState)))
-                {
-                    nextState = EnumAttributes.GetAttributeValue<NextState, PlayState>(s);
-                }
-                return nextState;
-            }
-
-            public static int  GetSkyValue(this PlayState ps)                 { return EnumAttributes.GetAttributeValue<SkyValue, int>(ps); }
-            public static bool TryGetPlayState(string text, out PlayState ps) { return EnumHelper.TryGetEnumByCode<PlayState, SkyValue>(text, out ps); }
-        }
-    #endregion
-
-    public enum TileSource
-    {
-        WallDraw,            /// Tile came from the wall. A regular draw.
-        ReplacementTileDraw, /// Tile came from the dead wall after a kan.
-        Call,                /// Tile came from performing a chii or a pon.
-    }
-
-    public enum Placement
-    {
-        Place1,
-        Place2,
-        Place3,
-        Place4
-    };
-
-    #region Round
-        public enum Round
-        {
-            [DescriptionName("East 1"),  TextValue("e1"), RoundOffset(0), NextRound(East2)]  East1,
-            [DescriptionName("East 2"),  TextValue("e2"), RoundOffset(1), NextRound(East3)]  East2,
-            [DescriptionName("East 3"),  TextValue("e3"), RoundOffset(2), NextRound(East4)]  East3,
-            [DescriptionName("East 4"),  TextValue("e4"), RoundOffset(3), NextRound(South1)] East4,
-            [DescriptionName("South 1"), TextValue("s1"), RoundOffset(0), NextRound(South2)] South1,
-            [DescriptionName("South 2"), TextValue("s2"), RoundOffset(1), NextRound(South3)] South2,
-            [DescriptionName("South 3"), TextValue("s3"), RoundOffset(2), NextRound(South4)] South3,
-            [DescriptionName("South 4"), TextValue("s4"), RoundOffset(3), NextRound(West1)]  South4,
-            [DescriptionName("West 1"),  TextValue("w1"), RoundOffset(0), NextRound(West2)]  West1,
-            [DescriptionName("West 2"),  TextValue("w2"), RoundOffset(1), NextRound(West3)]  West2,
-            [DescriptionName("West 3"),  TextValue("w3"), RoundOffset(2), NextRound(West4)]  West3,
-            [DescriptionName("West 4"),  TextValue("w4"), RoundOffset(3), NextRound(North1)] West4,
-            [DescriptionName("North 1"), TextValue("n1"), RoundOffset(0), NextRound(North2)] North1,
-            [DescriptionName("North 2"), TextValue("n2"), RoundOffset(1), NextRound(North3)] North2,
-            [DescriptionName("North 3"), TextValue("n3"), RoundOffset(2), NextRound(North4)] North3,
-            [DescriptionName("North 4"), TextValue("n4"), RoundOffset(3), NextRound(East1)]  North4
-        };
-
-        public static class RoundExtensionMethods
-        {
-            public static Round  GetNext(this Round r)      { return EnumAttributes.GetAttributeValue<NextRound, Round>(r); }
-            public static int    GetOffset(this Round r)    { return EnumAttributes.GetAttributeValue<RoundOffset, int>(r); }
-            public static string GetTextValue(this Round r) { return EnumAttributes.GetAttributeValue<TextValue, string>(r); }
-            public static string GetDescName(this Round r)  { return EnumAttributes.GetAttributeValue<DescriptionName, string>(r); }
-
-            public static bool TryGetRound(string text, out Round c)
-            {
-                Round? rResult = EnumHelper.GetEnumValueFromAttribute<Round, TextValue, string>(text);
-                c = (rResult != null) ? rResult.Value : default(Round);
-                return rResult != null;
-            }
-        }
-    #endregion
-
-    #region Player
-        public enum Player
-        {
-            [IsSinglePlayer(false), PlayerValue(0)]                               None,
-            [IsSinglePlayer(false), PlayerValue(5)]                               All,
-            [IsSinglePlayer(false), PlayerValue(6)]                               Multiple,
-            [IsSinglePlayer(true),  TextValue("1"), PlayerValue(1), ZeroIndex(0)] Player1,
-            [IsSinglePlayer(true),  TextValue("2"), PlayerValue(2), ZeroIndex(1)] Player2,
-            [IsSinglePlayer(true),  TextValue("3"), PlayerValue(3), ZeroIndex(2)] Player3,
-            [IsSinglePlayer(true),  TextValue("4"), PlayerValue(4), ZeroIndex(3)] Player4
-        };
-
-        public static class PlayerExtensionMethods
-        {
-            public static Player[] Players = new Player[] { Player.Player1, Player.Player2, Player.Player3, Player.Player4 };
-
-            public static bool IsPlayer(this Player p)       { return EnumAttributes.GetAttributeValue<IsSinglePlayer, bool>(p); }
-            public static int  GetZeroIndex(this Player p)   { return EnumAttributes.GetAttributeValue<ZeroIndex, int>(p); }
-            public static int  GetPlayerValue(this Player p) { return EnumAttributes.GetAttributeValue<PlayerValue, int>(p); }
-
-            public static bool TryGetPlayer(string text, out Player p)
-            {
-                int textValue;
-                bool found = int.TryParse(text, out textValue);
-                if (found)
-                {
-                    Player? pResult = EnumHelper.GetEnumValueFromAttribute<Player, PlayerValue, int>(textValue);
-                    p = (pResult != null) ? pResult.Value : default(Player);
-                }
-                else
-                {
-                    p = default(Player);
-                }
-                return found;
-            }
-
-            public static Player GetNext(this Player p)
-            {
-                return (p == Player.Player1) ? Player.Player2 :
-                       (p == Player.Player2) ? Player.Player3 :
-                       (p == Player.Player3) ? Player.Player4 :
-                                               Player.Player1;
-            }
-
-            public static Player GetPrevious(this Player p)
-            {
-                return (p == Player.Player1) ? Player.Player4 :
-                       (p == Player.Player2) ? Player.Player1 :
-                       (p == Player.Player3) ? Player.Player2 :
-                                               Player.Player3;
-            }
-
-            public static CalledDirection GetTargetPlayerDirection(this Player p, Player target)
-            {
-                return (!p.IsPlayer() || (p == target)) ? CalledDirection.None :
-                        (p.GetNext() == target)         ? CalledDirection.Right :
-                        (p.GetPrevious() == target)     ? CalledDirection.Left :
-                                                          CalledDirection.Across;
-            }
-
-            public static Player AddOffset(this Player p, int offset)
-            {
-                int playerValue = EnumAttributes.GetAttributeValue<PlayerValue, int>(p);
-                int offsetValue = playerValue + offset - 1;
-                while (offsetValue < 0)
-                {
-                    offsetValue += 4;
-                }
-                int targetPlayer = (offsetValue % 4) + 1;
-                return (targetPlayer == 1) ? Player.Player1 :
-                       (targetPlayer == 2) ? Player.Player2 :
-                       (targetPlayer == 3) ? Player.Player3 :
-                                             Player.Player4;
-            }
-
-            public static Player GetRandom()
-            {
-                int targetPlayer = RiichiGlobal.RandomRange(1, 5);
-                return (targetPlayer == 1) ? Player.Player1 :
-                       (targetPlayer == 2) ? Player.Player2 :
-                       (targetPlayer == 3) ? Player.Player3 :
-                                             Player.Player4;
-            }
-        }
-    #endregion
-
-    public class DiscardInfo
-    {
-        public bool           InReach;
-        public bool           CanNormalDiscard;
-        public bool           CanKyuushuuKyuuhai;
-        public bool           CanTsumo;
-        public bool           CanReach;
-        public bool           CanOpenReach;
-        public List<TileType> RestrictedTiles = new List<TileType>();
-        public TileType       SuufurendanTile;
-        public KanOptions     KanOptions;
-    }
-
-    public interface GameStateSink
-    {
-        void HandCleared(Player p);
-        void HandSort(Player p, bool initialSort);
-        void HandPrePickTile(Player p, int count);
-        void HandTileAdded(Player p, int count);
-        void HandPerformedAbortiveDraw(Player p, TileType tile, int handSlot);
-        void HandPerformedDiscard(Player p, TileType tile, int handSlot);
-        void HandPerformedReach(Player p, TileType tile, int handSlot, bool fOpenReach);
-        void HandPerformedKan(Player p, TileType tile, KanType type);
-        void HandPerformedStoredCall(Player p, CallOption co);
-        void HandPerformedRon(Player p, WinResults results);
-        void HandPerformedTsumo(Player p, WinResults results);
-        void MultiWin(WinResults win1, WinResults win2, WinResults win3, WinResults win4);
-        void ExhaustiveDraw(WinResults results);
-        void GatherPostDiscardDecisions();
-        void GatherPostKanDecisions();
-        void PerformSave();
-        void PerformRandomizingBreak(int finalRoll);
-        void PerformDeadWallMove();
-        void PerformDiscard(Player p, DiscardInfo info);
-        void DoraTileFlipped();
-        bool PreCheckPlayState(PlayState state);
-        void WallTilePicked(int[] tileSlot, TileSource source);
-        void GameComplete(GameResults results);
-        void TableCleanUpForNextRound();
-
-        // Rewind callbacks
-        bool PreCheckRewindPlayState(PlayState state);
-        void DiscardUndone(Player p, TileType tile);
-        void TsumoUndone(Player p);
-        void DrawUndone(Player p, TileType tile);
-    }
-
-    // GameState is intended to be a pure implementation of a riichi mahjong game state. Any hooks into the GameState should
-    // be done through GameStateSink. It will let you know when things happen, and you can react to them at that time.
-    public class GameState
+    internal class GameStateImpl : IGameState
     {
         public TileColor        TileColor          { get; private set; }
         public TileType[]       Wall               { get; private set; } = new TileType[TileHelpers.TOTAL_TILE_COUNT];
@@ -330,7 +73,6 @@ namespace MahjongCore.Riichi
         public int              Pool               { get; private set; }
         public int              DoraCount          { get; private set; }
         public int              Roll               { get; private set; }
-        public GameStateSink    Sink               { private get; set; }
 
         public Player           PlayerRecentOpenKan      { get; private set; }
         public bool             FlipDoraAfterNextDiscard { get; private set; }
@@ -360,18 +102,20 @@ namespace MahjongCore.Riichi
         private WinResults[]                  _MultiWinResults = new WinResults[] { new WinResults(), new WinResults(), new WinResults(), new WinResults() };
         private GameAction                    _RewindAction = GameAction.Nothing;
 
-        public GameState(GameStateSink sink, GameSettings settings)                { Initialize(sink, settings, null); }
-        public GameState(GameStateSink sink, TutorialSettings tSettings)           { Initialize(sink, null, tSettings); }
-        public GameState(GameStateSink sink, SaveState state)                      { InitializeFromState(sink, state, null); }
-        public GameState(GameStateSink sink, SaveState state, TutorialSettings ts) { InitializeFromState(sink, state, ts); }
-        public SaveState GetSaveState()                                            { return SaveState.GetState(this); }
+        public ISaveState Save()            { return SaveStateImpl.GetState(this); }
+
+        public GameStateImpl(GameSettings settings)                 { Initialize(settings, null); }
+        public GameStateImpl(TutorialSettings tSettings)            { Initialize(null, tSettings); }
+        public GameStateImpl(ISaveState state)                      { InitializeFromState(state, null); }
+        public GameStateImpl(ISaveState state, TutorialSettings ts) { InitializeFromState(state, ts); }
+        
         public void ContinueCurrentPlayState()                                     { AdvancePlayState(CurrentState, false, true); } // Used by tutorial to continue execution of the game after being paused.
         public void AdvancePlayState()                  { AdvancePlayState(CurrentState.GetNext(), EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(CurrentState.GetNext()), false); }
         private void StartPlayState(PlayState mode)     { AdvancePlayState(mode, EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(mode), false); }
 
-        private void Initialize(GameStateSink sink, GameSettings gs, TutorialSettings ts)
+        private void Initialize(GameSettings gs, TutorialSettings ts)
         {
-            InitializeCommon(sink, gs, ts);
+            InitializeCommon(gs, ts);
 
             // Initialize everything else.
             TileColor                 = TileColor.Orange;
@@ -389,9 +133,9 @@ namespace MahjongCore.Riichi
             PlayerRecentOpenKan       = Player.None;
         }
 
-        public void InitializeFromState(GameStateSink sink, SaveState state, TutorialSettings ts)
+        public void InitializeFromState(ISaveState state, TutorialSettings ts)
         {
-            InitializeCommon(sink, state.CustomSettings, ts);
+            InitializeCommon(state.CustomSettings, ts);
 
             // Initialize other things.
             NextActionPlayer = CurrentPlayer;

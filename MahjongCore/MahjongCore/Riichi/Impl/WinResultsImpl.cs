@@ -4,7 +4,7 @@ using MahjongCore.Riichi.Evaluator;
 
 namespace MahjongCore.Riichi
 {
-    public class WinResults
+    internal class WinResults
     {
         public Player        WinningPlayer;
         public CandidateHand WinningHand;

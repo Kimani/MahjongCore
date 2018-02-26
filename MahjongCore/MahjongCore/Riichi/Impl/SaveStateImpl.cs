@@ -10,16 +10,7 @@ using System;
 
 namespace MahjongCore.Riichi
 {
-    public static class StringBuilderExtensionMethods
-    {
-        public static void AppendWithSpace(this StringBuilder sb, string str)
-        {
-            sb.Append(str);
-            sb.Append(' ');
-        }
-    }
-
-    public class SaveState : IComparable<SaveState>
+    public class SaveStateImpl : IComparable<SaveStateImpl>
     {
         public class PlayerValue : IComparable<PlayerValue>
         {
@@ -116,11 +107,11 @@ namespace MahjongCore.Riichi
         private static string MULTI_STRING_NAME_END = "multistringnameend";
         private static string NEUTRAL_FLAGS_STR = "neutral";
 
-        private SaveState() { }
+        private SaveStateImpl() { }
 
-        public SaveState Clone()
+        public SaveStateImpl Clone()
         {
-            SaveState s = new SaveState();
+            SaveStateImpl s = new SaveStateImpl();
             s.TileColor = TileColor;
             s.CurrentRound = CurrentRound;
             s.CurrentRoundLapped = CurrentRoundLapped;
@@ -155,10 +146,10 @@ namespace MahjongCore.Riichi
             return s;
         }
 
-        public static SaveState LoadFromString(string save)
+        public static SaveStateImpl LoadFromString(string save)
         {
             RiichiGlobal.Assert((save != null) && (save.Length > 0));
-            SaveState state = new SaveState();
+            SaveStateImpl state = new SaveStateImpl();
 
             if (save.StartsWith(PREFIX_V2)) { state.LoadFromStringV2(save); }
             else                            { state.LoadFromStringV1(save); }
@@ -313,7 +304,7 @@ namespace MahjongCore.Riichi
             RiichiGlobal.Assert(false, "V1 String Not Supported.");
         }
 
-        private void LoadFromState(GameState state)
+        private void LoadFromState(GameStateImpl state)
         {
             TileColor = state.TileColor;
             CurrentRound = state.CurrentRound;
@@ -387,9 +378,9 @@ namespace MahjongCore.Riichi
             }
         }
 
-        public static SaveState GetState(GameState state)
+        public static SaveStateImpl GetState(GameStateImpl state)
         {
-            SaveState rs = new SaveState();
+            SaveStateImpl rs = new SaveStateImpl();
             rs.LoadFromState(state);
             return rs;
         }
