@@ -93,7 +93,7 @@ namespace MahjongCore.Riichi.Impl
                 }
                 else
                 {
-                    Swap(1, 2);
+                    Swap(0, 1);
                 }
             }
 
