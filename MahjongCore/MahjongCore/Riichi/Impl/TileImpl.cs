@@ -7,36 +7,6 @@ using System;
 
 namespace MahjongCore.Riichi
 {
-    #region TileColor
-        public enum TileColor
-        {
-            [TextValue("o")] Orange,
-            [TextValue("b")] Blue,
-            [TextValue("r")] Red,
-            [TextValue("g")] Green
-        }
-
-        public static class ColorExtensionMethods
-        {
-            public static string GetTextValue(this TileColor c) { return EnumAttributes.GetAttributeValue<TextValue, string>(c); }
-
-            public static TileColor GetNextColor(this TileColor c)
-            {
-                return (c == TileColor.Orange) ? TileColor.Blue :
-                       (c == TileColor.Blue)   ? TileColor.Red :
-                       (c == TileColor.Red)    ? TileColor.Green :
-                                                 TileColor.Orange;
-            }
-
-            public static bool TryGetColor(string text, out TileColor c)
-            {
-                TileColor? cResult = EnumHelper.GetEnumValueFromAttribute<TileColor, TextValue, string>(text);
-                c = (cResult != null) ? cResult.Value : default(TileColor);
-                return cResult != null;
-            }
-        }
-    #endregion
-
     #region Suit
         public enum Suit
         {

@@ -11,7 +11,8 @@
     <AssemblyName>MahjongCore</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>Unity Full v3.5</TargetFrameworkProfile>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,6 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,6 +31,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -53,6 +56,7 @@
     <Compile Include="Riichi\Hand.cs" />
     <Compile Include="Riichi\Impl\DiscardDecision.cs" />
     <Compile Include="Riichi\Impl\PostDiscardDecision.cs" />
+    <Compile Include="Riichi\Meld.cs" />
     <Compile Include="Riichi\PlayerAI.cs" />
     <Compile Include="Riichi\Attributes\AdvancePlayer.cs" />
     <Compile Include="Riichi\Attributes\BitfieldMask.cs" />
@@ -114,7 +118,7 @@
     <Compile Include="Riichi\Evaluator\WaitCandidateHand.cs" />
     <Compile Include="Riichi\Evaluator\YakuEvaluators.cs" />
     <Compile Include="Riichi\Impl\GameResults.cs" />
-    <Compile Include="Riichi\Impl\GameSettings.cs" />
+    <Compile Include="Riichi\GameSettings.cs" />
     <Compile Include="Riichi\Impl\GameStateImpl.cs" />
     <Compile Include="Riichi\Impl\HandImpl.cs" />
     <Compile Include="Riichi\Helpers\GameStateHelpers.cs" />
@@ -123,11 +127,12 @@
     <Compile Include="Riichi\Impl\MeldImpl.cs" />
     <Compile Include="Riichi\Impl\RiichiGlobal.cs" />
     <Compile Include="Riichi\Impl\SaveStateImpl.cs" />
-    <Compile Include="Riichi\Impl\Tile.cs" />
+    <Compile Include="Riichi\Impl\TileImpl.cs" />
     <Compile Include="Riichi\Impl\TileCommand.cs" />
     <Compile Include="Riichi\Impl\TutorialSettings.cs" />
     <Compile Include="Riichi\Impl\WinResultsImpl.cs" />
     <Compile Include="Riichi\Impl\Yaku.cs" />
+    <Compile Include="Riichi\Tile.cs" />
     <Compile Include="Riichi\WinResults.cs" />
   </ItemGroup>
   <ItemGroup>

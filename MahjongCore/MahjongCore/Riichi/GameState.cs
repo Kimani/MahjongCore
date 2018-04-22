@@ -137,25 +137,10 @@ namespace MahjongCore.Riichi
         {
             public static Player[] Players = new Player[] { Player.Player1, Player.Player2, Player.Player3, Player.Player4 };
 
-            public static bool IsPlayer(this Player p)       { return EnumAttributes.GetAttributeValue<IsSinglePlayer, bool>(p); }
-            public static int  GetZeroIndex(this Player p)   { return EnumAttributes.GetAttributeValue<ZeroIndex, int>(p); }
-            public static int  GetPlayerValue(this Player p) { return EnumAttributes.GetAttributeValue<PlayerValue, int>(p); }
-
-            public static bool TryGetPlayer(string text, out Player p)
-            {
-                int textValue;
-                bool found = int.TryParse(text, out textValue);
-                if (found)
-                {
-                    Player? pResult = EnumHelper.GetEnumValueFromAttribute<Player, PlayerValue, int>(textValue);
-                    p = (pResult != null) ? pResult.Value : default(Player);
-                }
-                else
-                {
-                    p = default(Player);
-                }
-                return found;
-            }
+            public static bool IsPlayer(this Player p)                 { return EnumAttributes.GetAttributeValue<IsSinglePlayer, bool>(p); }
+            public static int  GetZeroIndex(this Player p)             { return EnumAttributes.GetAttributeValue<ZeroIndex, int>(p); }
+            public static int  GetPlayerValue(this Player p)           { return EnumAttributes.GetAttributeValue<PlayerValue, int>(p); }
+            public static bool TryGetPlayer(string text, out Player p) { return EnumHelper.TryGetEnumByCode<Player, PlayerValue>(text, out p); }
 
             public static Player GetNext(this Player p)
             {
@@ -350,7 +335,7 @@ namespace MahjongCore.Riichi
         ISaveStatePlayer Player3        { get; }
         ISaveStatePlayer Player4        { get; }
         Round            Round          { get; }
-        string           CustomTags     { get; set; }
+        IList<string>    Tags           { get; }
         int              TilesRemaining { get; }
 
         string     Marshall();
