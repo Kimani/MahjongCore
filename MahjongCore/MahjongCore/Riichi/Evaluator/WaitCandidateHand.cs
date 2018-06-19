@@ -40,12 +40,12 @@ namespace MahjongCore.Riichi.Evaluator
          */
         public WaitCandidateHand Branch(int slotStart)
         {
-            RiichiGlobal.Assert(Tiles.Length >= 3);
-            RiichiGlobal.Assert(MeldCount < 4);
-            RiichiGlobal.Assert(slotStart + 2 < Tiles.Length);
-            RiichiGlobal.Assert(Tiles[slotStart].IsEqual(Tiles[slotStart + 1]));
-            RiichiGlobal.Assert(Tiles[slotStart].IsEqual(Tiles[slotStart + 2]));
-            RiichiGlobal.Assert(Tiles[slotStart].IsTile());
+            Global.Assert(Tiles.Length >= 3);
+            Global.Assert(MeldCount < 4);
+            Global.Assert(slotStart + 2 < Tiles.Length);
+            Global.Assert(Tiles[slotStart].IsEqual(Tiles[slotStart + 1]));
+            Global.Assert(Tiles[slotStart].IsEqual(Tiles[slotStart + 2]));
+            Global.Assert(Tiles[slotStart].IsTile());
 
             TileType[] subTiles = (TileType[])Tiles.Clone();
             TileType tile = Tiles[slotStart];
@@ -68,9 +68,9 @@ namespace MahjongCore.Riichi.Evaluator
          */
         public WaitCandidateHand Branch(int slotA, int slotB)
         {
-            RiichiGlobal.Assert(Wildcard);
-            RiichiGlobal.Assert(Tiles.Length >= 2);
-            RiichiGlobal.Assert(MeldCount < 4);
+            Global.Assert(Wildcard);
+            Global.Assert(Tiles.Length >= 2);
+            Global.Assert(MeldCount < 4);
 
             TileType[] subTiles = (TileType[])Tiles.Clone();
             subTiles[slotA] = TileType.None;
@@ -87,7 +87,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
             else
             {
-                RiichiGlobal.Assert(tileA.GetSuit() == tileB.GetSuit());
+                Global.Assert(tileA.GetSuit() == tileB.GetSuit());
                 if (tileA.IsNext(tileB))
                 {
                     // Two sided wait. See if either works.
@@ -112,7 +112,7 @@ namespace MahjongCore.Riichi.Evaluator
                 else
                 {
                     // Center wait.
-                    RiichiGlobal.Assert(tileB.GetValue() == (tileA.GetValue() + 2));
+                    Global.Assert(tileB.GetValue() == (tileA.GetValue() + 2));
                     bHand.WaitA = tileA.GetNext();
                 }
 

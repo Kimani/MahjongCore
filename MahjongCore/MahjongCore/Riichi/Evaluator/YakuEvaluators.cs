@@ -19,7 +19,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
 
             var evaluator = Evaluators[y];
-            RiichiGlobal.Assert(evaluator != null);
+            Global.Assert(evaluator != null);
             int han = 0;
             if (evaluator != null)
             {

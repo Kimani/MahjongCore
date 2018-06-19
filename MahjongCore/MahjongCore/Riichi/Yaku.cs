@@ -94,7 +94,7 @@ namespace MahjongCore.Riichi
             return EnumAttributes.GetAttributeValue<IsYakuman, bool>(s);
         }
 
-        public static int GetHan(this Yaku y, bool fClosed, GameSettings settings)
+        public static int GetHan(this Yaku y, bool fClosed, IGameSettings settings)
         {
             int han;
             if (y == Yaku.IisouSanjun)
@@ -116,11 +116,11 @@ namespace MahjongCore.Riichi
             return han;
         }
 
-        public static int Evaluate(this Yaku y, Hand hand, CandidateHand cHand, bool fRon)
+        public static int Evaluate(this Yaku y, IGameSettings settings, IHand hand, ICandidateHand cHand, bool fRon)
         {
             GameOption option = EnumAttributes.GetAttributeValue<GameOptionSetting, GameOption>(y);
             int han = 0;
-            if (hand.Parent.Settings.GetSetting<bool>(option))
+            if (settings.GetSetting<bool>(option))
             {
                 han = YakuEvaluator.Evaluate(y, hand, cHand, fRon);
             }

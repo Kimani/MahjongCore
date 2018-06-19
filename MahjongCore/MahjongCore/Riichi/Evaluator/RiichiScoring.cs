@@ -80,7 +80,7 @@ namespace MahjongCore.Riichi.Evaluator
                     pScore -= (winningPlayer != p) ? (bonusCount * 100) : 0;
 
                     // Make sure the winning player's score is zero at this juncture.
-                    RiichiGlobal.Assert((p != winningPlayer) || (pScore == 0));
+                    Global.Assert((p != winningPlayer) || (pScore == 0));
                     scoreResults.SetPlayerScore(p, pScore);
                 }
 
@@ -115,7 +115,7 @@ namespace MahjongCore.Riichi.Evaluator
                     pScore -= (targetPlayer == p) ? (bonusCount * 300) : 0;
 
                     // Make sure the winning player's score is zero at this juncture.
-                    RiichiGlobal.Assert((p != winningPlayer) || (pScore == 0));
+                    Global.Assert((p != winningPlayer) || (pScore == 0));
                     scoreResults.SetPlayerScore(p, pScore);
                 }
 

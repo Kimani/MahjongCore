@@ -49,7 +49,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
             else
             {
-                RiichiGlobal.Assert(hand.IsFullHand(), "We don't have a full hand?? ActiveTileCount: " + activeTileCount);
+                Global.Assert(hand.IsFullHand(), "We don't have a full hand?? ActiveTileCount: " + activeTileCount);
                 sublist = new TileType[activeTileCount - 1];
                 {
                     int target = 0;
@@ -188,7 +188,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
             catch (Exception e)
             {
-                RiichiGlobal.Assert(false, e.StackTrace);
+                Global.Assert(false, e.StackTrace);
             }
 
             // Check to see if we're in a wait for thirteen orphans. Handle both the single and 13 sided wait scenarios.
@@ -408,7 +408,7 @@ namespace MahjongCore.Riichi.Evaluator
                     }
 
                     // Fill approvedReachKanTiles.
-                    RiichiGlobal.Assert(threeOfAKindTiles.Count <= 4);
+                    Global.Assert(threeOfAKindTiles.Count <= 4);
                     if (threeOfAKindTiles.Count > 0)
                     {
                         int reachKanSlot = 0;
@@ -433,7 +433,7 @@ namespace MahjongCore.Riichi.Evaluator
          */
         public static CandidateHand GetCompleteHand(Hand hand)
         {
-            RiichiGlobal.Assert(hand.IsFullHand());
+            Global.Assert(hand.IsFullHand());
 
             List<CandidateHand> chBucket = new List<CandidateHand>();
             GetWinningHandCandidates(hand, chBucket, false);
@@ -447,7 +447,7 @@ namespace MahjongCore.Riichi.Evaluator
          */
         public static CandidateHand GetWinningHand(Hand hand, bool fRon, bool fKokushiOnly)
         {
-            RiichiGlobal.Assert(hand.IsFullHand());
+            Global.Assert(hand.IsFullHand());
 
             // Make sure we're not in furiten.
             if (fRon && hand.IsFuriten())
@@ -615,7 +615,7 @@ namespace MahjongCore.Riichi.Evaluator
             // If we find all four melds, add the results to the resultsBox. The results are the waits that the wildcard could have been.
             if (wHand.MeldCount == 4)
             {
-                RiichiGlobal.Assert(!wHand.Wildcard, "Wait hand found but didn't use wildcard? 3ofKindTiles: " + wHand.ThreeInARowTiles.Count + " 3inRowTiles: " + wHand.ThreeInARowTiles.Count +
+                Global.Assert(!wHand.Wildcard, "Wait hand found but didn't use wildcard? 3ofKindTiles: " + wHand.ThreeInARowTiles.Count + " 3inRowTiles: " + wHand.ThreeInARowTiles.Count +
                                                      " WaitA: " + wHand.WaitA + " WaitB: " + wHand.WaitB + " Hand: " + OutputStashedHand());
 
                 threeOfAKindTiles.AddRange(wHand.ThreeOfAKindTiles);
@@ -683,7 +683,7 @@ namespace MahjongCore.Riichi.Evaluator
          */
         private static void GetWinningHandCandidates(Hand hand, List<CandidateHand> chBucket, bool fKokushiOnly)
         {
-            RiichiGlobal.Assert(hand.IsFullHand());
+            Global.Assert(hand.IsFullHand());
 
             // Get a copy of the active hand and sort it.
             int activeTileCount = hand.ActiveTileCount;

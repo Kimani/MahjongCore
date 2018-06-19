@@ -6,9 +6,10 @@ namespace MahjongCore.Riichi
 {
     public interface IHand
     {
+        IGameState         Parent                { get; }
         Player             Player                { get; }
-        TileType           Seat                  { get; }
-        TileType[]         ActiveHand            { get; }
+        Wind               Seat                  { get; }
+        ITile[]            ActiveHand            { get; }
         IMeld[]            Melds                 { get; }
         int                Score                 { get; }
         int                ActiveTileCount       { get; }
@@ -27,17 +28,18 @@ namespace MahjongCore.Riichi
         bool               Furiten               { get; }
         bool               Yakitori              { get; }
         bool               HasFullHand           { get; }
-        bool               CanIppatsu            { get; }
-        bool               CanDoubleReach        { get; }
-        bool               CanKyuushuuKyuuhai    { get; }
-        bool               CanSuufurendan        { get; }
-        List<TileType>     Waits                 { get; }
-        Stack<TileCommand> DrawsAndKans          { get; }
-        List<ExtendedTile> Discards              { get; }
-        List<CallOption>   AvailableCalls        { get; }
+        bool               CouldIppatsu          { get; }
+        bool               CouldDoubleReach      { get; }
+        bool               CouldKyuushuuKyuuhai  { get; }
+        bool               CouldSuufurendan      { get; }
+        IList<TileType>    Waits                 { get; }
+        IList<TileCommand> DrawsAndKans          { get; }
+        IList<ITile>       Discards              { get; }
+        IList<IMeld>       AvailableCalls        { get; }
 
-        int  GetTileSlot(TileType tile, bool matchRed);
-        void MoveTileToEnd(TileType targetTile);
-        void ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd);
+        int             GetTileSlot(TileType tile, bool matchRed);
+        void            MoveTileToEnd(TileType targetTile);
+        void            ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd);
+        IList<TileType> GetWaitsForDiscard(int slot);
     }
 }

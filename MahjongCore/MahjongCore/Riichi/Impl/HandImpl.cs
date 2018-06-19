@@ -9,17 +9,6 @@ using System.Text;
 
 namespace MahjongCore.Riichi
 {
-    public class KanOptions
-    {
-        public bool Promoted = false;
-        public bool Closed = false;
-
-        public bool HasOptions()
-        {
-            return Promoted || Closed;
-        }
-    }
-
     public class Hand
     {
         public Player             Player                { get; private set; }
@@ -117,7 +106,7 @@ namespace MahjongCore.Riichi
                 sb.Append(tc.TilePrimary.Tile + " ");
                 DrawsAndKans.Push(tc);
             }
-            RiichiGlobal.Log(sb.ToString());
+            Global.Log(sb.ToString());
         }
 
         public bool IsTempai()
@@ -175,7 +164,7 @@ namespace MahjongCore.Riichi
 
         public void AddTemporaryTile(TileType tile)
         {
-            RiichiGlobal.Assert(!HasTemporaryTile);
+            Global.Assert(!HasTemporaryTile);
 
             ActiveHand[ActiveTileCount] = tile;
             ActiveTileCount++;
@@ -184,8 +173,8 @@ namespace MahjongCore.Riichi
 
         public void RemoveTemporaryTile()
         {
-            RiichiGlobal.Assert(HasTemporaryTile);
-            RiichiGlobal.Assert(IsFullHand());
+            Global.Assert(HasTemporaryTile);
+            Global.Assert(IsFullHand());
 
             ActiveTileCount--;
             ActiveHand[ActiveTileCount] = TileType.None;
@@ -371,7 +360,7 @@ namespace MahjongCore.Riichi
             if (!rewind)
             {
                 DrawsAndKans.Push(new TileCommand(TileCommand.Type.Tile, new ExtendedTile(tile)));
-                RiichiGlobal.Log("Pushed onto drawsnkans! Player: " + Player + " tile: " + tile + " new drawsnkans count: " + DrawsAndKans.Count);
+                Global.Log("Pushed onto drawsnkans! Player: " + Player + " tile: " + tile + " new drawsnkans count: " + DrawsAndKans.Count);
             }
         }
 
@@ -410,7 +399,7 @@ namespace MahjongCore.Riichi
                     ActiveTileCount--;
                     Sort(false);
 
-                    RiichiGlobal.Assert(targetTile == DrawsAndKans.Peek().TilePrimary.Tile);
+                    Global.Assert(targetTile == DrawsAndKans.Peek().TilePrimary.Tile);
                     DrawsAndKans.Pop();
                     return true;
                 }
@@ -420,7 +409,7 @@ namespace MahjongCore.Riichi
 
         public void ForceSetLastTile(TileType targetTile)
         {
-            RiichiGlobal.Assert(targetTile != TileType.None);
+            Global.Assert(targetTile != TileType.None);
 
             // Find where the target tile is in the hand. Don't need to do anything if it's already at the end.
             bool fFound = false;
@@ -436,7 +425,7 @@ namespace MahjongCore.Riichi
                     break;
                 }
             }
-            RiichiGlobal.Assert(fFound);
+            Global.Assert(fFound);
 
             // Don't sort the hand, but sync the visual representation of it.
             Parent.HandSort(Player, false);
@@ -444,7 +433,7 @@ namespace MahjongCore.Riichi
 
         public void ForceReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd)
         {
-            RiichiGlobal.Assert(tilesRemove.Count == tilesAdd.Count);
+            Global.Assert(tilesRemove.Count == tilesAdd.Count);
 
             // Remove from the hand one of each tile in tilesRemove.
             foreach (TileType ripTile in tilesRemove)
@@ -462,7 +451,7 @@ namespace MahjongCore.Riichi
                         break;
                     }
                 }
-                RiichiGlobal.Assert(fFound);
+                Global.Assert(fFound);
             }
 
             // Add to the hand one of each tile in tilesAdd. We'll need to grab that tile from somewhere else on the board. Look
@@ -620,7 +609,7 @@ namespace MahjongCore.Riichi
             meld.Tiles[3].Tile = (StoredCallOption.Type == MeldState.KanOpen) ? StoredCallOption.TileD : TileType.None;
 
             CalledDirection direction = Player.GetTargetPlayerDirection(Parent.CurrentPlayer);
-            RiichiGlobal.Assert(direction != CalledDirection.None);
+            Global.Assert(direction != CalledDirection.None);
             if (direction == CalledDirection.Left)        { meld.Tiles[0].Called = true; }
             else if (direction == CalledDirection.Across) { meld.Tiles[1].Called = true; }
             else if (direction == CalledDirection.Right)  { meld.Tiles[meld.State.GetTileCount() - 1].Called = true; }
@@ -789,7 +778,7 @@ namespace MahjongCore.Riichi
             if (!IsInReach() && (Parent.PrevAction == GameAction.Chii) && !Parent.Settings.GetSetting<bool>(GameOption.SequenceSwitch))
             {
                 Meld meld = GetLatestMeld();
-                RiichiGlobal.Assert(meld.State == MeldState.Chii);
+                Global.Assert(meld.State == MeldState.Chii);
 
                 int tileCalledValue = meld.Tiles[0].Tile.GetValue();
                 int tileAValue = meld.Tiles[1].Tile.GetValue();
@@ -816,12 +805,12 @@ namespace MahjongCore.Riichi
         public bool CheckRon(bool fKokushiOnly)
         {
             TileType discardedTile = Parent.NextActionTile;
-            RiichiGlobal.Assert((Parent.NextAction == GameAction.Discard) ||
+            Global.Assert((Parent.NextAction == GameAction.Discard) ||
                                 (Parent.NextAction == GameAction.RiichiDiscard) ||
                                 (Parent.NextAction == GameAction.OpenRiichiDiscard) ||
                                 (Parent.NextAction == GameAction.PromotedKan) ||
                                 (Parent.NextAction == GameAction.ClosedKan), "NextAction is " + Parent.NextAction);
-            RiichiGlobal.Assert(discardedTile.IsTile(), "Discarded tile isn't a tile " + discardedTile);
+            Global.Assert(discardedTile.IsTile(), "Discarded tile isn't a tile " + discardedTile);
 
             bool fHandAtozuke = false;
             WinningHandCache = null;
@@ -856,7 +845,7 @@ namespace MahjongCore.Riichi
 
         public bool CheckNagashiMangan()
         {
-            RiichiGlobal.Assert(Parent.TilesRemaining == 0);
+            Global.Assert(Parent.TilesRemaining == 0);
 
             int han = Yaku.NagashiMangan.Evaluate(this, null, false);
             if (han != 0)
@@ -975,7 +964,7 @@ namespace MahjongCore.Riichi
         public GameAction PeekLastDrawKanType()
         {
             TileCommand tc = (DrawsAndKans.Count > 0) ? DrawsAndKans.Peek() : null;
-            RiichiGlobal.Log("PeekLastDrawKanType! tc: " + tc + ((tc != null) ? " " + tc.TilePrimary.Tile : "") + " draws&kanscount " + DrawsAndKans.Count);
+            Global.Log("PeekLastDrawKanType! tc: " + tc + ((tc != null) ? " " + tc.TilePrimary.Tile : "") + " draws&kanscount " + DrawsAndKans.Count);
             return (tc == null) ? GameAction.Nothing :
                    (tc.CommandType == TileCommand.Type.Tile) ? GameAction.PickedFromWall :
                                                                GameAction.ReplacementTilePick;

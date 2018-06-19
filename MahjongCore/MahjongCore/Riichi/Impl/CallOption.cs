@@ -44,7 +44,7 @@ namespace MahjongCore.Riichi
 
         public TileType GetTile(int slot)
         {
-            RiichiGlobal.Assert((slot >= 0) && (slot < 4));
+            Global.Assert((slot >= 0) && (slot < 4));
             return (slot == 0) ? TileA :
                    (slot == 1) ? TileB :
                    (slot == 2) ? TileC :
@@ -53,7 +53,7 @@ namespace MahjongCore.Riichi
 
         public int GetSlot(int slot)
         {
-            RiichiGlobal.Assert((slot >= 0) && (slot < 4));
+            Global.Assert((slot >= 0) && (slot < 4));
             return (slot == 0) ? SlotA :
                    (slot == 1) ? SlotB :
                    (slot == 2) ? SlotC :
@@ -86,7 +86,7 @@ namespace MahjongCore.Riichi
 
         public static CallOption GetPon(CalledDirection Called, TileType tileCalled, TileType tileA, TileType tileB, int slotA, int slotB)
         {
-            RiichiGlobal.Assert(Called != CalledDirection.None);
+            Global.Assert(Called != CalledDirection.None);
             return (Called == CalledDirection.Left)   ? new CallOption(CalledDirection.Left, MeldState.Pon, tileCalled, tileA, tileB, TileType.None, slotA, slotB, -1) :
                    (Called == CalledDirection.Across) ? new CallOption(CalledDirection.Across, MeldState.Pon, tileA, tileCalled, tileB, TileType.None, slotA, slotB, -1) :
                                                         new CallOption(CalledDirection.Right, MeldState.Pon, tileA, tileB, tileCalled, TileType.None, slotA, slotB, -1);
@@ -94,7 +94,7 @@ namespace MahjongCore.Riichi
 
         public static CallOption GetKan(CalledDirection Called, TileType tileCalled, TileType tileA, TileType tileB, TileType tileC, int slotA, int slotB, int slotC) // One of them might be like, a red 5. So we want to know which one.
         {
-            RiichiGlobal.Assert(Called != CalledDirection.None);
+            Global.Assert(Called != CalledDirection.None);
             return (Called == CalledDirection.Left)   ? new CallOption(CalledDirection.Left, MeldState.KanOpen, tileCalled, tileA, tileB, tileC, slotA, slotB, slotC) :
                    (Called == CalledDirection.Across) ? new CallOption(CalledDirection.Across, MeldState.KanOpen, tileA, tileCalled, tileB, tileC, slotA, slotB, slotC) :
                                                         new CallOption(CalledDirection.Right, MeldState.KanOpen, tileA, tileB, tileC, tileCalled, slotA, slotB, slotC);

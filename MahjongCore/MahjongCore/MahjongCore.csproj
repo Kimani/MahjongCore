@@ -51,13 +51,18 @@
     <Compile Include="Common\ListExtensions.cs" />
     <Compile Include="Common\StringBuilderExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Riichi\Attributes\Tile.cs" />
+    <Compile Include="Riichi\ExtraSettings.cs" />
+    <Compile Include="Riichi\Impl\AI\AIRandom.cs" />
+    <Compile Include="Riichi\Attributes\PlayerNext.cs" />
+    <Compile Include="Riichi\Attributes\PlayerPrevious.cs" />
     <Compile Include="Riichi\Decision.cs" />
     <Compile Include="Riichi\GameState.cs" />
     <Compile Include="Riichi\Hand.cs" />
-    <Compile Include="Riichi\Impl\DiscardDecision.cs" />
-    <Compile Include="Riichi\Impl\PostDiscardDecision.cs" />
+    <Compile Include="Riichi\Impl\DecisionImpl.cs" />
+    <Compile Include="Riichi\Impl\GameSettingsImpl.cs" />
     <Compile Include="Riichi\Meld.cs" />
-    <Compile Include="Riichi\PlayerAI.cs" />
+    <Compile Include="Riichi\AI.cs" />
     <Compile Include="Riichi\Attributes\AdvancePlayer.cs" />
     <Compile Include="Riichi\Attributes\BitfieldMask.cs" />
     <Compile Include="Riichi\Attributes\CommandMeldState.cs" />
@@ -125,19 +130,18 @@
     <Compile Include="Riichi\Helpers\RiichiHandHelpers.cs" />
     <Compile Include="Riichi\Helpers\TileHelpers.cs" />
     <Compile Include="Riichi\Impl\MeldImpl.cs" />
-    <Compile Include="Riichi\Impl\RiichiGlobal.cs" />
+    <Compile Include="Riichi\Global.cs" />
     <Compile Include="Riichi\Impl\SaveStateImpl.cs" />
     <Compile Include="Riichi\Impl\TileImpl.cs" />
     <Compile Include="Riichi\Impl\TileCommand.cs" />
-    <Compile Include="Riichi\Impl\TutorialSettings.cs" />
+    <Compile Include="Riichi\Impl\TutorialSettingsImpl.cs" />
     <Compile Include="Riichi\Impl\WinResultsImpl.cs" />
-    <Compile Include="Riichi\Impl\Yaku.cs" />
+    <Compile Include="Riichi\Yaku.cs" />
     <Compile Include="Riichi\Tile.cs" />
+    <Compile Include="Riichi\Types.cs" />
     <Compile Include="Riichi\WinResults.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Riichi\AI\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

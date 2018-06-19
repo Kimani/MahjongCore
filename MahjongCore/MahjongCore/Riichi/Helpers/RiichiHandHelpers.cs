@@ -342,10 +342,10 @@ namespace MahjongCore.Riichi.Helpers
 
         private static int GetNextTileRedVersionSlot(TileType[] sourceTiles, int regularFiveSlot)
         {
-            RiichiGlobal.Assert(regularFiveSlot >= 0);
-            RiichiGlobal.Assert(regularFiveSlot < sourceTiles.Length);
-            RiichiGlobal.Assert(sourceTiles[regularFiveSlot].GetValue() == 5);
-            RiichiGlobal.Assert(!sourceTiles[regularFiveSlot].IsRedDora());
+            Global.Assert(regularFiveSlot >= 0);
+            Global.Assert(regularFiveSlot < sourceTiles.Length);
+            Global.Assert(sourceTiles[regularFiveSlot].GetValue() == 5);
+            Global.Assert(!sourceTiles[regularFiveSlot].IsRedDora());
 
             Suit suit = sourceTiles[regularFiveSlot].GetSuit();
             for (int i = regularFiveSlot + 1; i < sourceTiles.Length; ++i)

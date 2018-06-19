@@ -8,7 +8,7 @@ namespace MahjongCore.Riichi.Evaluator
     {
         public override bool Evaluate(Hand baseHand, bool fRon)
         {
-            RiichiGlobal.Assert(!fRon);
+            Global.Assert(!fRon);
 
             ResetValues();
             Han = -1;

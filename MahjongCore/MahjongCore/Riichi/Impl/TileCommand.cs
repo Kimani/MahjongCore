@@ -37,7 +37,7 @@ namespace MahjongCore.Riichi
 
         public TileCommand(Type t)
         {
-            RiichiGlobal.Assert((t == Type.CallPass) || (t == Type.RonPass) || (t == Type.TsumoPass) || (t == Type.PromotedKan) || (t == Type.ClosedKan));
+            Global.Assert((t == Type.CallPass) || (t == Type.RonPass) || (t == Type.TsumoPass) || (t == Type.PromotedKan) || (t == Type.ClosedKan));
             CommandType = t;
             TilePrimary = new ExtendedTile(TileType.None);
         }
@@ -52,7 +52,7 @@ namespace MahjongCore.Riichi
  
         public void PromotePrimaryTileToRed()
         {
-            RiichiGlobal.Assert(((TilePrimary.Tile.GetValue() == 5) && (CommandType == Type.Tile)), "Promoting a tile to red that isn't a regular 5!!");
+            Global.Assert(((TilePrimary.Tile.GetValue() == 5) && (CommandType == Type.Tile)), "Promoting a tile to red that isn't a regular 5!!");
             TilePrimary = new ExtendedTile(TilePrimary.Tile.GetRedDoraVersion());
         }
 

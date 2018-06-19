@@ -5,81 +5,11 @@ using MahjongCore.Riichi.Attributes;
 using System;
 using System.Collections.Generic;
 
-namespace MahjongCore.Riichi
+namespace MahjongCore.Riichi.Impl
 {
-    #region CameraPosition
-        public enum CameraPosition
-        {
-            [TextValue("default")]         Default,
-            [TextValue("deadwall")]        DeadWall,
-            [TextValue("centerpiece")]     Centerpiece,
-            [TextValue("reachindicator1")] ReachIndicator1,
-            [TextValue("reachindicator2")] ReachIndicator2,
-            [TextValue("reachindicator3")] ReachIndicator3,
-            [TextValue("reachindicator4")] ReachIndicator4,
-            [TextValue("rinshan")]         RinshanTile,
-            [TextValue("newdora")]         NewDoraTile,
-            [TextValue("discards1")]       Discards1,
-            [TextValue("discards2")]       Discards2,
-            [TextValue("discards3")]       Discards3,
-            [TextValue("discards4")]       Discards4,
-            [TextValue("aheadofdeadwall")] AheadOfDeadWall
-        }
-
-        public static class CameraPositionExtensionMethods
-        {
-            public static string GetId(this CameraPosition cp) { return EnumAttributes.GetAttributeValue<TextValue, string>(cp); }
-
-            public static CameraPosition? GetFromId(string id)
-            {
-                CameraPosition? cp = null;
-                foreach (CameraPosition testPos in Enum.GetValues(typeof(CameraPosition)))
-                {
-                    if (testPos.GetId().Equals(id))
-                    {
-                        cp = testPos;
-                        break;
-                    }
-                }
-                return cp;
-            }
-        }
-    #endregion
-
-    #region CameraZoom
-        public enum CameraZoom
-        {
-            [TextValue(null)]     None,
-            [TextValue("normal")] Normal,
-            [TextValue("close")]  Close,
-            [TextValue("far")]    Far
-        }
-
-        public static class CameraZoomExtensionMethods
-        {
-            public static string GetId(this CameraZoom cz) { return EnumAttributes.GetAttributeValue<TextValue, string>(cz); }
-
-            public static CameraZoom? GetFromId(string id)
-            {
-                CameraZoom? cz = null;
-                foreach (CameraZoom testZoom in Enum.GetValues(typeof(CameraZoom)))
-                {
-                    if (id.Equals(testZoom.GetId()))
-                    {
-                        cz = testZoom;
-                        break;
-                    }
-                }
-                return cz;
-            }
-        }
-    #endregion
-
-    public class TutorialSettings
+    internal class ExtraSettings : IExtraSettings
     {
         public List<TileType> RestrictDiscardTiles  { get; set; }
-        public CameraPosition CameraPosition        { get; set; }
-        public CameraZoom     CameraZoom            { get; set; }
         public bool           DisableAnyDiscard     { get; set; }
         public bool           DisableCall           { get; set; }
         public bool           DisableCalling        { get; set; }
@@ -101,8 +31,6 @@ namespace MahjongCore.Riichi
         public TutorialSettings()
         {
             RestrictDiscardTiles  = new List<TileType>();
-            CameraPosition        = CameraPosition.Default;
-            CameraZoom            = CameraZoom.Normal;
             DisableAnyDiscard     = false;
             DisableCall           = false;
             DisableCalling        = false;

@@ -145,7 +145,7 @@ namespace MahjongCore.Riichi
 
         public int GetPoints(Player p)
         {
-            RiichiGlobal.Assert(p.IsPlayer());
+            Global.Assert(p.IsPlayer());
             return (p == Player.Player1) ? FinalPointsPlayer1 :
                    (p == Player.Player2) ? FinalPointsPlayer2 :
                    (p == Player.Player3) ? FinalPointsPlayer3 :
@@ -154,7 +154,7 @@ namespace MahjongCore.Riichi
 
         public float GetScore(Player p)
         {
-            RiichiGlobal.Assert(p.IsPlayer());
+            Global.Assert(p.IsPlayer());
             return (p == Player.Player1) ? FinalScorePlayer1 :
                    (p == Player.Player2) ? FinalScorePlayer2 :
                    (p == Player.Player3) ? FinalScorePlayer3 :

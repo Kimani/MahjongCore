@@ -148,7 +148,7 @@ namespace MahjongCore.Riichi
 
         public static SaveStateImpl LoadFromString(string save)
         {
-            RiichiGlobal.Assert((save != null) && (save.Length > 0));
+            Global.Assert((save != null) && (save.Length > 0));
             SaveStateImpl state = new SaveStateImpl();
 
             if (save.StartsWith(PREFIX_V2)) { state.LoadFromStringV2(save); }
@@ -159,31 +159,31 @@ namespace MahjongCore.Riichi
         private void LoadFromStringV2(string save)
         {
             Queue<string> lines = new Queue<string>(save.Split(null)); // Passing in null splits at any whitespace.
-            RiichiGlobal.Assert(PREFIX_V2.Equals(lines.Dequeue()));
+            Global.Assert(PREFIX_V2.Equals(lines.Dequeue()));
 
             // Get data from the save string.
-            RiichiGlobal.Assert(PlayStateExtentionMethods.TryGetPlayState(lines.Dequeue(), out CurrentState));
-            RiichiGlobal.Assert(ColorExtensionMethods.TryGetColor(lines.Dequeue(), out TileColor));
-            RiichiGlobal.Assert(RoundExtensionMethods.TryGetRound(lines.Dequeue(), out CurrentRound));
-            RiichiGlobal.Assert(bool.TryParse(lines.Dequeue(), out CurrentRoundLapped));
-            RiichiGlobal.Assert(int.TryParse(lines.Dequeue(), out Bonus));
-            RiichiGlobal.Assert(int.TryParse(lines.Dequeue(), out Pool));
+            Global.Assert(PlayStateExtentionMethods.TryGetPlayState(lines.Dequeue(), out CurrentState));
+            Global.Assert(ColorExtensionMethods.TryGetColor(lines.Dequeue(), out TileColor));
+            Global.Assert(RoundExtensionMethods.TryGetRound(lines.Dequeue(), out CurrentRound));
+            Global.Assert(bool.TryParse(lines.Dequeue(), out CurrentRoundLapped));
+            Global.Assert(int.TryParse(lines.Dequeue(), out Bonus));
+            Global.Assert(int.TryParse(lines.Dequeue(), out Pool));
 
             Player startingDealer;
-            RiichiGlobal.Assert(PlayerExtensionMethods.TryGetPlayer(lines.Dequeue(), out startingDealer));
-            RiichiGlobal.Assert(PlayerExtensionMethods.TryGetPlayer(lines.Dequeue(), out CurrentPlayer));
-            RiichiGlobal.Assert(PlayerExtensionMethods.TryGetPlayer(lines.Dequeue(), out PlayerRecentOpenKan));
-            RiichiGlobal.Assert(int.TryParse(lines.Dequeue(), out Roll));
-            RiichiGlobal.Assert(bool.TryParse(lines.Dequeue(), out PlayerDeadWallPick));
+            Global.Assert(PlayerExtensionMethods.TryGetPlayer(lines.Dequeue(), out startingDealer));
+            Global.Assert(PlayerExtensionMethods.TryGetPlayer(lines.Dequeue(), out CurrentPlayer));
+            Global.Assert(PlayerExtensionMethods.TryGetPlayer(lines.Dequeue(), out PlayerRecentOpenKan));
+            Global.Assert(int.TryParse(lines.Dequeue(), out Roll));
+            Global.Assert(bool.TryParse(lines.Dequeue(), out PlayerDeadWallPick));
             GameTypeFlags = lines.Dequeue();
 
             int pickedTileCount;
-            RiichiGlobal.Assert(int.TryParse(lines.Dequeue(), out pickedTileCount));
-            RiichiGlobal.Assert(GameActionExtentionMethods.TryGetGameAction(lines.Dequeue(), out PrevAction));
-            RiichiGlobal.Assert(GameActionExtentionMethods.TryGetGameAction(lines.Dequeue(), out NextAction));
+            Global.Assert(int.TryParse(lines.Dequeue(), out pickedTileCount));
+            Global.Assert(GameActionExtentionMethods.TryGetGameAction(lines.Dequeue(), out PrevAction));
+            Global.Assert(GameActionExtentionMethods.TryGetGameAction(lines.Dequeue(), out NextAction));
 
             string tileWallString = lines.Dequeue();
-            RiichiGlobal.Assert(tileWallString.Length == (2 * 136)); // 136 tiles, 2-bytes per character.
+            Global.Assert(tileWallString.Length == (2 * 136)); // 136 tiles, 2-bytes per character.
             for (int i = 0; i < 136; ++i)
             {
                 Wall[i] = TileTypeExtensionMethods.GetTile(tileWallString.Substring((i * 2), 2));
@@ -206,17 +206,17 @@ namespace MahjongCore.Riichi
                         }
 
                         string nameEndToken = lines.Dequeue();
-                        RiichiGlobal.Assert(MULTI_STRING_NAME_END.Equals(nameEndToken));
+                        Global.Assert(MULTI_STRING_NAME_END.Equals(nameEndToken));
                     }
                 }
 
-                RiichiGlobal.Assert(int.TryParse(lines.Dequeue(), out p.Score));
-                RiichiGlobal.Assert(int.TryParse(lines.Dequeue(), out p.ConsecutiveWinStreak));
-                RiichiGlobal.Assert(bool.TryParse(lines.Dequeue(), out p.Yakitori));
+                Global.Assert(int.TryParse(lines.Dequeue(), out p.Score));
+                Global.Assert(int.TryParse(lines.Dequeue(), out p.ConsecutiveWinStreak));
+                Global.Assert(bool.TryParse(lines.Dequeue(), out p.Yakitori));
 
                 // Get the active hand.
                 string activeHandString = lines.Dequeue();
-                RiichiGlobal.Assert(activeHandString.Length == (2 * 13)); // 13 tiles, 2-bytes per character.
+                Global.Assert(activeHandString.Length == (2 * 13)); // 13 tiles, 2-bytes per character.
                 for (int i = 0; i < 13; ++i)
                 {
                     p.ActiveHand[i] = TileTypeExtensionMethods.GetTile(activeHandString.Substring((i * 2), 2));
@@ -224,26 +224,26 @@ namespace MahjongCore.Riichi
 
                 // Get open melds.
                 int openMeldCount;
-                RiichiGlobal.Assert(int.TryParse(lines.Dequeue(), out openMeldCount));
+                Global.Assert(int.TryParse(lines.Dequeue(), out openMeldCount));
                 for (int i = 0; i < openMeldCount; ++i)
                 {
                     MeldState meldState;
                     ExtendedTile et1, et2, et3, et4;
-                    RiichiGlobal.Assert(MeldStateExtensionMethods.TryGetMeldState(lines.Dequeue(), out meldState));
-                    RiichiGlobal.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et1));
-                    RiichiGlobal.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et2));
-                    RiichiGlobal.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et3));
-                    RiichiGlobal.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et4));
+                    Global.Assert(MeldStateExtensionMethods.TryGetMeldState(lines.Dequeue(), out meldState));
+                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et1));
+                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et2));
+                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et3));
+                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et4));
                     p.Melds.Add(new Meld(meldState, et1, et2, et3, et4));
                 }
 
                 // Get discards.
                 int discardCount;
-                RiichiGlobal.Assert(int.TryParse(lines.Dequeue(), out discardCount));
+                Global.Assert(int.TryParse(lines.Dequeue(), out discardCount));
                 for (int i = 0; i < discardCount; ++i)
                 {
                     ExtendedTile et;
-                    RiichiGlobal.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et));
+                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et));
                     p.Discards.Add(et);
                 }
             }
@@ -251,21 +251,21 @@ namespace MahjongCore.Riichi
             // Get custom rules.
             CustomSettings = new GameSettings();
             bool hasCustomRules;
-            RiichiGlobal.Assert(bool.TryParse(lines.Dequeue(), out hasCustomRules));
+            Global.Assert(bool.TryParse(lines.Dequeue(), out hasCustomRules));
 
             if (hasCustomRules)
             {
-                uint rules1;        RiichiGlobal.Assert(uint.TryParse(lines.Dequeue(), out rules1));                                    CustomSettings.SetSettingField(rules1, CustomBitfields.CustomGameRules1);
-                uint rules2;        RiichiGlobal.Assert(uint.TryParse(lines.Dequeue(), out rules2));                                    CustomSettings.SetSettingField(rules2, CustomBitfields.CustomGameRules2);
-                uint yaku1;         RiichiGlobal.Assert(uint.TryParse(lines.Dequeue(), out yaku1));                                     CustomSettings.SetSettingField(yaku1,  CustomBitfields.CustomGameYaku1);
-                uint yaku2;         RiichiGlobal.Assert(uint.TryParse(lines.Dequeue(), out yaku2));                                     CustomSettings.SetSettingField(yaku2,  CustomBitfields.CustomGameYaku2);
-                uint yaku3;         RiichiGlobal.Assert(uint.TryParse(lines.Dequeue(), out yaku3));                                     CustomSettings.SetSettingField(yaku3,  CustomBitfields.CustomGameYaku3);
-                int victoryScore;   RiichiGlobal.Assert(int.TryParse(lines.Dequeue(), out victoryScore));                               CustomSettings.SetSetting(GameOption.VictoryPoints, victoryScore);
-                Uma uma;            RiichiGlobal.Assert(UmaExtensionMethods.TryGetUma(lines.Dequeue(), out uma));                       CustomSettings.SetSetting(GameOption.UmaOption, uma);
-                RedDora redDora;    RiichiGlobal.Assert(RedDoraExtensionMethods.TryGetRedDora(lines.Dequeue(), out redDora));           CustomSettings.SetSetting(GameOption.RedDoraOption, redDora);
-                Oka oka;            RiichiGlobal.Assert(OkaExtensionMethods.TryGetOka(lines.Dequeue(), out oka));                       CustomSettings.SetSetting(GameOption.OkaOption, oka);
-                IisouSanjunHan ish; RiichiGlobal.Assert(IisouSanjunHanExtensionMethods.TryGetIisouSanjunHan(lines.Dequeue(), out ish)); CustomSettings.SetSetting(GameOption.IisouSanjunHanOption, ish);
-                Yakitori yakitori;  RiichiGlobal.Assert(YakitoriExtensionMethods.TryGetYakitori(lines.Dequeue(), out yakitori));        CustomSettings.SetSetting(GameOption.YakitoriOption, yakitori);
+                uint rules1;        Global.Assert(uint.TryParse(lines.Dequeue(), out rules1));                                    CustomSettings.SetSettingField(rules1, CustomBitfields.CustomGameRules1);
+                uint rules2;        Global.Assert(uint.TryParse(lines.Dequeue(), out rules2));                                    CustomSettings.SetSettingField(rules2, CustomBitfields.CustomGameRules2);
+                uint yaku1;         Global.Assert(uint.TryParse(lines.Dequeue(), out yaku1));                                     CustomSettings.SetSettingField(yaku1,  CustomBitfields.CustomGameYaku1);
+                uint yaku2;         Global.Assert(uint.TryParse(lines.Dequeue(), out yaku2));                                     CustomSettings.SetSettingField(yaku2,  CustomBitfields.CustomGameYaku2);
+                uint yaku3;         Global.Assert(uint.TryParse(lines.Dequeue(), out yaku3));                                     CustomSettings.SetSettingField(yaku3,  CustomBitfields.CustomGameYaku3);
+                int victoryScore;   Global.Assert(int.TryParse(lines.Dequeue(), out victoryScore));                               CustomSettings.SetSetting(GameOption.VictoryPoints, victoryScore);
+                Uma uma;            Global.Assert(UmaExtensionMethods.TryGetUma(lines.Dequeue(), out uma));                       CustomSettings.SetSetting(GameOption.UmaOption, uma);
+                RedDora redDora;    Global.Assert(RedDoraExtensionMethods.TryGetRedDora(lines.Dequeue(), out redDora));           CustomSettings.SetSetting(GameOption.RedDoraOption, redDora);
+                Oka oka;            Global.Assert(OkaExtensionMethods.TryGetOka(lines.Dequeue(), out oka));                       CustomSettings.SetSetting(GameOption.OkaOption, oka);
+                IisouSanjunHan ish; Global.Assert(IisouSanjunHanExtensionMethods.TryGetIisouSanjunHan(lines.Dequeue(), out ish)); CustomSettings.SetSetting(GameOption.IisouSanjunHanOption, ish);
+                Yakitori yakitori;  Global.Assert(YakitoriExtensionMethods.TryGetYakitori(lines.Dequeue(), out yakitori));        CustomSettings.SetSetting(GameOption.YakitoriOption, yakitori);
             }
 
             // Extrapolate other data.
@@ -301,7 +301,7 @@ namespace MahjongCore.Riichi
 
         private void LoadFromStringV1(string state)
         {
-            RiichiGlobal.Assert(false, "V1 String Not Supported.");
+            Global.Assert(false, "V1 String Not Supported.");
         }
 
         private void LoadFromState(GameStateImpl state)
@@ -367,7 +367,7 @@ namespace MahjongCore.Riichi
                     p.DrawsAndKans.Add(tc);
                     sb.Append(tc.TilePrimary.Tile + ", ");
                 }
-                RiichiGlobal.Log(sb.ToString());
+                Global.Log(sb.ToString());
             }
 
             // Copy over DiscardPlayerList.
@@ -415,8 +415,8 @@ namespace MahjongCore.Riichi
             }
             else
             {
-                RiichiGlobal.Assert(!flags.Contains(' '));
-                RiichiGlobal.Assert(!flags.Contains('\n'));
+                Global.Assert(!flags.Contains(' '));
+                Global.Assert(!flags.Contains('\n'));
             }
             sb.AppendWithSpace(flags);
 

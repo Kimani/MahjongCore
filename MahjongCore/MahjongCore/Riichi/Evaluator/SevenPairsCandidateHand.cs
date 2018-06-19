@@ -87,7 +87,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
 
             // Check for red dora. Will need to look at base hand for this, since our representation only shows one of the tiles of the pair.
-            RiichiGlobal.Assert(hand.ActiveTileCount == TileHelpers.HAND_SIZE);
+            Global.Assert(hand.ActiveTileCount == TileHelpers.HAND_SIZE);
             foreach (TileType tt in hand.ActiveHand)
             {
                 if (tt.IsRedDora())
@@ -107,7 +107,7 @@ namespace MahjongCore.Riichi.Evaluator
         public override void ExpandAndInsert(List<CandidateHand> chBucket, Hand hand)
         {
             TileType winningTile = hand.ActiveHand[TileHelpers.HAND_SIZE - 1];
-            RiichiGlobal.Assert(winningTile.IsTile());
+            Global.Assert(winningTile.IsTile());
 
             for (int i = 0; i < 7; ++i)
             {

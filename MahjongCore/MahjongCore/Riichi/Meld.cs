@@ -2,6 +2,7 @@
 
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
+using MahjongCore.Riichi.Impl;
 using System;
 
 namespace MahjongCore.Riichi
@@ -58,46 +59,166 @@ namespace MahjongCore.Riichi
 
     public interface IMeld : ICloneable, IComparable<IMeld>
     {
-        MeldState       State             { get; }
-        CalledDirection Direction         { get; }
-        ITile[]         Tiles             { get; }
-        TileType        CalledTile        { get; }
-        int             RedDoraCount      { get; }
+        Player          Owner        { get; }
+        Player          Target       { get; }
+        MeldState       State        { get; }
+        CalledDirection Direction    { get; }
+        ITile[]         Tiles        { get; }
+        ITile           CalledTile   { get; }
+        int             RedDoraCount { get; }
 
         void Promote(TileType kanTile, int kanTileSlot);
     }
 
     public static class MeldFactory
     {
-        public static IMeld BuildChii(Player callee, TileType calledTile, TileType tileLo, TileType tileHi, int calledSlot, int slotLo, int slotHi)
+        public static IMeld BuildChii(Player target, TileType tileCalled, TileType tileLo, TileType tileHi, int slotLo, int slotHi)
         {
+            if (Global.CanAssert)
+            {
+                Global.Assert(target.IsPlayer());
+                Global.Assert(tileCalled.IsTile());
+                Global.Assert(tileCalled.GetSuit() == tileLo.GetSuit());
+                Global.Assert(tileCalled.GetSuit() == tileHi.GetSuit());
 
+                int loValue = tileLo.GetValue();
+                int hiValue = tileHi.GetValue();
+                int calledValue = tileCalled.GetValue();
+                Global.Assert(loValue < hiValue);
+                Global.Assert(((loValue + 1) == hiValue) || ((loValue + 2) == hiValue));
+                Global.Assert(((loValue + 2) == hiValue) ? (calledValue == (loValue + 1)) : 
+                                                           ((calledValue == (loValue - 1)) || calledValue == (hiValue + 1)));
+            }
+
+            MeldImpl meld = new MeldImpl();
+            meld.Owner = target.GetNext();
+            meld.Target = target;
+            meld.State = MeldState.Chii;
+            meld.Direction = CalledDirection.Left;
+
+            TileImpl tile1 = meld.GetTile(0);
+            tile1.Type = tileCalled;
+            tile1.Location = Location.Call;
+            tile1.Ancillary = target;
+            tile1.Called = true;
+
+            TileImpl tile2 = meld.GetTile(1);
+            tile2.Type = tileLo;
+            tile2.Location = Location.Call;
+            tile2.Ancillary = meld.Owner;
+            tile2.Slot = slotLo;
+
+            TileImpl tile3 = meld.GetTile(2);
+            tile3.Type = tileHi;
+            tile3.Location = Location.Call;
+            tile3.Ancillary = meld.Owner;
+            tile3.Slot = slotHi;
+            return meld;
         }
 
-        public static IMeld BuildPon(Player caller,
-                                     Player callee,
-                                     TileType calledTile,
+        public static IMeld BuildPon(Player target,
+                                     Player caller,
+                                     TileType tileCalled,
                                      TileType tileA,
                                      TileType tileB,
-                                     int calledSlot,
                                      int slotA,
                                      int slotB)
         {
+            if (Global.CanAssert)
+            {
+                Global.Assert(target.IsPlayer());
+                Global.Assert(caller.IsPlayer());
+                Global.Assert(target != caller);
+                Global.Assert(tileCalled.IsTile());
+                Global.Assert(tileCalled.GetValue() == tileA.GetValue());
+                Global.Assert(tileCalled.GetValue() == tileB.GetValue());
+                Global.Assert(tileCalled.GetSuit() == tileA.GetSuit());
+                Global.Assert(tileCalled.GetSuit() == tileB.GetSuit());
+            }
 
+            MeldImpl meld = new MeldImpl();
+            meld.Owner = caller;
+            meld.Target = target;
+            meld.State = MeldState.Pon;
+            meld.Direction = caller.GetTargetPlayerDirection(target);
+
+            TileImpl tileImplCalled, tileImplA, tileImplB;
+            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.GetTile(0); tileImplA = meld.GetTile(1); tileImplB = meld.GetTile(2); }
+            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.GetTile(1); tileImplA = meld.GetTile(0); tileImplB = meld.GetTile(2); }
+            else                                               { tileImplCalled = meld.GetTile(2); tileImplA = meld.GetTile(0); tileImplB = meld.GetTile(1); }
+
+            tileImplCalled.Type = tileCalled;
+            tileImplCalled.Location = Location.Call;
+            tileImplCalled.Ancillary = target;
+            tileImplCalled.Called = true;
+
+            tileImplA.Type = tileA;
+            tileImplA.Location = Location.Call;
+            tileImplA.Ancillary = caller;
+            tileImplA.Slot = slotA;
+
+            tileImplB.Type = tileB;
+            tileImplB.Location = Location.Call;
+            tileImplB.Ancillary = caller;
+            tileImplB.Slot = slotB;
+            return meld;
         }
 
-        public static IMeld BuildOpenKan(Player caller,
-                                         Player callee,
-                                         TileType calledTile,
+        public static IMeld BuildOpenKan(Player target,
+                                         Player caller,
+                                         TileType tileCalled,
                                          TileType tileA,
                                          TileType tileB,
                                          TileType tileC,
-                                         int calledSlot,
                                          int slotA,
                                          int slotB,
                                          int slotC)
         {
+            if (Global.CanAssert)
+            {
+                Global.Assert(target.IsPlayer());
+                Global.Assert(caller.IsPlayer());
+                Global.Assert(target != caller);
+                Global.Assert(tileCalled.IsTile());
+                Global.Assert(tileCalled.GetValue() == tileA.GetValue());
+                Global.Assert(tileCalled.GetValue() == tileB.GetValue());
+                Global.Assert(tileCalled.GetValue() == tileC.GetValue());
+                Global.Assert(tileCalled.GetSuit() == tileA.GetSuit());
+                Global.Assert(tileCalled.GetSuit() == tileB.GetSuit());
+                Global.Assert(tileCalled.GetSuit() == tileC.GetSuit());
+            }
 
+            MeldImpl meld = new MeldImpl();
+            meld.Owner = caller;
+            meld.Target = target;
+            meld.State = MeldState.KanOpen;
+            meld.Direction = caller.GetTargetPlayerDirection(target);
+
+            TileImpl tileImplCalled, tileImplA, tileImplB, tileImplC;
+            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.GetTile(0); tileImplA = meld.GetTile(1); tileImplB = meld.GetTile(2); tileImplC = meld.GetTile(3); }
+            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.GetTile(1); tileImplA = meld.GetTile(0); tileImplB = meld.GetTile(2); tileImplC = meld.GetTile(3); }
+            else                                               { tileImplCalled = meld.GetTile(3); tileImplA = meld.GetTile(0); tileImplB = meld.GetTile(1); tileImplC = meld.GetTile(2); }
+
+            tileImplCalled.Type = tileCalled;
+            tileImplCalled.Location = Location.Call;
+            tileImplCalled.Ancillary = target;
+            tileImplCalled.Called = true;
+
+            tileImplA.Type = tileA;
+            tileImplA.Location = Location.Call;
+            tileImplA.Ancillary = caller;
+            tileImplA.Slot = slotA;
+
+            tileImplB.Type = tileB;
+            tileImplB.Location = Location.Call;
+            tileImplB.Ancillary = caller;
+            tileImplB.Slot = slotB;
+
+            tileImplC.Type = tileC;
+            tileImplC.Location = Location.Call;
+            tileImplC.Ancillary = caller;
+            tileImplC.Slot = slotC;
+            return meld;
         }
 
         public static IMeld BuildClosedKan(Player caller,
@@ -110,7 +231,46 @@ namespace MahjongCore.Riichi
                                            int slotC,
                                            int slotD)
         {
+            if (Global.CanAssert)
+            {
+                Global.Assert(caller.IsPlayer());
+                Global.Assert(tileA.IsTile());
+                Global.Assert(tileA.GetValue() == tileB.GetValue());
+                Global.Assert(tileA.GetValue() == tileC.GetValue());
+                Global.Assert(tileA.GetValue() == tileD.GetValue());
+                Global.Assert(tileA.GetSuit() == tileB.GetSuit());
+                Global.Assert(tileA.GetSuit() == tileC.GetSuit());
+                Global.Assert(tileA.GetSuit() == tileD.GetSuit());
+            }
 
+            MeldImpl meld = new MeldImpl();
+            meld.Owner = caller;
+            meld.State = MeldState.KanConcealed;
+
+            TileImpl tileImplA = meld.GetTile(0);
+            tileImplA.Type = tileA;
+            tileImplA.Location = Location.Call;
+            tileImplA.Ancillary = caller;
+            tileImplA.Slot = slotA;
+
+            TileImpl tileImplB = meld.GetTile(1);
+            tileImplB.Type = tileB;
+            tileImplB.Location = Location.Call;
+            tileImplB.Ancillary = caller;
+            tileImplB.Slot = slotB;
+
+            TileImpl tileImplC = meld.GetTile(2);
+            tileImplC.Type = tileC;
+            tileImplC.Location = Location.Call;
+            tileImplC.Ancillary = caller;
+            tileImplC.Slot = slotC;
+
+            TileImpl tileImplD = meld.GetTile(3);
+            tileImplD.Type = tileD;
+            tileImplD.Location = Location.Call;
+            tileImplD.Ancillary = caller;
+            tileImplD.Slot = slotD;
+            return meld;
         }
     }
 }

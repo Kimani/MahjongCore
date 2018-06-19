@@ -54,7 +54,7 @@ namespace MahjongCore.Riichi
 
         public void SetPlayerScore(Player p, int score)
         {
-            RiichiGlobal.Assert(p.IsPlayer());
+            Global.Assert(p.IsPlayer());
             if      (p == Player.Player1) { Player1Delta = score; }
             else if (p == Player.Player2) { Player2Delta = score; }
             else if (p == Player.Player3) { Player3Delta = score; }
@@ -63,7 +63,7 @@ namespace MahjongCore.Riichi
 
         public void SetPlayerPool(Player p, int pool)
         {
-            RiichiGlobal.Assert(p.IsPlayer());
+            Global.Assert(p.IsPlayer());
             if      (p == Player.Player1) { Player1PoolDelta = pool; }
             else if (p == Player.Player2) { Player2PoolDelta = pool; }
             else if (p == Player.Player3) { Player3PoolDelta = pool; }

@@ -57,7 +57,7 @@ namespace MahjongCore.Riichi.Helpers
 
         public static TileType[] GetRandomBoard(TileType[] existingArray, RedDora redDoraSetting)
         {
-            RiichiGlobal.Assert((existingArray == null) || (existingArray.Length == TOTAL_TILE_COUNT));
+            Global.Assert((existingArray == null) || (existingArray.Length == TOTAL_TILE_COUNT));
             TileType[] targetArray = (existingArray != null) ? existingArray : new TileType[TOTAL_TILE_COUNT];
 
             // Build a list with all the tiles in it. One red dora for each suit.
@@ -84,14 +84,14 @@ namespace MahjongCore.Riichi.Helpers
             // Randomize board by picking a random tiles out of TileSource until it is depleted.
             for (int i = 0; i < 136; ++i)
             {
-                int slot = RiichiGlobal.RandomRange(0, (136 - i));
+                int slot = Global.RandomRange(0, (136 - i));
                 TileType pickedTile = TileSource[slot];
                 TileSource[slot] = TileSource[136 - i - 1];
 
                 targetArray[i] = pickedTile;
             }
 
-            if (RiichiGlobal.AssertHandler != null)
+            if (Global.AssertHandler != null)
             {
                 bool passed = true;
                 for (int i = 0; i <= 36; ++i)
@@ -115,9 +115,9 @@ namespace MahjongCore.Riichi.Helpers
                             ++seen;
                         }
                     }
-                    RiichiGlobal.Assert(seen == count);
+                    Global.Assert(seen == count);
                 }
-                RiichiGlobal.Assert(passed);
+                Global.Assert(passed);
             }
             return targetArray;
         }

@@ -2,7 +2,6 @@
 
 using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
-using MahjongCore.Riichi.AI;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Helpers;
 using System;
@@ -10,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace MahjongCore.Riichi
+namespace MahjongCore.Riichi.Impl
 {
     #region GameAction
         internal enum GameAction
@@ -42,7 +41,6 @@ namespace MahjongCore.Riichi
 
     internal class GameStateImpl : IGameState
     {
-        public TileColor        TileColor          { get; private set; }
         public TileType[]       Wall               { get; private set; } = new TileType[TileHelpers.TOTAL_TILE_COUNT];
         public TileType[]       DoraIndicators     { get; private set; } = new TileType[5];
         public TileType[]       UraDoraIndicators  { get; private set; } = new TileType[5];
@@ -285,7 +283,7 @@ namespace MahjongCore.Riichi
             }
             else
             {
-                RiichiGlobal.Assert("Post discard decision failed validation!");
+                Global.Assert("Post discard decision failed validation!");
             }
         }
 
@@ -300,7 +298,7 @@ namespace MahjongCore.Riichi
             else if ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.ClosedKan))         { GetHand(CurrentPlayer).Kan(decision.Slot, false); }
             else if ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.PromotedKan))       { GetHand(CurrentPlayer).Kan(decision.Slot, true); }
             else if ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.AbortiveDraw))      { GetHand(CurrentPlayer).AbortiveDraw(decision.Slot, (decision.Slot != -1)); }
-            else    { RiichiGlobal.Assert(false, "Action and Play State do not match! Action: " + decision.DecisionToMake + " State: " + CurrentState); }
+            else    { Global.Assert(false, "Action and Play State do not match! Action: " + decision.DecisionToMake + " State: " + CurrentState); }
         }
 
         public void RewindPlayState()
@@ -316,7 +314,7 @@ namespace MahjongCore.Riichi
 
                     // Now that we're at a previous mode, execute a handler. This might not exist, that is fine.
                     var handler = _RewindPostModeChangeHandlers[CurrentState];
-                    RiichiGlobal.Log("is there a post modechange handler for: " + CurrentState + " ? ---> " + handler);
+                    Global.Log("is there a post modechange handler for: " + CurrentState + " ? ---> " + handler);
 
                     _RewindPostModeChangeHandlers[CurrentState]?.Invoke();
                 }
@@ -327,7 +325,7 @@ namespace MahjongCore.Riichi
             }
             catch (Exception e)
             {
-                RiichiGlobal.Assert(e.Message + "\n" + e.StackTrace);
+                Global.Assert(e.Message + "\n" + e.StackTrace);
             }
         }
 
@@ -391,7 +389,7 @@ namespace MahjongCore.Riichi
 
         public void ExecutePostBreak_RandomizingBreak()
         {
-            Roll                     = TutorialSettings.OverrideDiceRoll ? TutorialSettings.OverrideDiceRollValue : (RiichiGlobal.RandomRange(1, 7) + RiichiGlobal.RandomRange(1, 7));
+            Roll                     = TutorialSettings.OverrideDiceRoll ? TutorialSettings.OverrideDiceRollValue : (Global.RandomRange(1, 7) + Global.RandomRange(1, 7));
             Offset                   = GameStateHelpers.GetOffset(CurrentDealer, Roll);
             TilesRemaining           = 122;
             DoraCount                = 0;
@@ -645,7 +643,7 @@ namespace MahjongCore.Riichi
             }
             else
             {
-                RiichiGlobal.Assert(false);
+                Global.Assert(false);
             }
 
             // Set the furiten flags on all the players who didn't just move.
@@ -772,7 +770,7 @@ namespace MahjongCore.Riichi
             }
             else if (NextAction == GameAction.Ron)
             {
-                RiichiGlobal.Assert(_NextActionPlayerTarget != NextActionPlayer); // NextActionPlayer rons on _NextActionPlayerTarget.
+                Global.Assert(_NextActionPlayerTarget != NextActionPlayer); // NextActionPlayer rons on _NextActionPlayerTarget.
                 Sink.HandPerformedRon(NextActionPlayer, _WinResultCache);
             }
             else if (NextAction == GameAction.AbortiveDraw)
@@ -781,7 +779,7 @@ namespace MahjongCore.Riichi
             }
             else
             {
-                RiichiGlobal.Assert(NextAction == GameAction.Nothing);
+                Global.Assert(NextAction == GameAction.Nothing);
                 Sink.ExhaustiveDraw(_WinResultCache);
             }
         }
@@ -942,7 +940,7 @@ namespace MahjongCore.Riichi
             else
             {
                 // NextAction is PromotedKan or ClosedKan.
-                RiichiGlobal.Assert((NextAction == GameAction.PromotedKan) || (NextAction == GameAction.ClosedKan));
+                Global.Assert((NextAction == GameAction.PromotedKan) || (NextAction == GameAction.ClosedKan));
 
                 // We will use this to see if we can ron on the chankan in the case of a promoted can or ron
                 // with a kokushi in the case of a closed kan. Set PrevAction to the type of kan.
@@ -981,7 +979,7 @@ namespace MahjongCore.Riichi
             }
             else
             {
-                RiichiGlobal.Assert(false);
+                Global.Assert(false);
             }
         }
 
@@ -1031,13 +1029,13 @@ namespace MahjongCore.Riichi
             }
             else
             {
-                RiichiGlobal.Assert("Unexpected state for rewinding!");
+                Global.Assert("Unexpected state for rewinding!");
             }
         }
 
         public void ExecuteRewindModeChange_DecideMove()
         {
-            RiichiGlobal.Assert((_RewindAction != GameAction.Nothing), "Expected _RewindAction to not be Nothing, but it's: " + _RewindAction);
+            Global.Assert((_RewindAction != GameAction.Nothing), "Expected _RewindAction to not be Nothing, but it's: " + _RewindAction);
             CurrentState = (_RewindAction == GameAction.OpenKan) || // RewindPlayerDrawOrCall.RewindAction....
                            (_RewindAction == GameAction.Chii)    ||
                            (_RewindAction == GameAction.Pon)            ? PlayState.PerformDecision :
@@ -1101,17 +1099,17 @@ namespace MahjongCore.Riichi
             Hand hand = GetHand(CurrentPlayer);
             TileCommand tc = hand.PeekLastDrawKan();
 
-            RiichiGlobal.Log("draw to rewind: " + tc.TilePrimary.Tile + " reaminig drawnskan count " + hand.DrawsAndKans.Count);
-            RiichiGlobal.Assert(tc.CommandType == TileCommand.Type.Tile, "RewindPMC_PickTile, expected tile, found: " + tc.CommandType);
+            Global.Log("draw to rewind: " + tc.TilePrimary.Tile + " reaminig drawnskan count " + hand.DrawsAndKans.Count);
+            Global.Assert(tc.CommandType == TileCommand.Type.Tile, "RewindPMC_PickTile, expected tile, found: " + tc.CommandType);
 
             bool succeeded = hand.RewindAddTile(tc.TilePrimary.Tile);
-            RiichiGlobal.Assert(succeeded, "Failed to rewind add tile!! Tile: " + tc.TilePrimary.Tile);
+            Global.Assert(succeeded, "Failed to rewind add tile!! Tile: " + tc.TilePrimary.Tile);
 
             // Increase the number of tiles remaining. Ensure that the tiles match.
             TilesRemaining++;
             int slot = TileHelpers.ClampTile(Offset + (122 - TilesRemaining));
             TileType wallTile = Wall[slot];
-            RiichiGlobal.Assert(wallTile.IsEqual(tc.TilePrimary.Tile), "Tile that was rewinded isn't the same tile from the wall! rewind tile: " + tc.TilePrimary.Tile + " wall tile: " + wallTile + " at slot: " + slot);
+            Global.Assert(wallTile.IsEqual(tc.TilePrimary.Tile), "Tile that was rewinded isn't the same tile from the wall! rewind tile: " + tc.TilePrimary.Tile + " wall tile: " + wallTile + " at slot: " + slot);
 
             // Notify the sink that this happened.
             Sink.DrawUndone(CurrentPlayer, tc.TilePrimary.Tile);
@@ -1175,7 +1173,7 @@ namespace MahjongCore.Riichi
         private int PickIntoPlayerHand(Player p, TileSource source)
         {
             // Get the tile from the wall to pick from.
-            RiichiGlobal.Assert(source != TileSource.Call);
+            Global.Assert(source != TileSource.Call);
             int tileNumber;
             if (source == TileSource.ReplacementTileDraw)
             {
@@ -1193,7 +1191,7 @@ namespace MahjongCore.Riichi
             }
 
             // Move the tile into the target player's hand.
-            RiichiGlobal.Log("PickIntoPlayerHand! Player: " + p + " Slot: " + tileNumber + " tile: " + Wall[tileNumber]);
+            Global.Log("PickIntoPlayerHand! Player: " + p + " Slot: " + tileNumber + " tile: " + Wall[tileNumber]);
 
             GetHand(p).AddTile(Wall[tileNumber]);
             return tileNumber;
@@ -1201,7 +1199,7 @@ namespace MahjongCore.Riichi
 
         public Hand GetHandZeroIndexed(int slot)
         {
-            RiichiGlobal.Assert((slot >= 0) && (slot <= 3));
+            Global.Assert((slot >= 0) && (slot <= 3));
             return (slot == 0) ? Player1Hand :
                    (slot == 1) ? Player2Hand :
                    (slot == 2) ? Player3Hand :
@@ -1210,7 +1208,7 @@ namespace MahjongCore.Riichi
 
         public List<ExtendedTile> GetDiscardsZeroIndexed(int slot)
         {
-            RiichiGlobal.Assert((slot >= 0) && (slot <= 3));
+            Global.Assert((slot >= 0) && (slot <= 3));
             return (slot == 0) ? _Player1Discards :
                    (slot == 1) ? _Player2Discards :
                    (slot == 2) ? _Player3Discards :
@@ -1219,7 +1217,7 @@ namespace MahjongCore.Riichi
 
         private GameAction GetNextPlayerActionZeroIndexed(int slot)
         {
-            RiichiGlobal.Assert((slot >= 0) && (slot <= 3));
+            Global.Assert((slot >= 0) && (slot <= 3));
             return (slot == 0) ? _NextAction1 :
                    (slot == 1) ? _NextAction2 :
                    (slot == 2) ? _NextAction3 :
@@ -1309,7 +1307,7 @@ namespace MahjongCore.Riichi
 
         public void HandPerformedKan(Player p, int handSlot, TileType tile, KanType type)
         {
-            RiichiGlobal.Assert(p == CurrentPlayer);
+            Global.Assert(p == CurrentPlayer);
 
             NextActionTile = tile;
             NextActionSlot = handSlot;
@@ -1353,7 +1351,7 @@ namespace MahjongCore.Riichi
             Hand hand = GetHand(CurrentPlayer);
             if (Settings.GetSetting<bool>(GameOption.Buttobi))
             {
-                RiichiGlobal.Assert((hand.Score >= 1000), "Tried to reach with less than 1000 points!");
+                Global.Assert((hand.Score >= 1000), "Tried to reach with less than 1000 points!");
             }
             hand.Score -= 1000;
 

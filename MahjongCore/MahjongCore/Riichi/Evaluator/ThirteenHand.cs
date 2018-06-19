@@ -18,7 +18,7 @@ namespace MahjongCore.Riichi.Evaluator
 
         public override bool Evaluate(Hand hand, bool fRon)
         {
-            RiichiGlobal.Assert(Type == Riichi.Yaku.KokushiMusou || !fRon); // We're either kokushi musou or if we're shiisanbudou, we're tsumo. Should have been enforced by Evaluate_Shiisanbudou.
+            Global.Assert(Type == Riichi.Yaku.KokushiMusou || !fRon); // We're either kokushi musou or if we're shiisanbudou, we're tsumo. Should have been enforced by Evaluate_Shiisanbudou.
 
             ResetValues();
             Han += EvaluateYakuList(hand, fRon, new Yaku[] { Riichi.Yaku.KokushiMusou,
