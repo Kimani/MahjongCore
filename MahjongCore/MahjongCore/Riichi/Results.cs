@@ -37,7 +37,7 @@ namespace MahjongCore.Riichi
         int            Player2PoolDelta { get; }
         int            Player3PoolDelta { get; }
         int            Player4PoolDelta { get; }
-        bool           Limit            { get; }
+        bool           Limit            { get; } // True if mangan or better.
     }
 
     public interface IGameResults

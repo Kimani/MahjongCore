@@ -286,7 +286,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
         }
 
-        public static void GetScores(GameSettings settings, int points1st, int points2nd, int points3rd, int points4th, float[] scores)
+        public static void GetScores(IGameSettings settings, int points1st, int points2nd, int points3rd, int points4th, float[] scores)
         {
             float startingScore = (float)settings.GetSetting<int>(GameOption.StartingPoints) / 1000.0f;
             float rawScore1 = (((float)points1st) / 1000.0f) - startingScore;

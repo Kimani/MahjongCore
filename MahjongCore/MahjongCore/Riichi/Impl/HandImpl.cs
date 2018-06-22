@@ -1,32 +1,121 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using System;
-using System.Collections.Generic;
 using MahjongCore.Riichi.Evaluator;
 using MahjongCore.Riichi.Helpers;
 using MahjongCore.Common;
+using MahjongCore.Riichi.Impl;
+using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace MahjongCore.Riichi
 {
-    public class Hand
+    public class HandImpl : IHand
     {
-        public Player             Player                { get; private set; }
-        public int                Score                 { get; set; }
-        public GameState          Parent                { get; private set; }
-        public TileType[]         ActiveHand            { get; private set; } = new TileType[TileHelpers.HAND_SIZE];
-        public Meld[]             OpenMeld              { get; private set; } = new Meld[] { new Meld(), new Meld(), new Meld(), new Meld() };
+        // IHand
+        public IGameState         Parent                { get; internal set; }
+        public Player             Player                { get; internal set; }
+        public Wind               Seat                  { get { return WindExtensionMethods.GetWind(Player, Parent.Dealer); } }
+        public ITile[]            ActiveHand            { get { return _ActiveHand; } }
+        public IMeld[]            Melds                 { get { return _Melds; } }
+        public IList<ITile>       Discards              { get { return (IList<ITile>)_Discards; } }
+        public IList<TileType>    Waits                 { get; internal set; }
+        public IList<TileCommand> DrawsAndKans          { get; internal set; }
+        public IList<IMeld>       AvailableCalls        { get; internal set; }
+        public int                Score                 { get; internal set; } = 0;
+        public int                ActiveTileCount       { get; internal set; } = 0;
+        public int                Streak                { get; internal set; } = 0;
+        public int                MeldCount             { get { return (_Melds[0].State.IsCalled() ? 1 : 0) + (_Melds[1].State.IsCalled() ? 1 : 0) + (_Melds[2].State.IsCalled() ? 1 : 0) + (_Melds[3].State.IsCalled() ? 1 : 0); } }
+        public int                MeldedTileCount       { get; internal set; }
+        public int                KanCount              { get { return (_Melds[0].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (_Melds[1].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (_Melds[2].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (_Melds[3].State.GetMeldType() == MeldType.Kan ? 1 : 0); } }
+        public bool               Dealer                { get { return Player == Parent.Dealer; } }
+        public bool               Open                  { get { return _Melds[0].State.IsOpen() || _Melds[1].State.IsOpen() || _Melds[2].State.IsOpen() || _Melds[3].State.IsOpen(); } }
+        public bool               Closed                { get { return !Open; } }
+        public bool               Tempai                { get; internal set; }
+        public bool               InReach               { get; internal set; }
+        public bool               InDoubleReach         { get; internal set; }
+        public bool               InOpenReach           { get; internal set; }
+        public bool               Furiten               { get; internal set; } = false;
+        public bool               Yakitori              { get; internal set; } = true;
+        public bool               HasFullHand           { get; internal set; }
+        public bool               CouldIppatsu          { get; internal set; }
+        public bool               CouldDoubleReach      { get; internal set; }
+        public bool               CouldKyuushuuKyuuhai  { get; internal set; }
+        public bool               CouldSuufurendan      { get; internal set; }
+
+        public int GetTileSlot(TileType tile, bool matchRed)
+        {
+            for (int i = 0; i < ActiveTileCount; ++i)
+            {
+                if (_ActiveHand[i].Type.IsEqual(tile, matchRed)) { return i; }
+            }
+            return -1;
+        }
+
+        public void MoveTileToEnd(TileType targetTile)
+        {
+
+        }
+
+        public void ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd)
+        {
+            Global.Assert(tilesRemove.Count == tilesAdd.Count);
+
+            // Remove from the hand one of each tile in tilesRemove.
+            foreach (TileType ripTile in tilesRemove)
+            {
+                bool fFound = false;
+                for (int iHandTile = 0; iHandTile < ActiveTileCount; ++iHandTile)
+                {
+                    if (ripTile.IsEqual(ActiveHand[iHandTile]) && (ripTile.IsRedDora() == ActiveHand[iHandTile].IsRedDora()))
+                    {
+                        ActiveHand[iHandTile] = ActiveHand[ActiveTileCount - 1];
+                        ActiveHand[ActiveTileCount - 1] = TileType.None;
+                        --ActiveTileCount;
+
+                        fFound = true;
+                        break;
+                    }
+                }
+                Global.Assert(fFound);
+            }
+
+            // Add to the hand one of each tile in tilesAdd. We'll need to grab that tile from somewhere else on the board. Look
+            // through the wall first (excluding flipped dora tiles), then other players' hands, then discards, and then the dora
+            // tile. Replace the tile with a corresponding tile from tilesRemove.
+            foreach (TileType addTile in tilesAdd)
+            {
+                // Add the tile to the hand.
+                ActiveHand[ActiveTileCount++] = addTile;
+                // TODO: Find this tile somewhere else on the board and replace it with tilesRemove[iTileAdd].
+                // TODO: maybe update DrawsAndKans as well...
+            }
+
+            // Sort the hand. This will also go into MahjongHand and update it's tiles there.
+            Sort(false);
+        }
+
+        public IList<TileType> GetWaitsForDiscard(int slot)
+        {
+            return null;
+        }
+
+        // HandImpl
+        internal List<ITile>    DiscardsImpl        { get; set; } = new List<ITile>();
+        internal bool           IppatsuFlag         { get; set; } = false;
+        internal ICandidateHand WinningHandCache    { get; set; } = null;
+        internal bool           OverrideNoReachFlag { get; set; } = false;
+        internal IMeld          CachedCall          { get; set; } = null;
+
+        private TileImpl[]     _ActiveHand = new TileImpl[TileHelpers.HAND_SIZE];
+        private MeldImpl[]     _Melds      = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
+        private List<TileImpl> _Discards   = new List<TileImpl>();
+
+
+
+
         public List<TileType>[]   ActiveTileWaits       { get; private set; } = new List<TileType>[TileHelpers.HAND_SIZE];
-        public int                ActiveTileCount       { get; private set; } = 0;
-        public int                Streak                { get; set; }         = 0;
-        public bool               Yakitori              { get; set; }         = true;
-        public bool               Furiten               { get; set; }         = false;
-        public bool               OverrideNoReachFlag   { get; set; }         = false;
-        public CandidateHand      WinningHandCache      { get; set; }         = null;
-        public CallOption         StoredCallOption      { get; set; }         = null;
         public Stack<TileCommand> DrawsAndKans          { get; private set; } = new Stack<TileCommand>();
-        public TileType           Seat                  { get { return TileTypeExtensionMethods.GetSeatWindTile(Player, Parent.CurrentDealer); } }
-        public List<ExtendedTile> Discards              { get { return Parent.GetDiscards(Player); } } // TODO: just make this here and not there?
 
         private bool               HasTemporaryTile      = false;
         private List<TileType>     WaitTiles             = new List<TileType>();
@@ -38,20 +127,15 @@ namespace MahjongCore.Riichi
 
         public int GetCalledMeldCount()              { return (OpenMeld[0].State.IsCalled() ? 1 : 0) + (OpenMeld[1].State.IsCalled() ? 1 : 0) + (OpenMeld[2].State.IsCalled() ? 1 : 0) + (OpenMeld[3].State.IsCalled() ? 1 : 0); }
         public int GetMeldedTileCount()              { return OpenMeld[0].State.GetTileCount() + OpenMeld[1].State.GetTileCount() + OpenMeld[2].State.GetTileCount() + OpenMeld[3].State.GetTileCount(); }
-        public int GetOpenMeldCount()                { return (OpenMeld[0].State.IsOpen() ? 1 : 0) + (OpenMeld[1].State.IsOpen() ? 1 : 0) + (OpenMeld[2].State.IsOpen() ? 1 : 0) + (OpenMeld[3].State.IsOpen() ? 1 : 0); }        
         public bool IsFullHand()                     { return ((GetCalledMeldCount() * 3) + ActiveTileCount) == TileHelpers.HAND_SIZE; }
         public bool IsFuriten()                      { return Parent.Settings.GetSetting<bool>(GameOption.Furiten) && Furiten; }
-        public bool IsDealer()                       { return Player == Parent.CurrentDealer; }
         public bool IsWaramePlayer()                 { return Player == Parent.WaremePlayer; }
-        public bool IsClosed()                       { return !IsOpen(); }
         public bool IsInReach()                      { return Parent.IsInReach(Player); }
         public bool IsInDoubleReach()                { return Parent.IsInDoubleReach(Player); }
-        public bool IsOpen()                         { return OpenMeld[0].State.IsOpen() || OpenMeld[1].State.IsOpen() || OpenMeld[2].State.IsOpen() || OpenMeld[3].State.IsOpen(); }
         public bool IsIppatsu()                      { return Parent.GetIppatsu(Player); }
         public bool IsFourKans()                     { return GetKanCount() == 4; }
         public List<TileType> GetTileWaits(int slot) { return ActiveTileWaits[(slot == -1) ? (ActiveTileCount - 1) : slot]; }
         public int GetClosedKanFlippedTileCount()    { return OpenMeld[0].State.GetFlippedTileCount() + OpenMeld[1].State.GetFlippedTileCount() + OpenMeld[2].State.GetFlippedTileCount() + OpenMeld[3].State.GetFlippedTileCount(); }
-        public int GetKanCount()                     { return (OpenMeld[0].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (OpenMeld[1].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (OpenMeld[2].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (OpenMeld[3].State.GetMeldType() == MeldType.Kan ? 1 : 0); }
         public bool IsInOpenReach()                  { return Parent.IsInOpenReach(Player); }
         public List<TileType> GetWaits()             { return CommonHelpers.SafeCopyByValue(WaitTiles); } // Make a copy, so the caller can't mess with our waits.
         public List<CallOption> GetCalls()           { return RiichiHandHelpers.GetCalls(this, Parent); }
@@ -431,43 +515,6 @@ namespace MahjongCore.Riichi
             Parent.HandSort(Player, false);
         }
 
-        public void ForceReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd)
-        {
-            Global.Assert(tilesRemove.Count == tilesAdd.Count);
-
-            // Remove from the hand one of each tile in tilesRemove.
-            foreach (TileType ripTile in tilesRemove)
-            {
-                bool fFound = false;
-                for (int iHandTile = 0; iHandTile < ActiveTileCount; ++iHandTile)
-                {
-                    if (ripTile.IsEqual(ActiveHand[iHandTile]) && (ripTile.IsRedDora() == ActiveHand[iHandTile].IsRedDora()))
-                    {
-                        ActiveHand[iHandTile] = ActiveHand[ActiveTileCount - 1];
-                        ActiveHand[ActiveTileCount - 1] = TileType.None;
-                        --ActiveTileCount;
-
-                        fFound = true;
-                        break;
-                    }
-                }
-                Global.Assert(fFound);
-            }
-
-            // Add to the hand one of each tile in tilesAdd. We'll need to grab that tile from somewhere else on the board. Look
-            // through the wall first (excluding flipped dora tiles), then other players' hands, then discards, and then the dora
-            // tile. Replace the tile with a corresponding tile from tilesRemove.
-            foreach (TileType addTile in tilesAdd)
-            {
-                // Add the tile to the hand.
-                ActiveHand[ActiveTileCount++] = addTile;
-                // TODO: Find this tile somewhere else on the board and replace it with tilesRemove[iTileAdd].
-                // TODO: maybe update DrawsAndKans as well...
-            }
-
-            // Sort the hand. This will also go into MahjongHand and update it's tiles there.
-            Sort(false);
-        }
 
         public void AbortiveDraw(int slot, bool fDiscard)
         {

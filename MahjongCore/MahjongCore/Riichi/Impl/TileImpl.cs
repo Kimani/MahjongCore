@@ -3,9 +3,9 @@
 using MahjongCore.Common;
 using System;
 
-namespace MahjongCore.Riichi
+namespace MahjongCore.Riichi.Impl
 {
-    public class TileImpl : ITile, ICloneable
+    internal class TileImpl : ITile, ICloneable
     {
         // ITile
         public TileType  Type        { get; internal set; } = TileType.None;

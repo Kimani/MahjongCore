@@ -11,11 +11,14 @@ namespace MahjongCore.Riichi
         Wind               Seat                  { get; }
         ITile[]            ActiveHand            { get; }
         IMeld[]            Melds                 { get; }
+        IList<ITile>       Discards              { get; }
+        IList<TileType>    Waits                 { get; }
+        IList<TileCommand> DrawsAndKans          { get; }
+        IList<IMeld>       AvailableCalls        { get; }
         int                Score                 { get; }
         int                ActiveTileCount       { get; }
         int                Streak                { get; }
         int                MeldCount             { get; }
-        int                OpenMeldCount         { get; }
         int                MeldedTileCount       { get; }
         int                KanCount              { get; }
         bool               Dealer                { get; }
@@ -32,10 +35,6 @@ namespace MahjongCore.Riichi
         bool               CouldDoubleReach      { get; }
         bool               CouldKyuushuuKyuuhai  { get; }
         bool               CouldSuufurendan      { get; }
-        IList<TileType>    Waits                 { get; }
-        IList<TileCommand> DrawsAndKans          { get; }
-        IList<ITile>       Discards              { get; }
-        IList<IMeld>       AvailableCalls        { get; }
 
         int             GetTileSlot(TileType tile, bool matchRed);
         void            MoveTileToEnd(TileType targetTile);

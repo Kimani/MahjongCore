@@ -8,9 +8,9 @@ using MahjongCore.Riichi.Helpers;
 using MahjongCore.Common;
 using System;
 
-namespace MahjongCore.Riichi
+namespace MahjongCore.Riichi.Impl
 {
-    public class SaveStateImpl : IComparable<SaveStateImpl>
+    public class SaveStateImpl : ISaveState
     {
         public class PlayerValue : IComparable<PlayerValue>
         {

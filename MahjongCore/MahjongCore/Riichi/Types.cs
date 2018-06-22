@@ -43,6 +43,16 @@ namespace MahjongCore.Riichi
         public static class WindExtensionMethods
         {
             public static TileType GetTile(this Wind w) { return EnumAttributes.GetAttributeValue<Tile, TileType>(w); }
+        
+            public static Wind GetWind(Player current, Player dealer)
+            {
+                Global.Assert(current.IsPlayer());
+                Global.Assert(dealer.IsPlayer());
+                return (current == dealer)           ? Wind.East :
+                       (current == dealer.GetNext()) ? Wind.South :
+                       (current.GetNext() == dealer) ? Wind.North :
+                                                       Wind.West;
+            }
         }
     #endregion
 

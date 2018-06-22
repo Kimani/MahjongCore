@@ -2,6 +2,7 @@
 
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
+using MahjongCore.Riichi.Impl;
 using System;
 using System.Collections.Generic;
 
@@ -127,32 +128,32 @@ namespace MahjongCore.Riichi
         event EventHandler<WinUndoneArgs>            WinUndone;
         event EventHandler<TilePickUndoneArgs>       TilePickUndone;
 
-        ITile[]          Wall               { get; }
-        ITile[]          DoraIndicators     { get; }
-        ITile[]          UraDoraIndicators  { get; }
-        Round            Round              { get; }
-        Player           FirstDealer        { get; }
-        Player           Dealer             { get; }
-        Player           Current            { get; }
-        Player           Wareme             { get; }
-        PlayState        State              { get; }
-        IGameSettings    Settings           { get; }
-        IExtraSettings   ExtraSettings      { get; }
-        IHand            Player1Hand        { get; }
-        IHand            Player2Hand        { get; }
-        IHand            Player3Hand        { get; }
-        IHand            Player4Hand        { get; }
-        IPlayerAI        Player1AI          { get; set; }
-        IPlayerAI        Player2AI          { get; set; }
-        IPlayerAI        Player3AI          { get; set; }
-        IPlayerAI        Player4AI          { get; set; }
-        bool             CurrentRoundLapped { get; }
-        int              Offset             { get; }
-        int              TilesRemaining     { get; }
-        int              Bonus              { get; }
-        int              Pool               { get; }
-        int              DoraCount          { get; }
-        int              Roll               { get; }
+        ITile[]        Wall               { get; }
+        ITile[]        DoraIndicators     { get; }
+        ITile[]        UraDoraIndicators  { get; }
+        Round          Round              { get; }
+        Player         FirstDealer        { get; }
+        Player         Dealer             { get; }
+        Player         Current            { get; }
+        Player         Wareme             { get; }
+        PlayState      State              { get; }
+        IGameSettings  Settings           { get; }
+        IExtraSettings ExtraSettings      { get; }
+        IHand          Player1Hand        { get; }
+        IHand          Player2Hand        { get; }
+        IHand          Player3Hand        { get; }
+        IHand          Player4Hand        { get; }
+        IPlayerAI      Player1AI          { get; set; }
+        IPlayerAI      Player2AI          { get; set; }
+        IPlayerAI      Player3AI          { get; set; }
+        IPlayerAI      Player4AI          { get; set; }
+        bool           CurrentRoundLapped { get; }
+        int            Offset             { get; }
+        int            TilesRemaining     { get; }
+        int            Bonus              { get; }
+        int            Pool               { get; }
+        int            DoraCount          { get; }
+        int            Roll               { get; }
 
         void       Advance();
         void       Rewind();
@@ -165,11 +166,11 @@ namespace MahjongCore.Riichi
 
     public static class GameStateFactory
     {
-        public static IGameState CreateNewGame()                                              { return new GameStateImpl(new GameSettingsImpl()); }
-        public static IGameState CreateNewGame(IGameSettings customSettings)                  { return new GameStateImpl(customSettings); }
-        public static IGameState CreateNewGame(IExtraSettings extraSettings)                  { return new GameStateImpl(tutorialSettings); }
-        public static IGameState LoadGame(ISaveState saveState)                               { return new GameStateImpl(saveState); }
-        public static IGameState LoadGame(ISaveState saveState, IExtraSettings extraSettings) { return new GameStateImpl(saveState, tutorialSettings); }
+        public static IGameState CreateNewGame()                                 { return new GameStateImpl(new GameSettingsImpl()); }
+        public static IGameState CreateNewGame(IGameSettings settings)           { return new GameStateImpl(settings); }
+        public static IGameState CreateNewGame(IExtraSettings extra)             { return new GameStateImpl(extra); }
+        public static IGameState LoadGame(ISaveState save)                       { return new GameStateImpl(save); }
+        public static IGameState LoadGame(ISaveState save, IExtraSettings extra) { return new GameStateImpl(save, extra); }
     }
 
     public interface ISaveStatePlayer

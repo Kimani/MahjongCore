@@ -7,13 +7,6 @@ using System.Collections.Generic;
 
 namespace MahjongCore.Riichi
 {
-    public enum PostDiscardDecisionType
-    {
-        Nothing,
-        Call,
-        Ron
-    }
-
     #region DiscardDecisionType
         public enum DiscardDecisionType
         {
@@ -32,6 +25,13 @@ namespace MahjongCore.Riichi
             public static bool IsDiscard(this DiscardDecisionType d) { return EnumAttributes.GetAttributeValue<IsDiscard, bool>(d); }
         }
     #endregion
+
+    public enum PostDiscardDecisionType
+    {
+        Nothing,
+        Call,
+        Ron
+    }
 
     public interface DiscardInfo
     {
@@ -57,17 +57,17 @@ namespace MahjongCore.Riichi
         bool         CanChankanRon { get; }
     }
 
+    public interface IDiscardDecision
+    {
+        DiscardDecisionType Decision { get; }
+        ITile               Tile     { get; }
+    }
+
     public interface IPostDiscardDecision
     {
         Player                  Player   { get; }
         PostDiscardDecisionType Decision { get; }
         IMeld                   Call     { get; }
-    }
-
-    public interface IDiscardDecision
-    {
-        DiscardDecisionType Decision { get; }
-        ITile               Tile     { get; }
     }
 
     public static class DecisionFactory

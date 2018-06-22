@@ -8,7 +8,7 @@ namespace MahjongCore.Riichi
 {
     public interface IExtraSettings : ICloneable, IComparable<IExtraSettings>
     {
-        IList<TileType> RestrictDiscardTiles  { get; set; }
+        IList<TileType> RestrictDiscardTiles  { get; }
         bool            DisableAnyDiscard     { get; set; } // Not allowed to discard at all. Only tsumo/abortive draw/kan/etc.
         bool            DisableCall           { get; set; } // Disables pon/chii/open kan by non-CPU players.
         bool            DisableCalling        { get; set; } // Disables for non-CPU players ANY kind of call on a tile, including ron.

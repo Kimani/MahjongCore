@@ -92,10 +92,11 @@ namespace MahjongCore.Riichi
             public static string   GetHexString(this TileType t)      { return string.Format("{0:X2}", t.GetSkyValue()); }
             public static bool     IsTerminal(this TileType t)        { return EnumAttributes.GetAttributeValue<IsTerminal, bool>(t); }
 
-            public static bool IsEqual(this TileType a, TileType b)
+            public static bool IsEqual(this TileType a, TileType b, bool matchRed = false)
             {
                 return (a == b) ||
-                       ((EnumAttributes.GetAttributeValue<TileValue, int>(a) == EnumAttributes.GetAttributeValue<TileValue, int>(b)) &&
+                       (!matchRed &&
+                        (EnumAttributes.GetAttributeValue<TileValue, int>(a) == EnumAttributes.GetAttributeValue<TileValue, int>(b)) &&
                         (EnumAttributes.GetAttributeValue<TileSuit, Suit>(a) == EnumAttributes.GetAttributeValue<TileSuit, Suit>(b)));
             }
 

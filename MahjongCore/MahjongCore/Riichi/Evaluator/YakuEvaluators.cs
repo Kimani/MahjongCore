@@ -11,7 +11,7 @@ namespace MahjongCore.Riichi.Evaluator
     {
         private static Dictionary<Yaku, Func<Hand, CandidateHand, bool, int>> Evaluators = new Dictionary<Yaku, Func<Hand, CandidateHand, bool, int>>();
 
-        public static int Evaluate(Yaku y, Hand hand, CandidateHand cHand, bool fRon)
+        public static int Evaluate(Yaku y, IHand hand, ICandidateHand cHand, bool fRon)
         {
             if (Evaluators.Count == 0)
             {

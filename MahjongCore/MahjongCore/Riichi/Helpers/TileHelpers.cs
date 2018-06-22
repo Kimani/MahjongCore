@@ -8,6 +8,7 @@ namespace MahjongCore.Riichi.Helpers
         public static int WALL_HEIGHT           = 2;
         public static int WALL_COUNT            = 4;
         public static int MAX_MELD_SIZE         = 4;
+        public static int MAX_MELD_COUNT        = 4;
         public static int TOTAL_TILE_COUNT      = WALL_LENGTH * WALL_HEIGHT * WALL_COUNT; // 136
         public static int DEAD_WALL_TILE_COUNT  = 14;
         public static int MAIN_WALL_TILE_COUNT  = TOTAL_TILE_COUNT - DEAD_WALL_TILE_COUNT; // 122
