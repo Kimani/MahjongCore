@@ -1,164 +1,82 @@
-﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
+// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
+using MahjongCore.Riichi.Evaluator;
+using MahjongCore.Riichi.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using MahjongCore.Riichi.Evaluator;
-using MahjongCore.Riichi.Helpers;
-using MahjongCore.Common;
-using System;
 
 namespace MahjongCore.Riichi.Impl
 {
     public class SaveStateImpl : ISaveState
     {
-        public class PlayerValue : IComparable<PlayerValue>
+        // ISaveState
+        public IGameSettings               Settings       { get; internal set; }
+        public IDictionary<string, string> Tags           { get { return _Tags; } }
+        public Round                       Round          { get; internal set; }
+        public bool                        Lapped         { get; internal set; }
+        public int                         Player1Score   { get; internal set; }
+        public int                         Player2Score   { get; internal set; }
+        public int                         Player3Score   { get; internal set; }
+        public int                         Player4Score   { get; internal set; }
+        public int                         TilesRemaining { get; internal set; }
+
+        public ISaveState Clone() { return new SaveStateImpl(_State); }
+        public string Marshall()  { return _State; }
+
+        // IComparable<ISaveState>
+        public int CompareTo(ISaveState other)
         {
-            public string             Name;
-            public int                Score = 0;
-            public int                ConsecutiveWinStreak = 0;
-            public bool               Ippatsu = false;
-            public bool               Furiten = false;
-            public bool               Yakitori = false;
-            public List<ExtendedTile> Discards = new List<ExtendedTile>();
-            public TileType[]         ActiveHand = new TileType[TileHelpers.HAND_SIZE];
-            public List<Meld>         Melds = new List<Meld>();
-            public List<TileCommand>  DrawsAndKans = new List<TileCommand>();
-
-            public int CountKans()
-            {
-                int kanCount = 0;
-                foreach (Meld m in Melds)
-                {
-                    if (m.State.GetMeldType() == MeldType.Kan)
-                    {
-                        kanCount++;
-                    }
-                }
-                return kanCount;
-            }
-
-            public int GetActiveTileCount()
-            {
-                int activeTileCount = TileHelpers.HAND_SIZE;
-                foreach (TileType tt in ActiveHand)
-                {
-                    if (tt == TileType.None)
-                    {
-                        --activeTileCount;
-                    }
-                }
-                return activeTileCount;
-            }
-
-            public PlayerValue Clone()
-            {
-                PlayerValue pv = new PlayerValue();
-                pv.Name = Name;
-                pv.Score = Score;
-                pv.ConsecutiveWinStreak = ConsecutiveWinStreak;
-                pv.Ippatsu = Ippatsu;
-                pv.Furiten = Furiten;
-                pv.Yakitori = Yakitori;
-
-                CommonHelpers.SafeCopyIntoList(pv.Discards, Discards);
-                CommonHelpers.SafeCopyIntoList(pv.Melds, Melds);
-                CommonHelpers.SafeCopyIntoList(pv.DrawsAndKans, DrawsAndKans);
-
-                for (int i = 0; i < ActiveHand.Length; ++i)
-                {
-                    pv.ActiveHand[i] = ActiveHand[i];
-                }
-                return pv;
-            }
-
-            // IComparable
-            public int CompareTo(PlayerValue other)
-            {
-                throw new NotImplementedException();
-            }
+            var state = other as SaveStateImpl;
+            return (state == null) ? (state.GetHashCode() - other.GetHashCode()) : _State.CompareTo(state._State);
         }
 
-        public PlayerValue[] Players           = new PlayerValue[] { new PlayerValue(), new PlayerValue(), new PlayerValue(), new PlayerValue() };
-        public TileType[]    Wall              = new TileType[TileHelpers.TOTAL_TILE_COUNT];
-        public List<Player>  DiscardPlayerList = new List<Player>();
-        public TileColor     TileColor;
-        public Round         CurrentRound;
-        public bool          CurrentRoundLapped;
-        public int           Bonus;
-        public int           Pool;
-        public int           Roll;
-        public int           Offset;
-        public int           TilesRemaining;
-        public int           DoraCount;
-        public Player        CurrentDealer;
-        public Player        CurrentPlayer;
-        public Player        PlayerRecentOpenKan;
-        public Player        WaremePlayer;
-        public bool          PlayerDeadWallPick;
-        public bool          FlipDoraAfterNextDiscard;
-        public string        GameTypeFlags;
-        public GameAction    PrevAction;
-        public GameAction    NextAction;
-        public GameSettings  CustomSettings;
-        public PlayState     CurrentState;
+        // SaveStateImpl
+        private string _State;
+        private Dictionary<string, string> _Tags = new Dictionary<string, string>();
 
-        private static string PREFIX_V2 = "v2";
+        private static string PREFIX_V2             = "v2";
         private static string MULTI_STRING_NAME_END = "multistringnameend";
-        private static string NEUTRAL_FLAGS_STR = "neutral";
+        private static string NEUTRAL_FLAGS_STR     = "neutral";
 
-        private SaveStateImpl() { }
-
-        public SaveStateImpl Clone()
+        internal SaveStateImpl(string state)
         {
-            SaveStateImpl s = new SaveStateImpl();
-            s.TileColor = TileColor;
-            s.CurrentRound = CurrentRound;
-            s.CurrentRoundLapped = CurrentRoundLapped;
-            s.Bonus = Bonus;
-            s.Pool = Pool;
-            s.Roll = Roll;
-            s.Offset = Offset;
-            s.TilesRemaining = TilesRemaining;
-            s.DoraCount = DoraCount;
-            s.CurrentDealer = CurrentDealer;
-            s.CurrentPlayer = CurrentPlayer;
-            s.PlayerRecentOpenKan = PlayerRecentOpenKan;
-            s.WaremePlayer = WaremePlayer;
-            s.PlayerDeadWallPick = PlayerDeadWallPick;
-            s.FlipDoraAfterNextDiscard = FlipDoraAfterNextDiscard;
-            s.GameTypeFlags = GameTypeFlags;
-            s.PrevAction = PrevAction;
-            s.NextAction = NextAction;
-            s.CustomSettings = CustomSettings;
-            s.CurrentState = CurrentState;
-            CommonHelpers.SafeCopyIntoValueList(s.DiscardPlayerList, DiscardPlayerList);
-
-            for (int i = 0; i < Wall.Length; ++i)
-            {
-                s.Wall[i] = Wall[i];
-            }
-
-            for (int i = 0; i < Players.Length; ++i)
-            {
-                s.Players[i] = Players[i].Clone();
-            }
-            return s;
+            CommonHelpers.Check(((state != null) && (state.Length > 0)), "Empty or null save string...");
+            _State = state;
+            InitializeCommon(PopulateState(null, _Tags));
         }
 
-        public static SaveStateImpl LoadFromString(string save)
+        internal SaveStateImpl(GameStateImpl state)
         {
-            Global.Assert((save != null) && (save.Length > 0));
-            SaveStateImpl state = new SaveStateImpl();
-
-            if (save.StartsWith(PREFIX_V2)) { state.LoadFromStringV2(save); }
-            else                            { state.LoadFromStringV1(save); }
-            return state;
+            InitializeCommon(state);
+            _State = SaveToString(state);
         }
 
-        private void LoadFromStringV2(string save)
+        internal GameStateImpl PopulateState(GameStateImpl state, Dictionary<string, string> tags)
         {
-            Queue<string> lines = new Queue<string>(save.Split(null)); // Passing in null splits at any whitespace.
+            var stateImpl = (state != null) ? state : new GameStateImpl();
+            if (_State.StartsWith(PREFIX_V2)) { LoadFromStringV2(stateImpl, tags); }
+            else                              { throw new Exception("Unrecognized state string"); }
+            return stateImpl;
+        }
+
+        private void InitializeCommon(GameStateImpl state)
+        {
+            Settings = state.Settings;
+            Round = state.Round;
+            Lapped = state.Lapped;
+            Player1Score = state.Player1HandRaw.Score;
+            Player2Score = state.Player2HandRaw.Score;
+            Player3Score = state.Player3HandRaw.Score;
+            Player4Score = state.Player4HandRaw.Score;
+            TilesRemaining = state.TilesRemaining;
+        }
+
+        private void LoadFromStringV2(GameStateImpl state, Dictionary<string, string> tags)
+        {
+            Queue<string> lines = new Queue<string>(_State.Split(null)); // Passing in null splits at any whitespace.
             Global.Assert(PREFIX_V2.Equals(lines.Dequeue()));
 
             // Get data from the save string.
@@ -299,98 +217,7 @@ namespace MahjongCore.Riichi.Impl
             Players[3].Furiten = DetermineFuriten(Players[3].ActiveHand, Players[3].Discards);
         }
 
-        private void LoadFromStringV1(string state)
-        {
-            Global.Assert(false, "V1 String Not Supported.");
-        }
-
-        private void LoadFromState(GameStateImpl state)
-        {
-            TileColor = state.TileColor;
-            CurrentRound = state.CurrentRound;
-            CurrentRoundLapped = state.CurrentRoundLapped;
-            Bonus = state.Bonus;
-            Pool = state.Pool;
-            Roll = state.Roll;
-            Offset = state.Offset;
-            TilesRemaining = state.TilesRemaining;
-            DoraCount = state.DoraCount;
-            CurrentDealer = state.CurrentDealer;
-            CurrentPlayer = state.CurrentPlayer;
-            PlayerRecentOpenKan = state.PlayerRecentOpenKan;
-            WaremePlayer = state.WaremePlayer;
-            PlayerDeadWallPick = state.PlayerDeadWallPick;
-            FlipDoraAfterNextDiscard = state.FlipDoraAfterNextDiscard;
-            GameTypeFlags = NEUTRAL_FLAGS_STR;
-            PrevAction = state.PrevAction;
-            NextAction = state.NextAction;
-            CustomSettings = state.Settings;
-            CurrentState = state.CurrentState;
-
-            // Copy over the wall.
-            for (int i = 0; i < 136; ++i)
-            {
-                Wall[i] = state.Wall[i];
-            }
-
-            // Copy over per-player data.
-            for (int iPlayer = 0; iPlayer < 4; ++iPlayer)
-            {
-                PlayerValue p = Players[iPlayer];
-                Hand hand = state.GetHandZeroIndexed(iPlayer);
-
-                p.Name = "Player " + (iPlayer + 1);
-                p.Score = hand.Score;
-                p.ConsecutiveWinStreak = hand.Streak;
-                p.Ippatsu = hand.IsIppatsu();
-                p.Furiten = hand.IsFuriten();
-                p.Yakitori = hand.Yakitori;
-                p.Discards = state.GetDiscardsZeroIndexed(iPlayer);
-
-                for (int iActiveHandTile = 0; iActiveHandTile < 14; ++iActiveHandTile)
-                {
-                    p.ActiveHand[iActiveHandTile] = hand.ActiveHand[iActiveHandTile];
-                }
-
-                p.Melds.Clear();
-                for (int iMeldCount = 0; iMeldCount < hand.GetCalledMeldCount(); ++iMeldCount)
-                {
-                    p.Melds.Add(hand.OpenMeld[iMeldCount]);
-                }
-
-                p.DrawsAndKans.Clear();
-                StringBuilder sb = new StringBuilder();
-                sb.Append("SAVING dnk, p: " + hand.Player + " drawsnkans size: " + hand.DrawsAndKans.Count + " drawsnaksn in order: ");
-                for (int iDrawAndKanSlot = hand.DrawsAndKans.Count - 1; iDrawAndKanSlot >= 0; --iDrawAndKanSlot)
-                {
-                    TileCommand tc = hand.DrawsAndKans.ElementAt(iDrawAndKanSlot);
-                    p.DrawsAndKans.Add(tc);
-                    sb.Append(tc.TilePrimary.Tile + ", ");
-                }
-                Global.Log(sb.ToString());
-            }
-
-            // Copy over DiscardPlayerList.
-            DiscardPlayerList.Clear();
-            for (int iDiscardPlayerSlot = state.DiscardPlayerList.Count - 1; iDiscardPlayerSlot >= 0; --iDiscardPlayerSlot)
-            {
-                DiscardPlayerList.Add(state.DiscardPlayerList.ElementAt(iDiscardPlayerSlot));
-            }
-        }
-
-        public static SaveStateImpl GetState(GameStateImpl state)
-        {
-            SaveStateImpl rs = new SaveStateImpl();
-            rs.LoadFromState(state);
-            return rs;
-        }
-
-        public string SaveToString()
-        {
-            return SaveToStringV2();
-        }
-
-        private string SaveToStringV2()
+        private string SaveToString(GameStateImpl state)
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendWithSpace(PREFIX_V2);
@@ -582,12 +409,6 @@ namespace MahjongCore.Riichi.Impl
                 }
             }
             return furiten;
-        }
-
-        // IComparable
-        public int CompareTo(SaveState obj)
-        {
-            throw new NotImplementedException();
         }
     }
 }

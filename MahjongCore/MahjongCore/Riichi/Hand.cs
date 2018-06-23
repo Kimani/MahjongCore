@@ -6,35 +6,35 @@ namespace MahjongCore.Riichi
 {
     public interface IHand
     {
-        IGameState         Parent                { get; }
-        Player             Player                { get; }
-        Wind               Seat                  { get; }
-        ITile[]            ActiveHand            { get; }
-        IMeld[]            Melds                 { get; }
-        IList<ITile>       Discards              { get; }
-        IList<TileType>    Waits                 { get; }
-        IList<TileCommand> DrawsAndKans          { get; }
-        IList<IMeld>       AvailableCalls        { get; }
-        int                Score                 { get; }
-        int                ActiveTileCount       { get; }
-        int                Streak                { get; }
-        int                MeldCount             { get; }
-        int                MeldedTileCount       { get; }
-        int                KanCount              { get; }
-        bool               Dealer                { get; }
-        bool               Open                  { get; }
-        bool               Closed                { get; }
-        bool               Tempai                { get; }
-        bool               InReach               { get; }
-        bool               InDoubleReach         { get; }
-        bool               InOpenReach           { get; }
-        bool               Furiten               { get; }
-        bool               Yakitori              { get; }
-        bool               HasFullHand           { get; }
-        bool               CouldIppatsu          { get; }
-        bool               CouldDoubleReach      { get; }
-        bool               CouldKyuushuuKyuuhai  { get; }
-        bool               CouldSuufurendan      { get; }
+        IGameState      Parent               { get; }
+        Player          Player               { get; }
+        Wind            Seat                 { get; }
+        ITile[]         ActiveHand           { get; }
+        IMeld[]         Melds                { get; }
+        IList<ITile>    Discards             { get; }
+        IList<TileType> Waits                { get; }
+        IList<ICommand> DrawsAndKans         { get; }
+        IList<IMeld>    AvailableCalls       { get; }
+        int             Score                { get; }
+        int             ActiveTileCount      { get; }
+        int             Streak               { get; }
+        int             MeldCount            { get; }
+        int             MeldedTileCount      { get; }
+        int             KanCount             { get; }
+        bool            Dealer               { get; }
+        bool            Open                 { get; }
+        bool            Closed               { get; }
+        bool            Tempai               { get; }
+        bool            InReach              { get; }
+        bool            InDoubleReach        { get; }
+        bool            InOpenReach          { get; }
+        bool            Furiten              { get; }
+        bool            Yakitori             { get; }
+        bool            HasFullHand          { get; }
+        bool            CouldIppatsu         { get; }
+        bool            CouldDoubleReach     { get; }
+        bool            CouldKyuushuuKyuuhai { get; }
+        bool            CouldSuufurendan     { get; }
 
         int             GetTileSlot(TileType tile, bool matchRed);
         void            MoveTileToEnd(TileType targetTile);

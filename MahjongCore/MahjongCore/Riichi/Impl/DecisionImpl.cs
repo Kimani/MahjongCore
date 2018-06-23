@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace MahjongCore.Riichi.Impl
 {
-    internal class DiscardInfoImpl : DiscardInfo
+    internal class DiscardInfoImpl : IDiscardInfo
     {
         public IHand           Hand               { get; internal set; }
         public IList<TileType> PromotedKanTiles   { get; } = new List<TileType>();
@@ -18,7 +18,7 @@ namespace MahjongCore.Riichi.Impl
         public bool            CanReach           { get; internal set; }
     }
 
-    internal class PostDiscardInfoImpl : PostDiscardInfo
+    internal class PostDiscardInfoImpl : IPostDiscardInfo
     {
         public IHand        Hand          { get; internal set; }
         public IHand        TargetPlayer  { get; internal set; }
@@ -77,7 +77,7 @@ namespace MahjongCore.Riichi.Impl
                                                                 if (valid)
                                                                 {
                                                                     valid = false;
-                                                                    for (int i = 0; i < hand.OpenMeldCount; ++i)
+                                                                    for (int i = 0; i < hand.MeldCount; ++i)
                                                                     {
                                                                          if ((hand.Melds[i].State == MeldState.Pon) &&
                                                                              hand.Melds[i].CalledTile.Type.IsEqual(Tile.Type))

@@ -11,7 +11,7 @@ namespace MahjongCore.Riichi.Impl
         public CalledDirection Direction  { get; internal set; } = CalledDirection.None;
         public ITile[]         Tiles      { get { return _Tiles; } }
 
-        private TileImpl[] _Tiles = new TileImpl[] { new TileImpl(), new TileImpl(), new TileImpl(), new TileImpl() };
+        internal TileImpl[] _Tiles = new TileImpl[] { new TileImpl(), new TileImpl(), new TileImpl(), new TileImpl() };
 
         public ITile CalledTile
         {
@@ -145,7 +145,7 @@ namespace MahjongCore.Riichi.Impl
 
         private void Swap(int a, int b)
         {
-            ITile temp = _Tiles[a];
+            TileImpl temp = _Tiles[a];
             _Tiles[a] = _Tiles[b];
             _Tiles[b] = temp;
         }

@@ -70,32 +70,32 @@ namespace MahjongCore.Riichi.Impl
         public event EventHandler<WinUndoneArgs>            WinUndone;
         public event EventHandler<TilePickUndoneArgs>       TilePickUndone;
 
-        public ITile[]          Wall               { get { return _Wall; } }
-        public ITile[]          DoraIndicators     { get { return _DoraIndicators; } }
-        public ITile[]          UraDoraIndicators  { get { return _UraDoraIndicators; } }
-        public Round            Round              { get; internal set; }
-        public Player           FirstDealer        { get; internal set; }
-        public Player           Dealer             { get; internal set; }
-        public Player           Current            { get; internal set; }
-        public Player           Wareme             { get; internal set; }
-        public PlayState        State              { get; internal set; }
+        public ITile[]          Wall               { get { return WallRaw; } }
+        public ITile[]          DoraIndicators     { get { return DoraIndicatorsRaw; } }
+        public ITile[]          UraDoraIndicators  { get { return UraDoraIndicatorsRaw; } }
+        public Round            Round              { get; internal set; } = Round.East1;
+        public Player           FirstDealer        { get; internal set; } = Player.None;
+        public Player           Dealer             { get; internal set; } = Player.None;
+        public Player           Current            { get; internal set; } = Player.None;
+        public Player           Wareme             { get; internal set; } = Player.None;
+        public PlayState        State              { get; internal set; } = PlayState.PreGame;
         public IGameSettings    Settings           { get; internal set; }
         public IExtraSettings   ExtraSettings      { get; internal set; }
-        public IHand            Player1Hand        { get; internal set; }
-        public IHand            Player2Hand        { get; internal set; }
-        public IHand            Player3Hand        { get; internal set; }
-        public IHand            Player4Hand        { get; internal set; }
+        public IHand            Player1Hand        { get { return Player1HandRaw; } }
+        public IHand            Player2Hand        { get { return Player2HandRaw; } }
+        public IHand            Player3Hand        { get { return Player3HandRaw; } }
+        public IHand            Player4Hand        { get { return Player4HandRaw; } }
         public IPlayerAI        Player1AI          { get; set; }
         public IPlayerAI        Player2AI          { get; set; }
         public IPlayerAI        Player3AI          { get; set; }
         public IPlayerAI        Player4AI          { get; set; }
-        public bool             CurrentRoundLapped { get; internal set; }
-        public int              Offset             { get; internal set; }
-        public int              TilesRemaining     { get; internal set; }
-        public int              Bonus              { get; internal set; }
-        public int              Pool               { get; internal set; }
-        public int              DoraCount          { get; internal set; }
-        public int              Roll               { get; internal set; }
+        public bool             Lapped             { get; internal set; } = false;
+        public int              Offset             { get; internal set; } = 0;
+        public int              TilesRemaining     { get; internal set; } = 0;
+        public int              Bonus              { get; internal set; } = 0;
+        public int              Pool               { get; internal set; } = 0;
+        public int              DoraCount          { get; internal set; } = 0;
+        public int              Roll               { get; internal set; } = 0;
 
         public void       Advance() { AdvancePlayState(State.GetNext(), EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(State.GetNext()), false); }
         public void       Resume()  { AdvancePlayState(State, false, true); }
@@ -122,80 +122,70 @@ namespace MahjongCore.Riichi.Impl
         }
 
         // GameStateImpl
-        internal GameAction PrevAction { get; private set; }
-        internal GameAction NextAction { get; private set; }
+        internal GameAction PrevAction           { get; private set; } = GameAction.Nothing;
+        internal GameAction NextAction           { get; private set; } = GameAction.Nothing;
+        internal TileImpl[] WallRaw              { get; private set; } = new TileImpl[TileHelpers.MAIN_WALL_TILE_COUNT];
+        internal TileImpl[] DoraIndicatorsRaw    { get; private set; } = new TileImpl[5];
+        internal TileImpl[] UraDoraIndicatorsRaw { get; private set; } = new TileImpl[5];
+        internal HandImpl   Player1HandRaw       { get; private set; }
+        internal HandImpl   Player2HandRaw       { get; private set; }
+        internal HandImpl   Player3HandRaw       { get; private set; }
+        internal HandImpl   Player4HandRaw       { get; private set; }
 
-        private TileImpl[]                    _Wall = new TileImpl[TileHelpers.MAIN_WALL_TILE_COUNT];
-        private TileImpl[]                    _DoraIndicators = new TileImpl[5];
-        private TileImpl[]                    _UraDoraIndicators = new TileImpl[5];
-        private Player                        _NextActionPlayer;
-        private TileType                      _NextActionTile;
-        private bool                          _PlayerDeadWallPick;
-        private bool                          _ChankanFlag;
-        private bool                          _KanburiFlag;
-        private bool                          _IsTutorial;
-        private int                           _NextActionSlot = -1;
-        private Player                        _PlayerRecentOpenKan;
-        private bool                          _FlipDoraAfterNextDiscard;
-        private Stack<Player>                 _DiscardPlayerList = new Stack<Player>();
-        private Dictionary<PlayState, Action> _PreBreakStateHandlers = new Dictionary<PlayState, Action>();
-        private Dictionary<PlayState, Action> _PostBreakStateHandlers = new Dictionary<PlayState, Action>();
-        private Dictionary<PlayState, Action> _RewindModeChangeHandlers = new Dictionary<PlayState, Action>();
-        private Dictionary<PlayState, Action> _RewindPostModeChangeHandlers = new Dictionary<PlayState, Action>();
-        private DiscardInfo                   _DiscardInfoCache = new DiscardInfoImpl();
-        private GameAction                    _NextAction1 = GameAction.DecisionPending;
-        private GameAction                    _NextAction2 = GameAction.DecisionPending;
-        private GameAction                    _NextAction3 = GameAction.DecisionPending;
-        private GameAction                    _NextAction4 = GameAction.DecisionPending;
-        private Player                        _NextActionPlayerTarget = Player.None;
-        private WinResultsImpl                _WinResultCache = new WinResultsImpl();
-        private bool                          _SkipAdvancePlayer = false;
-        private WinResultsImpl[]              _MultiWinResults = new WinResultsImpl[] { new WinResultsImpl(), new WinResultsImpl(), new WinResultsImpl(), new WinResultsImpl() };
-        private GameAction                    _RewindAction = GameAction.Nothing;
+        private Dictionary<PlayState, Action> _PreBreakStateHandlers    = new Dictionary<PlayState, Action>();
+        private Dictionary<PlayState, Action> _PostBreakStateHandlers   = new Dictionary<PlayState, Action>();
+        private Dictionary<PlayState, Action> _RewindPreHandlers        = new Dictionary<PlayState, Action>();
+        private Dictionary<PlayState, Action> _RewindPostHandlers       = new Dictionary<PlayState, Action>();
+        private WinResultsImpl                _WinResultCache           = new WinResultsImpl();
+        private WinResultsImpl[]              _MultiWinResults          = new WinResultsImpl[] { new WinResultsImpl(), new WinResultsImpl(), new WinResultsImpl(), new WinResultsImpl() };
+        private Stack<Player>                 _DiscardPlayerList        = new Stack<Player>();
+        private IDiscardInfo                  _DiscardInfoCache         = new DiscardInfoImpl();
+        private TileType                      _NextActionTile           = TileType.None;
+        private Player                        _NextActionPlayer         = Player.None;
+        private Player                        _PlayerRecentOpenKan      = Player.None;
+        private Player                        _NextActionPlayerTarget   = Player.None;
+        private GameAction                    _NextAction1              = GameAction.Nothing;
+        private GameAction                    _NextAction2              = GameAction.Nothing;
+        private GameAction                    _NextAction3              = GameAction.Nothing;
+        private GameAction                    _NextAction4              = GameAction.Nothing;
+        private GameAction                    _RewindAction             = GameAction.Nothing;
+        private bool                          _FlipDoraAfterNextDiscard = false;
+        private bool                          _SkipAdvancePlayer        = false;
+        private bool                          _PlayerDeadWallPick       = false;
+        private bool                          _ChankanFlag              = false;
+        private bool                          _KanburiFlag              = false;
+        private bool                          _HasExtraSettings         = false;
+        private int                           _NextActionSlot           = -1;
 
-        public GameStateImpl(IGameSettings settings)                 { Initialize(settings, null); }
-        public GameStateImpl(IExtraSettings extra)                   { Initialize(null, extra); }
-        public GameStateImpl(ISaveState state)                       { InitializeFromState(state, null); }
-        public GameStateImpl(ISaveState state, IExtraSettings extra) { InitializeFromState(state, extra); }
-        private void StartPlayState(PlayState mode)                  { AdvancePlayState(mode, EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(mode), false); }
 
-        private void Initialize(IGameSettings gs, IExtraSettings ts)
+        internal GameStateImpl()                                       { InitializeCommon(null, null, true); }
+        internal GameStateImpl(IGameSettings settings)                 { Initialize(settings, null); }
+        internal GameStateImpl(IExtraSettings extra)                   { Initialize(null, extra); }
+        internal GameStateImpl(ISaveState state)                       { InitializeFromState(state, null); }
+        internal GameStateImpl(ISaveState state, IExtraSettings extra) { InitializeFromState(state, extra); }
+        private void StartPlayState(PlayState mode)                    { AdvancePlayState(mode, EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(mode), false); }
+
+        private void Initialize(IGameSettings settings, IExtraSettings extra)
         {
-            InitializeCommon(gs, ts);
+            InitializeCommon(settings, extra);
 
-            // Initialize everything else.
-            TileColor                 = TileColor.Orange;
-            Offset                    = 0;
-            CurrentRound              = Round.East1;
-            CurrentDealer             = PlayerExtensionMethods.GetRandom();
-            CurrentPlayer             = CurrentDealer;
-            CurrentState              = PlayState.PreGame;
-            PrevAction                = GameAction.Nothing;
-            NextAction                = GameAction.Nothing;
-            NextActionTile            = TileType.None;
-            NextActionPlayer          = Player.None;
-            IsTutorial                = false;
-            FlipDoraAfterNextDiscard  = false;
-            PlayerRecentOpenKan       = Player.None;
+            FirstDealer = PlayerExtensionMethods.GetRandom();
+            Dealer = FirstDealer;
+            Current = FirstDealer;
         }
 
-        public void InitializeFromState(ISaveState state, IExtraSettings ts)
+        public void InitializeFromState(ISaveState state, IExtraSettings extra)
         {
-            InitializeCommon(state.CustomSettings, ts);
-
-            // Initialize other things.
-            NextActionPlayer = CurrentPlayer;
-            _NextAction1     = GameAction.Nothing;
-            _NextAction2     = GameAction.Nothing;
-            _NextAction3     = GameAction.Nothing;
-            _NextAction4     = GameAction.Nothing;
+            InitializeCommon(state.Settings, extra);
 
             // Initialize from state.
-            TileColor                 = state.TileColor;
-            CurrentRound              = state.CurrentRound;
-            CurrentRoundLapped        = state.CurrentRoundLapped;
-            Bonus                     = state.Bonus;
-            Pool                      = state.Pool;
+            var save = state as SaveStateImpl;
+            CommonHelpers.Check((save != null), "SaveState not from MahjongCore, external save states not supported at this time.");
+
+            Round                = save.Round;
+            Lapped               = save.Lapped;
+            Bonus                     = save.Bonus;
+            Pool                      = save.Pool;
             Roll                      = state.Roll;
             Offset                    = state.Offset;
             TilesRemaining            = state.TilesRemaining;
@@ -217,6 +207,7 @@ namespace MahjongCore.Riichi.Impl
             _Player2Discards          = CommonHelpers.SafeCopy(state.Players[1].Discards);
             _Player3Discards          = CommonHelpers.SafeCopy(state.Players[2].Discards);
             _Player4Discards          = CommonHelpers.SafeCopy(state.Players[3].Discards);
+            _NextActionPlayer         = Current;
 
             for (int i = 0; i < TileHelpers.TOTAL_TILE_COUNT; ++i)
             {
@@ -250,30 +241,32 @@ namespace MahjongCore.Riichi.Impl
             }
         }
 
-        private void InitializeCommon(GameStateSink sink, GameSettings gs, TutorialSettings ts)
+        private void InitializeCommon(IGameSettings settings, IExtraSettings extra, bool skipHandlers = false)
         {
             // Set settings and determine if we're in tutorial mode if ts is null or not.
-            Sink             = sink;
-            Settings         = (gs != null) ? gs : new GameSettings();
-            IsTutorial       = (ts != null);
-            TutorialSettings = (ts != null) ? ts : new TutorialSettings();
+            Settings          = (settings != null) ? settings : new GameSettingsImpl();
+            _HasExtraSettings = (extra != null);
+            ExtraSettings     = (extra != null) ? extra : new ExtraSettingsImpl();
 
             int score = Settings.GetSetting<int>(GameOption.StartingPoints);
-            Player1Hand = new Hand(this, Player.Player1, score);
-            Player2Hand = new Hand(this, Player.Player2, score);
-            Player3Hand = new Hand(this, Player.Player3, score);
-            Player4Hand = new Hand(this, Player.Player4, score);
+            Player1HandRaw = new HandImpl(this, Player.Player1, score);
+            Player2HandRaw = new HandImpl(this, Player.Player2, score);
+            Player3HandRaw = new HandImpl(this, Player.Player3, score);
+            Player4HandRaw = new HandImpl(this, Player.Player4, score);
 
-            foreach (PlayState ps in Enum.GetValues(typeof(PlayState)))
+            if (skipHandlers)
             {
-                TryAddStateHandlerFunction(ps, _PreBreakStateHandlers, "ExecutePreBreak_");
-                TryAddStateHandlerFunction(ps, _PostBreakStateHandlers, "ExecutePostBreak_");
-                TryAddStateHandlerFunction(ps, _RewindModeChangeHandlers, "ExecuteRewindModeChange_");
-                TryAddStateHandlerFunction(ps, _RewindPostModeChangeHandlers, "ExecuteRewindPostModeChange_");
+                foreach (PlayState ps in Enum.GetValues(typeof(PlayState)))
+                {
+                    TryAddStateHandlerFunction(ps, _PreBreakStateHandlers,  "ExecutePreBreak_");
+                    TryAddStateHandlerFunction(ps, _PostBreakStateHandlers, "ExecutePostBreak_");
+                    TryAddStateHandlerFunction(ps, _RewindPreHandlers,      "ExecuteRewindModeChange_");
+                    TryAddStateHandlerFunction(ps, _RewindPostHandlers,     "ExecuteRewindPostModeChange_");
+                }
             }
         }
 
-        public void SubmitPostDiscardDecision(Player p, PostDiscardDecision decision)
+        public void SubmitPostDiscardDecision(Player p, IPostDiscardDecision decision)
         {
             if (decision.Validate())
             {

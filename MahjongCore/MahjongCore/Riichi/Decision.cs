@@ -33,7 +33,7 @@ namespace MahjongCore.Riichi
         Ron
     }
 
-    public interface DiscardInfo
+    public interface IDiscardInfo
     {
         IHand           Hand               { get; }
         IList<TileType> PromotedKanTiles   { get; }
@@ -47,7 +47,7 @@ namespace MahjongCore.Riichi
         bool            CanReach           { get; }
     }
 
-    public interface PostDiscardInfo
+    public interface IPostDiscardInfo
     {
         IHand        Hand          { get; }
         IHand        TargetPlayer  { get; }

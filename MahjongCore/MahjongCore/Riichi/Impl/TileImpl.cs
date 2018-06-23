@@ -35,6 +35,9 @@ namespace MahjongCore.Riichi.Impl
         private static uint CALLER_P4_FLAG  = 0x1000;
         private static uint TILE_MASK       = 0x003F;
 
+        public TileImpl()              { }
+        public TileImpl(TileType type) { Type = type; }
+
         internal void Reset()
         {
             Type = TileType.None;

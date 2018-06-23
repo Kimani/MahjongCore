@@ -20,7 +20,7 @@ namespace MahjongCore.Riichi
         public IMeld[]            Melds                 { get { return _Melds; } }
         public IList<ITile>       Discards              { get { return (IList<ITile>)_Discards; } }
         public IList<TileType>    Waits                 { get; internal set; }
-        public IList<TileCommand> DrawsAndKans          { get; internal set; }
+        public IList<ICommand> DrawsAndKans          { get; internal set; }
         public IList<IMeld>       AvailableCalls        { get; internal set; }
         public int                Score                 { get; internal set; } = 0;
         public int                ActiveTileCount       { get; internal set; } = 0;
@@ -141,7 +141,7 @@ namespace MahjongCore.Riichi
         public List<CallOption> GetCalls()           { return RiichiHandHelpers.GetCalls(this, Parent); }
         public TileCommand PeekLastDrawKan()         { return DrawsAndKans.Peek(); }
 
-        public Hand(GameState parent, Player p, int score)
+        public HandImpl(IGameState parent, Player p, int score)
         {
             Parent               = parent;
             Player               = p;

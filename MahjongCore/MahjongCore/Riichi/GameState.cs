@@ -79,8 +79,8 @@ namespace MahjongCore.Riichi
     public abstract class HandKanArgs              : EventArgs { public abstract IMeld            Meld    { get; } }
     public abstract class HandCallArgs             : EventArgs { public abstract IMeld            Meld    { get; } }
     public abstract class WallTilesPicked          : EventArgs { public abstract ITile[]          Tiles   { get; } }
-    public abstract class DiscardRequestedArgs     : EventArgs { public abstract DiscardInfo      Info    { get; } }
-    public abstract class PostDiscardRequstedArgs  : EventArgs { public abstract PostDiscardInfo  Info    { get; } }
+    public abstract class DiscardRequestedArgs     : EventArgs { public abstract IDiscardInfo     Info    { get; } }
+    public abstract class PostDiscardRequstedArgs  : EventArgs { public abstract IPostDiscardInfo Info    { get; } }
     public abstract class HandRonArgs              : EventArgs { public abstract Player           Player  { get; }
                                                                  public abstract IWinResults      Results { get; } }
     public abstract class HandTsumoArgs            : EventArgs { public abstract Player           Player  { get; }
@@ -131,12 +131,6 @@ namespace MahjongCore.Riichi
         ITile[]        Wall               { get; }
         ITile[]        DoraIndicators     { get; }
         ITile[]        UraDoraIndicators  { get; }
-        Round          Round              { get; }
-        Player         FirstDealer        { get; }
-        Player         Dealer             { get; }
-        Player         Current            { get; }
-        Player         Wareme             { get; }
-        PlayState      State              { get; }
         IGameSettings  Settings           { get; }
         IExtraSettings ExtraSettings      { get; }
         IHand          Player1Hand        { get; }
@@ -147,7 +141,13 @@ namespace MahjongCore.Riichi
         IPlayerAI      Player2AI          { get; set; }
         IPlayerAI      Player3AI          { get; set; }
         IPlayerAI      Player4AI          { get; set; }
-        bool           CurrentRoundLapped { get; }
+        Round          Round              { get; }
+        Player         FirstDealer        { get; }
+        Player         Dealer             { get; }
+        Player         Current            { get; }
+        Player         Wareme             { get; }
+        PlayState      State              { get; }
+        bool           Lapped             { get; }
         int            Offset             { get; }
         int            TilesRemaining     { get; }
         int            Bonus              { get; }
@@ -173,22 +173,17 @@ namespace MahjongCore.Riichi
         public static IGameState LoadGame(ISaveState save, IExtraSettings extra) { return new GameStateImpl(save, extra); }
     }
 
-    public interface ISaveStatePlayer
-    {
-        string Name  { get; }
-        int    Score { get; }
-    }
-    
     public interface ISaveState : IComparable<ISaveState>
     {
-        IGameSettings    Settings       { get; }
-        ISaveStatePlayer Player1        { get; }
-        ISaveStatePlayer Player2        { get; }
-        ISaveStatePlayer Player3        { get; }
-        ISaveStatePlayer Player4        { get; }
-        IList<string>    Tags           { get; }
-        Round            Round          { get; }
-        int              TilesRemaining { get; }
+        IGameSettings               Settings       { get; }
+        IDictionary<string, string> Tags           { get; }
+        Round                       Round          { get; }
+        bool                        Lapped         { get; }
+        int                         Player1Score   { get; }
+        int                         Player2Score   { get; }
+        int                         Player3Score   { get; }
+        int                         Player4Score   { get; }
+        int                         TilesRemaining { get; }
 
         string     Marshall();
         ISaveState Clone();
@@ -196,6 +191,6 @@ namespace MahjongCore.Riichi
 
     public static class SaveStateFactory
     {
-        public static ISaveState Unmarshall(string save) { return SaveStateImpl.LoadFromString(save); }
+        public static ISaveState Unmarshall(string state) { return new SaveStateImpl(state); }
     }
 }

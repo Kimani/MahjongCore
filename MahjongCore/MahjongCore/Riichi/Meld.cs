@@ -72,18 +72,18 @@ namespace MahjongCore.Riichi
 
     public static class MeldFactory
     {
-        public static IMeld BuildChii(Player target, TileType tileCalled, TileType tileLo, TileType tileHi, int slotLo, int slotHi)
+        public static IMeld BuildChii(Player target, ITile tileCalled, TileType tileLo, TileType tileHi, int slotLo, int slotHi)
         {
             if (Global.CanAssert)
             {
                 Global.Assert(target.IsPlayer());
-                Global.Assert(tileCalled.IsTile());
-                Global.Assert(tileCalled.GetSuit() == tileLo.GetSuit());
-                Global.Assert(tileCalled.GetSuit() == tileHi.GetSuit());
+                Global.Assert(tileCalled.Type.IsTile());
+                Global.Assert(tileCalled.Type.GetSuit() == tileLo.GetSuit());
+                Global.Assert(tileCalled.Type.GetSuit() == tileHi.GetSuit());
 
                 int loValue = tileLo.GetValue();
                 int hiValue = tileHi.GetValue();
-                int calledValue = tileCalled.GetValue();
+                int calledValue = tileCalled.Type.GetValue();
                 Global.Assert(loValue < hiValue);
                 Global.Assert(((loValue + 1) == hiValue) || ((loValue + 2) == hiValue));
                 Global.Assert(((loValue + 2) == hiValue) ? (calledValue == (loValue + 1)) : 
@@ -96,19 +96,20 @@ namespace MahjongCore.Riichi
             meld.State = MeldState.Chii;
             meld.Direction = CalledDirection.Left;
 
-            TileImpl tile1 = meld.GetTile(0);
-            tile1.Type = tileCalled;
+            TileImpl tile1 = meld._Tiles[0];
+            tile1.Type = tileCalled.Type;
             tile1.Location = Location.Call;
             tile1.Ancillary = target;
             tile1.Called = true;
+            tile1.Slot = tileCalled.Slot;
 
-            TileImpl tile2 = meld.GetTile(1);
+            TileImpl tile2 = meld._Tiles[1];
             tile2.Type = tileLo;
             tile2.Location = Location.Call;
             tile2.Ancillary = meld.Owner;
             tile2.Slot = slotLo;
 
-            TileImpl tile3 = meld.GetTile(2);
+            TileImpl tile3 = meld._Tiles[2];
             tile3.Type = tileHi;
             tile3.Location = Location.Call;
             tile3.Ancillary = meld.Owner;
@@ -118,7 +119,7 @@ namespace MahjongCore.Riichi
 
         public static IMeld BuildPon(Player target,
                                      Player caller,
-                                     TileType tileCalled,
+                                     ITile tileCalled,
                                      TileType tileA,
                                      TileType tileB,
                                      int slotA,
@@ -129,11 +130,11 @@ namespace MahjongCore.Riichi
                 Global.Assert(target.IsPlayer());
                 Global.Assert(caller.IsPlayer());
                 Global.Assert(target != caller);
-                Global.Assert(tileCalled.IsTile());
-                Global.Assert(tileCalled.GetValue() == tileA.GetValue());
-                Global.Assert(tileCalled.GetValue() == tileB.GetValue());
-                Global.Assert(tileCalled.GetSuit() == tileA.GetSuit());
-                Global.Assert(tileCalled.GetSuit() == tileB.GetSuit());
+                Global.Assert(tileCalled.Type.IsTile());
+                Global.Assert(tileCalled.Type.GetValue() == tileA.GetValue());
+                Global.Assert(tileCalled.Type.GetValue() == tileB.GetValue());
+                Global.Assert(tileCalled.Type.GetSuit() == tileA.GetSuit());
+                Global.Assert(tileCalled.Type.GetSuit() == tileB.GetSuit());
             }
 
             MeldImpl meld = new MeldImpl();
@@ -143,14 +144,15 @@ namespace MahjongCore.Riichi
             meld.Direction = caller.GetTargetPlayerDirection(target);
 
             TileImpl tileImplCalled, tileImplA, tileImplB;
-            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.GetTile(0); tileImplA = meld.GetTile(1); tileImplB = meld.GetTile(2); }
-            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.GetTile(1); tileImplA = meld.GetTile(0); tileImplB = meld.GetTile(2); }
-            else                                               { tileImplCalled = meld.GetTile(2); tileImplA = meld.GetTile(0); tileImplB = meld.GetTile(1); }
+            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld._Tiles[0]; tileImplA = meld._Tiles[1]; tileImplB = meld._Tiles[2]; }
+            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld._Tiles[1]; tileImplA = meld._Tiles[0]; tileImplB = meld._Tiles[2]; }
+            else                                               { tileImplCalled = meld._Tiles[2]; tileImplA = meld._Tiles[0]; tileImplB = meld._Tiles[1]; }
 
-            tileImplCalled.Type = tileCalled;
+            tileImplCalled.Type = tileCalled.Type;
             tileImplCalled.Location = Location.Call;
             tileImplCalled.Ancillary = target;
             tileImplCalled.Called = true;
+            tileImplCalled.Slot = tileCalled.Slot;
 
             tileImplA.Type = tileA;
             tileImplA.Location = Location.Call;
@@ -166,7 +168,7 @@ namespace MahjongCore.Riichi
 
         public static IMeld BuildOpenKan(Player target,
                                          Player caller,
-                                         TileType tileCalled,
+                                         ITile tileCalled,
                                          TileType tileA,
                                          TileType tileB,
                                          TileType tileC,
@@ -179,13 +181,13 @@ namespace MahjongCore.Riichi
                 Global.Assert(target.IsPlayer());
                 Global.Assert(caller.IsPlayer());
                 Global.Assert(target != caller);
-                Global.Assert(tileCalled.IsTile());
-                Global.Assert(tileCalled.GetValue() == tileA.GetValue());
-                Global.Assert(tileCalled.GetValue() == tileB.GetValue());
-                Global.Assert(tileCalled.GetValue() == tileC.GetValue());
-                Global.Assert(tileCalled.GetSuit() == tileA.GetSuit());
-                Global.Assert(tileCalled.GetSuit() == tileB.GetSuit());
-                Global.Assert(tileCalled.GetSuit() == tileC.GetSuit());
+                Global.Assert(tileCalled.Type.IsTile());
+                Global.Assert(tileCalled.Type.GetValue() == tileA.GetValue());
+                Global.Assert(tileCalled.Type.GetValue() == tileB.GetValue());
+                Global.Assert(tileCalled.Type.GetValue() == tileC.GetValue());
+                Global.Assert(tileCalled.Type.GetSuit() == tileA.GetSuit());
+                Global.Assert(tileCalled.Type.GetSuit() == tileB.GetSuit());
+                Global.Assert(tileCalled.Type.GetSuit() == tileC.GetSuit());
             }
 
             MeldImpl meld = new MeldImpl();
@@ -195,14 +197,15 @@ namespace MahjongCore.Riichi
             meld.Direction = caller.GetTargetPlayerDirection(target);
 
             TileImpl tileImplCalled, tileImplA, tileImplB, tileImplC;
-            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.GetTile(0); tileImplA = meld.GetTile(1); tileImplB = meld.GetTile(2); tileImplC = meld.GetTile(3); }
-            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.GetTile(1); tileImplA = meld.GetTile(0); tileImplB = meld.GetTile(2); tileImplC = meld.GetTile(3); }
-            else                                               { tileImplCalled = meld.GetTile(3); tileImplA = meld.GetTile(0); tileImplB = meld.GetTile(1); tileImplC = meld.GetTile(2); }
+            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld._Tiles[0]; tileImplA = meld._Tiles[1]; tileImplB = meld._Tiles[2]; tileImplC = meld._Tiles[3]; }
+            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld._Tiles[1]; tileImplA = meld._Tiles[0]; tileImplB = meld._Tiles[2]; tileImplC = meld._Tiles[3]; }
+            else                                               { tileImplCalled = meld._Tiles[3]; tileImplA = meld._Tiles[0]; tileImplB = meld._Tiles[1]; tileImplC = meld._Tiles[2]; }
 
-            tileImplCalled.Type = tileCalled;
+            tileImplCalled.Type = tileCalled.Type;
             tileImplCalled.Location = Location.Call;
             tileImplCalled.Ancillary = target;
             tileImplCalled.Called = true;
+            tileImplCalled.Slot = tileCalled.Slot;
 
             tileImplA.Type = tileA;
             tileImplA.Location = Location.Call;
@@ -247,25 +250,25 @@ namespace MahjongCore.Riichi
             meld.Owner = caller;
             meld.State = MeldState.KanConcealed;
 
-            TileImpl tileImplA = meld.GetTile(0);
+            TileImpl tileImplA = meld._Tiles[0];
             tileImplA.Type = tileA;
             tileImplA.Location = Location.Call;
             tileImplA.Ancillary = caller;
             tileImplA.Slot = slotA;
 
-            TileImpl tileImplB = meld.GetTile(1);
+            TileImpl tileImplB = meld._Tiles[1];
             tileImplB.Type = tileB;
             tileImplB.Location = Location.Call;
             tileImplB.Ancillary = caller;
             tileImplB.Slot = slotB;
 
-            TileImpl tileImplC = meld.GetTile(2);
+            TileImpl tileImplC = meld._Tiles[2];
             tileImplC.Type = tileC;
             tileImplC.Location = Location.Call;
             tileImplC.Ancillary = caller;
             tileImplC.Slot = slotC;
 
-            TileImpl tileImplD = meld.GetTile(3);
+            TileImpl tileImplD = meld._Tiles[3];
             tileImplD.Type = tileD;
             tileImplD.Location = Location.Call;
             tileImplD.Ancillary = caller;
