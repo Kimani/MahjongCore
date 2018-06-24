@@ -77,144 +77,134 @@ namespace MahjongCore.Riichi.Impl
         private void LoadFromStringV2(GameStateImpl state, Dictionary<string, string> tags)
         {
             Queue<string> lines = new Queue<string>(_State.Split(null)); // Passing in null splits at any whitespace.
-            Global.Assert(PREFIX_V2.Equals(lines.Dequeue()));
+            CommonHelpers.Check(PREFIX_V2.Equals(lines.Dequeue()), "");
 
             // Get data from the save string.
-            Global.Assert(PlayStateExtentionMethods.TryGetPlayState(lines.Dequeue(), out CurrentState));
-            Global.Assert(ColorExtensionMethods.TryGetColor(lines.Dequeue(), out TileColor));
-            Global.Assert(RoundExtensionMethods.TryGetRound(lines.Dequeue(), out CurrentRound));
-            Global.Assert(bool.TryParse(lines.Dequeue(), out CurrentRoundLapped));
-            Global.Assert(int.TryParse(lines.Dequeue(), out Bonus));
-            Global.Assert(int.TryParse(lines.Dequeue(), out Pool));
+            state.State               = PlayStateExtentionMethods.GetPlayState(lines.Dequeue());
+            lines.Dequeue();          // TileColor
+            state.Round               = RoundExtensionMethods.GetRound(lines.Dequeue());
+            state.Lapped              = bool.Parse(lines.Dequeue());
+            state.Bonus               = int.Parse(lines.Dequeue());
+            state.Pool                = int.Parse(lines.Dequeue());
+            state.FirstDealer         = PlayerExtensionMethods.GetPlayer(lines.Dequeue());
+            state.Current             = PlayerExtensionMethods.GetPlayer(lines.Dequeue());
+            state.PlayerRecentOpenKan = PlayerExtensionMethods.GetPlayer(lines.Dequeue());
+            state.Roll                = int.Parse(lines.Dequeue());
+            state.PlayerDeadWallPick  = bool.Parse(lines.Dequeue());
+            lines.Dequeue();          // GameTypeFlags
 
-            Player startingDealer;
-            Global.Assert(PlayerExtensionMethods.TryGetPlayer(lines.Dequeue(), out startingDealer));
-            Global.Assert(PlayerExtensionMethods.TryGetPlayer(lines.Dequeue(), out CurrentPlayer));
-            Global.Assert(PlayerExtensionMethods.TryGetPlayer(lines.Dequeue(), out PlayerRecentOpenKan));
-            Global.Assert(int.TryParse(lines.Dequeue(), out Roll));
-            Global.Assert(bool.TryParse(lines.Dequeue(), out PlayerDeadWallPick));
-            GameTypeFlags = lines.Dequeue();
-
-            int pickedTileCount;
-            Global.Assert(int.TryParse(lines.Dequeue(), out pickedTileCount));
-            Global.Assert(GameActionExtentionMethods.TryGetGameAction(lines.Dequeue(), out PrevAction));
-            Global.Assert(GameActionExtentionMethods.TryGetGameAction(lines.Dequeue(), out NextAction));
+            int pickedTileCount = int.Parse(lines.Dequeue());
+            state.PrevAction = GameActionExtentionMethods.GetGameAction(lines.Dequeue());
+            state.NextAction = GameActionExtentionMethods.GetGameAction(lines.Dequeue());
 
             string tileWallString = lines.Dequeue();
-            Global.Assert(tileWallString.Length == (2 * 136)); // 136 tiles, 2-bytes per character.
+            CommonHelpers.Check(tileWallString.Length == (2 * 136), "Tile wall expected to be 2 * 136 characters long. Got: " + tileWallString.Length);
             for (int i = 0; i < 136; ++i)
             {
-                Wall[i] = TileTypeExtensionMethods.GetTile(tileWallString.Substring((i * 2), 2));
+                state.WallRaw[i].Type = TileTypeExtensionMethods.GetTile(tileWallString.Substring((i * 2), 2));
+                state.WallRaw[i].Ancillary = Player.None;
+                state.WallRaw[i].Ghost = false;
             }
 
-            foreach (PlayerValue p in Players)
+            foreach (Player p in PlayerExtensionMethods.Players)
             {
-                // Get the name and score.
-                p.Name = lines.Dequeue();
+                HandImpl hand = state.GetHand(p);
+                hand.Reset();
 
+                // Get the name and score.
+                string name = lines.Dequeue();
                 int nameTokenCount;
-                if (int.TryParse(p.Name, out nameTokenCount) && (lines.Count > nameTokenCount))
+                if (int.TryParse(name, out nameTokenCount) && (lines.Count > nameTokenCount))
                 {
                     if (MULTI_STRING_NAME_END.Equals(lines.ElementAt(nameTokenCount)))
                     {
-                        p.Name = lines.Dequeue();
+                        name = lines.Dequeue();
                         for (int i = 0; i < (nameTokenCount - 1); ++i)
                         {
-                            p.Name += " " + lines.Dequeue();
+                            name += " " + lines.Dequeue();
                         }
 
                         string nameEndToken = lines.Dequeue();
-                        Global.Assert(MULTI_STRING_NAME_END.Equals(nameEndToken));
+                        CommonHelpers.Check(MULTI_STRING_NAME_END.Equals(nameEndToken), "Last string of multi string didn't match end name token: " + nameEndToken);
                     }
                 }
 
-                Global.Assert(int.TryParse(lines.Dequeue(), out p.Score));
-                Global.Assert(int.TryParse(lines.Dequeue(), out p.ConsecutiveWinStreak));
-                Global.Assert(bool.TryParse(lines.Dequeue(), out p.Yakitori));
+                hand.Score = int.Parse(lines.Dequeue());
+                hand.Streak = int.Parse(lines.Dequeue());
+                hand.Yakitori = bool.Parse(lines.Dequeue());
 
                 // Get the active hand.
                 string activeHandString = lines.Dequeue();
-                Global.Assert(activeHandString.Length == (2 * 13)); // 13 tiles, 2-bytes per character.
+                CommonHelpers.Check(activeHandString.Length == (2 * 13), "Expecting 13 tiles, 2 characters per tile... found: " + activeHandString.Length);
                 for (int i = 0; i < 13; ++i)
                 {
-                    p.ActiveHand[i] = TileTypeExtensionMethods.GetTile(activeHandString.Substring((i * 2), 2));
+                    hand.ActiveHandRaw[i].Type = TileTypeExtensionMethods.GetTile(activeHandString.Substring((i * 2), 2));
                 }
 
                 // Get open melds.
-                int openMeldCount;
-                Global.Assert(int.TryParse(lines.Dequeue(), out openMeldCount));
+                int openMeldCount = int.Parse(lines.Dequeue());
                 for (int i = 0; i < openMeldCount; ++i)
                 {
-                    MeldState meldState;
-                    ExtendedTile et1, et2, et3, et4;
-                    Global.Assert(MeldStateExtensionMethods.TryGetMeldState(lines.Dequeue(), out meldState));
-                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et1));
-                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et2));
-                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et3));
-                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et4));
-                    p.Melds.Add(new Meld(meldState, et1, et2, et3, et4));
+                    hand.MeldsRaw[i].Set(MeldStateExtensionMethods.TryGetMeldState(lines.Dequeue()),
+                                         TileImpl.GetTile(lines.Dequeue()),
+                                         TileImpl.GetTile(lines.Dequeue()),
+                                         TileImpl.GetTile(lines.Dequeue()),
+                                         TileImpl.GetTile(lines.Dequeue()));
                 }
 
                 // Get discards.
-                int discardCount;
-                Global.Assert(int.TryParse(lines.Dequeue(), out discardCount));
+                int discardCount = int.Parse(lines.Dequeue());
+                hand.DiscardsImpl.Clear();
                 for (int i = 0; i < discardCount; ++i)
                 {
-                    ExtendedTile et;
-                    Global.Assert(ExtendedTile.TryGetExtendedTile(lines.Dequeue(), out et));
-                    p.Discards.Add(et);
+                    hand.DiscardsImpl.Add(TileImpl.GetTile(lines.Dequeue()));
                 }
             }
 
             // Get custom rules.
-            CustomSettings = new GameSettings();
-            bool hasCustomRules;
-            Global.Assert(bool.TryParse(lines.Dequeue(), out hasCustomRules));
+            state.Settings.Reset();
+            bool hasCustomRules = bool.Parse(lines.Dequeue());
+            GameSettingsImpl settings = state.Settings as GameSettingsImpl;
 
-            if (hasCustomRules)
+            if (hasCustomRules && (settings != null))
             {
-                uint rules1;        Global.Assert(uint.TryParse(lines.Dequeue(), out rules1));                                    CustomSettings.SetSettingField(rules1, CustomBitfields.CustomGameRules1);
-                uint rules2;        Global.Assert(uint.TryParse(lines.Dequeue(), out rules2));                                    CustomSettings.SetSettingField(rules2, CustomBitfields.CustomGameRules2);
-                uint yaku1;         Global.Assert(uint.TryParse(lines.Dequeue(), out yaku1));                                     CustomSettings.SetSettingField(yaku1,  CustomBitfields.CustomGameYaku1);
-                uint yaku2;         Global.Assert(uint.TryParse(lines.Dequeue(), out yaku2));                                     CustomSettings.SetSettingField(yaku2,  CustomBitfields.CustomGameYaku2);
-                uint yaku3;         Global.Assert(uint.TryParse(lines.Dequeue(), out yaku3));                                     CustomSettings.SetSettingField(yaku3,  CustomBitfields.CustomGameYaku3);
-                int victoryScore;   Global.Assert(int.TryParse(lines.Dequeue(), out victoryScore));                               CustomSettings.SetSetting(GameOption.VictoryPoints, victoryScore);
-                Uma uma;            Global.Assert(UmaExtensionMethods.TryGetUma(lines.Dequeue(), out uma));                       CustomSettings.SetSetting(GameOption.UmaOption, uma);
-                RedDora redDora;    Global.Assert(RedDoraExtensionMethods.TryGetRedDora(lines.Dequeue(), out redDora));           CustomSettings.SetSetting(GameOption.RedDoraOption, redDora);
-                Oka oka;            Global.Assert(OkaExtensionMethods.TryGetOka(lines.Dequeue(), out oka));                       CustomSettings.SetSetting(GameOption.OkaOption, oka);
-                IisouSanjunHan ish; Global.Assert(IisouSanjunHanExtensionMethods.TryGetIisouSanjunHan(lines.Dequeue(), out ish)); CustomSettings.SetSetting(GameOption.IisouSanjunHanOption, ish);
-                Yakitori yakitori;  Global.Assert(YakitoriExtensionMethods.TryGetYakitori(lines.Dequeue(), out yakitori));        CustomSettings.SetSetting(GameOption.YakitoriOption, yakitori);
+                settings.SetSettingField(uint.Parse(lines.Dequeue()), CustomBitfields.CustomGameRules1);
+                settings.SetSettingField(uint.Parse(lines.Dequeue()), CustomBitfields.CustomGameRules2);
+                settings.SetSettingField(uint.Parse(lines.Dequeue()),  CustomBitfields.CustomGameYaku1);
+                settings.SetSettingField(uint.Parse(lines.Dequeue()),  CustomBitfields.CustomGameYaku2);
+                settings.SetSettingField(uint.Parse(lines.Dequeue()),  CustomBitfields.CustomGameYaku3);
+                settings.SetSetting(GameOption.VictoryPoints, int.Parse(lines.Dequeue()));
+                settings.SetSetting(GameOption.UmaOption, UmaExtensionMethods.GetUma(lines.Dequeue()));
+                settings.SetSetting(GameOption.RedDoraOption, RedDoraExtensionMethods.GetRedDora(lines.Dequeue()));
+                settings.SetSetting(GameOption.OkaOption, OkaExtensionMethods.GetOka(lines.Dequeue()));
+                settings.SetSetting(GameOption.IisouSanjunHanOption, IisouSanjunHanExtensionMethods.GetIisouSanjunHan(lines.Dequeue()));
+                settings.SetSetting(GameOption.YakitoriOption, YakitoriExtensionMethods.GetYakitori(lines.Dequeue()));
             }
 
             // Extrapolate other data.
-            CurrentDealer = startingDealer.AddOffset(CurrentRound.GetOffset());
-            WaremePlayer = CustomSettings.GetSetting<bool>(GameOption.Wareme) ? CurrentDealer.AddOffset(Roll - 1) : Player.None;
-            Offset = GameStateHelpers.GetOffset(CurrentDealer, Roll);
-            TilesRemaining = 122 - (13 * 4) - pickedTileCount;
+            state.Dealer = state.FirstDealer.AddOffset(state.Round.GetOffset());
+            state.Wareme = state.Settings.GetSetting<bool>(GameOption.Wareme) ? state.Dealer.AddOffset(state.Roll - 1) : Player.None;
+            state.Offset = GameStateHelpers.GetOffset(state.Dealer, state.Roll);
+            state.TilesRemaining = 122 - (13 * 4) - pickedTileCount;
+            state.FlipDoraAfterNextDiscard = false;
+            state.DoraCount = 1 + (state.Player1Hand.KanCount + state.Player2Hand.KanCount + state.Player3Hand.KanCount + state.Player4Hand.KanCount) - (state.FlipDoraAfterNextDiscard ? 1 : 0);
 
-            FlipDoraAfterNextDiscard = false;
-            if (PrevAction == GameAction.ReplacementTilePick)
+            if (state.PrevAction == GameAction.ReplacementTilePick)
             {
-                PlayerValue currPlayerHand = Players[CurrentPlayer.GetZeroIndex()];
-                if (currPlayerHand.Melds.Count > 0)
+                HandImpl currentHand = state.GetHand(state.Current);
+                if (currentHand.MeldCount > 0)
                 {
-                    MeldState ms = currPlayerHand.Melds[currPlayerHand.Melds.Count - 1].State;
-                    FlipDoraAfterNextDiscard = (ms == MeldState.KanOpen) || (ms == MeldState.KanPromoted);
+                    MeldState ms = currentHand.GetLatestMeld().State;
+                    state.FlipDoraAfterNextDiscard = (ms == MeldState.KanOpen) || (ms == MeldState.KanPromoted);
                 }
             }
 
-            int kanCount = Players[0].CountKans() + Players[1].CountKans() + Players[2].CountKans() + Players[3].CountKans();
-            DoraCount = 1 + kanCount - (FlipDoraAfterNextDiscard ? 1 : 0);
-            Players[0].Ippatsu = DetermineIppatsu(Player.Player1, CurrentDealer, pickedTileCount, Players);
-            Players[1].Ippatsu = DetermineIppatsu(Player.Player2, CurrentDealer, pickedTileCount, Players);
-            Players[2].Ippatsu = DetermineIppatsu(Player.Player3, CurrentDealer, pickedTileCount, Players);
-            Players[3].Ippatsu = DetermineIppatsu(Player.Player4, CurrentDealer, pickedTileCount, Players);
-
-            // Read in furiten flags.
-            Players[0].Furiten = DetermineFuriten(Players[0].ActiveHand, Players[0].Discards);
-            Players[1].Furiten = DetermineFuriten(Players[1].ActiveHand, Players[1].Discards);
-            Players[2].Furiten = DetermineFuriten(Players[2].ActiveHand, Players[2].Discards);
-            Players[3].Furiten = DetermineFuriten(Players[3].ActiveHand, Players[3].Discards);
+            foreach (Player player in PlayerExtensionMethods.Players)
+            {
+                HandImpl hand = state.GetHand(player);
+                hand.CouldIppatsu = DetermineIppatsu(state, player, pickedTileCount);
+                hand.Furiten = DetermineFuriten(hand);
+            }
         }
 
         private string SaveToString(GameStateImpl state)
@@ -242,8 +232,8 @@ namespace MahjongCore.Riichi.Impl
             }
             else
             {
-                Global.Assert(!flags.Contains(' '));
-                Global.Assert(!flags.Contains('\n'));
+                CommonHelpers.Check(!flags.Contains(' '));
+                CommonHelpers.Check(!flags.Contains('\n'));
             }
             sb.AppendWithSpace(flags);
 
@@ -340,7 +330,7 @@ namespace MahjongCore.Riichi.Impl
             return sb.ToString().Trim();
         }
 
-        private bool DetermineIppatsu(Player p, Player dealer, int tilesPicked, PlayerValue[] players)
+        private bool DetermineIppatsu(GameStateImpl state, Player player, int tilesPicked)
         {
             int [] slots = new int[] { 0, 0, 0, 0 };
             bool ippatsu = false;
@@ -373,8 +363,8 @@ namespace MahjongCore.Riichi.Impl
             }
             return ippatsu;
         }
-        
-        private bool DetermineFuriten(TileType[] activeHand, List<ExtendedTile> discards)
+
+        private bool DetermineFuriten(HandImpl hand)
         {
             // Get the list of waits.
             bool anyCalls = (Players[0].Melds.Count + Players[1].Melds.Count + Players[2].Melds.Count + Players[3].Melds.Count) > 0;

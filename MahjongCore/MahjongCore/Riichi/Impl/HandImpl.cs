@@ -13,41 +13,41 @@ namespace MahjongCore.Riichi
     public class HandImpl : IHand
     {
         // IHand
-        public IGameState         Parent                { get; internal set; }
-        public Player             Player                { get; internal set; }
-        public Wind               Seat                  { get { return WindExtensionMethods.GetWind(Player, Parent.Dealer); } }
-        public ITile[]            ActiveHand            { get { return _ActiveHand; } }
-        public IMeld[]            Melds                 { get { return _Melds; } }
-        public IList<ITile>       Discards              { get { return (IList<ITile>)_Discards; } }
-        public IList<TileType>    Waits                 { get; internal set; }
+        public IGameState      Parent                { get; internal set; }
+        public Player          Player                { get; internal set; }
+        public Wind            Seat                  { get { return WindExtensionMethods.GetWind(Player, Parent.Dealer); } }
+        public ITile[]         ActiveHand            { get { return ActiveHandRaw; } }
+        public IMeld[]         Melds                 { get { return MeldsRaw; } }
+        public IList<ITile>    Discards              { get { return (IList<ITile>)DiscardsImpl; } }
+        public IList<TileType> Waits                 { get; internal set; }
         public IList<ICommand> DrawsAndKans          { get; internal set; }
-        public IList<IMeld>       AvailableCalls        { get; internal set; }
-        public int                Score                 { get; internal set; } = 0;
-        public int                ActiveTileCount       { get; internal set; } = 0;
-        public int                Streak                { get; internal set; } = 0;
-        public int                MeldCount             { get { return (_Melds[0].State.IsCalled() ? 1 : 0) + (_Melds[1].State.IsCalled() ? 1 : 0) + (_Melds[2].State.IsCalled() ? 1 : 0) + (_Melds[3].State.IsCalled() ? 1 : 0); } }
-        public int                MeldedTileCount       { get; internal set; }
-        public int                KanCount              { get { return (_Melds[0].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (_Melds[1].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (_Melds[2].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (_Melds[3].State.GetMeldType() == MeldType.Kan ? 1 : 0); } }
-        public bool               Dealer                { get { return Player == Parent.Dealer; } }
-        public bool               Open                  { get { return _Melds[0].State.IsOpen() || _Melds[1].State.IsOpen() || _Melds[2].State.IsOpen() || _Melds[3].State.IsOpen(); } }
-        public bool               Closed                { get { return !Open; } }
-        public bool               Tempai                { get; internal set; }
-        public bool               InReach               { get; internal set; }
-        public bool               InDoubleReach         { get; internal set; }
-        public bool               InOpenReach           { get; internal set; }
-        public bool               Furiten               { get; internal set; } = false;
-        public bool               Yakitori              { get; internal set; } = true;
-        public bool               HasFullHand           { get; internal set; }
-        public bool               CouldIppatsu          { get; internal set; }
-        public bool               CouldDoubleReach      { get; internal set; }
-        public bool               CouldKyuushuuKyuuhai  { get; internal set; }
-        public bool               CouldSuufurendan      { get; internal set; }
+        public IList<IMeld>    AvailableCalls        { get; internal set; }
+        public int             Score                 { get; internal set; } = 0;
+        public int             ActiveTileCount       { get; internal set; } = 0;
+        public int             Streak                { get; internal set; } = 0;
+        public int             MeldCount             { get { return (MeldsRaw[0].State.IsCalled() ? 1 : 0) + (MeldsRaw[1].State.IsCalled() ? 1 : 0) + (MeldsRaw[2].State.IsCalled() ? 1 : 0) + (MeldsRaw[3].State.IsCalled() ? 1 : 0); } }
+        public int             MeldedTileCount       { get; internal set; }
+        public int             KanCount              { get { return (MeldsRaw[0].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (MeldsRaw[1].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (MeldsRaw[2].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (MeldsRaw[3].State.GetMeldType() == MeldType.Kan ? 1 : 0); } }
+        public bool            Dealer                { get { return Player == Parent.Dealer; } }
+        public bool            Open                  { get { return MeldsRaw[0].State.IsOpen() || MeldsRaw[1].State.IsOpen() || MeldsRaw[2].State.IsOpen() || MeldsRaw[3].State.IsOpen(); } }
+        public bool            Closed                { get { return !Open; } }
+        public bool            Tempai                { get; internal set; }
+        public bool            InReach               { get; internal set; }
+        public bool            InDoubleReach         { get; internal set; }
+        public bool            InOpenReach           { get; internal set; }
+        public bool            Furiten               { get; internal set; } = false;
+        public bool            Yakitori              { get; internal set; } = true;
+        public bool            HasFullHand           { get; internal set; }
+        public bool            CouldIppatsu          { get; internal set; }
+        public bool            CouldDoubleReach      { get; internal set; }
+        public bool            CouldKyuushuuKyuuhai  { get; internal set; }
+        public bool            CouldSuufurendan      { get; internal set; }
 
         public int GetTileSlot(TileType tile, bool matchRed)
         {
             for (int i = 0; i < ActiveTileCount; ++i)
             {
-                if (_ActiveHand[i].Type.IsEqual(tile, matchRed)) { return i; }
+                if (ActiveHandRaw[i].Type.IsEqual(tile, matchRed)) { return i; }
             }
             return -1;
         }
@@ -67,7 +67,7 @@ namespace MahjongCore.Riichi
                 bool fFound = false;
                 for (int iHandTile = 0; iHandTile < ActiveTileCount; ++iHandTile)
                 {
-                    if (ripTile.IsEqual(ActiveHand[iHandTile]) && (ripTile.IsRedDora() == ActiveHand[iHandTile].IsRedDora()))
+                    if (ripTile.IsEqual(ActiveHandRaw[iHandTile]) && (ripTile.IsRedDora() == ActiveHandRaw[iHandTile].IsRedDora()))
                     {
                         ActiveHand[iHandTile] = ActiveHand[ActiveTileCount - 1];
                         ActiveHand[ActiveTileCount - 1] = TileType.None;
@@ -101,18 +101,13 @@ namespace MahjongCore.Riichi
         }
 
         // HandImpl
-        internal List<ITile>    DiscardsImpl        { get; set; } = new List<ITile>();
-        internal bool           IppatsuFlag         { get; set; } = false;
         internal ICandidateHand WinningHandCache    { get; set; } = null;
-        internal bool           OverrideNoReachFlag { get; set; } = false;
         internal IMeld          CachedCall          { get; set; } = null;
-
-        private TileImpl[]     _ActiveHand = new TileImpl[TileHelpers.HAND_SIZE];
-        private MeldImpl[]     _Melds      = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
-        private List<TileImpl> _Discards   = new List<TileImpl>();
-
-
-
+        internal List<TileImpl> DiscardsImpl        { get; set; } = new List<TileImpl>();
+        internal TileImpl[]     ActiveHandRaw       { get; set; } = new TileImpl[TileHelpers.HAND_SIZE];
+        internal MeldImpl[]     MeldsRaw            { get; set; } = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
+        internal bool           IppatsuFlag         { get; set; } = false;
+        internal bool           OverrideNoReachFlag { get; set; } = false;
 
         public List<TileType>[]   ActiveTileWaits       { get; private set; } = new List<TileType>[TileHelpers.HAND_SIZE];
         public Stack<TileCommand> DrawsAndKans          { get; private set; } = new Stack<TileCommand>();
@@ -153,6 +148,12 @@ namespace MahjongCore.Riichi
                 ActiveHand[i] = TileType.None;
                 ActiveTileWaits[i] = new List<TileType>();
             }
+        }
+
+        public void Reset()
+        {
+            asdfasdf
+            foreach (MeldImpl meld in hand.MeldsRaw) { meld.Reset(); }
         }
 
         public void Load(SaveState.PlayerValue values)
@@ -230,7 +231,7 @@ namespace MahjongCore.Riichi
             return null;
         }
 
-        public Meld GetLatestMeld()
+        internal MeldImpl GetLatestMeld()
         {
             return (OpenMeld[3].State != MeldState.None) ? OpenMeld[3] :
                    (OpenMeld[2].State != MeldState.None) ? OpenMeld[2] :

@@ -100,5 +100,15 @@ namespace MahjongCore.Riichi.Impl
             }
             return found;
         }
+
+        internal static TileImpl GetTile(string value)
+        {
+            TileImpl tile;
+            if (!TryGetTile(value, out tile))
+            {
+                throw new Exception("Failed to parse TileImpl: " + value);
+            }
+            return tile;
+        }
     }
 }

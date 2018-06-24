@@ -1,8 +1,10 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Impl;
+using System;
 
 namespace MahjongCore.Riichi
 {
@@ -168,6 +170,13 @@ namespace MahjongCore.Riichi
                 ish = (result != null) ? result.Value : default(IisouSanjunHan);
                 return result != null;
             }
+
+            public static IisouSanjunHan GetIisouSanjunHan(string text)
+            {
+                IisouSanjunHan? result = EnumHelper.GetEnumValueFromAttribute<IisouSanjunHan, TextValue, string>(text);
+                CommonHelpers.Check((result != null), "Failed to parse IisouSanjunHan: " + text);
+                return result.Value;
+            }
         }
     #endregion
 
@@ -191,6 +200,13 @@ namespace MahjongCore.Riichi
                 RedDora? result = EnumHelper.GetEnumValueFromAttribute<RedDora, TextValue, string>(text);
                 rd = (result != null) ? result.Value : default(RedDora);
                 return result != null;
+            }
+
+            public static RedDora GetRedDora(string text)
+            {
+                RedDora? result = EnumHelper.GetEnumValueFromAttribute<RedDora, TextValue, string>(text);
+                CommonHelpers.Check((result != null), "Failed to parse RedDora: " + text);
+                return result.Value;
             }
         }
     #endregion
@@ -224,6 +240,13 @@ namespace MahjongCore.Riichi
                 u = (result != null) ? result.Value : default(Uma);
                 return result != null;
             }
+
+            public static Uma GetUma(string text)
+            {
+                Uma? result = EnumHelper.GetEnumValueFromAttribute<Uma, TextValue, string>(text);
+                CommonHelpers.Check((result != null), ("Failed to parse Uma: " + text));
+                return result.Value;
+            }
         }
     #endregion
 
@@ -249,6 +272,13 @@ namespace MahjongCore.Riichi
                 Oka? result = EnumHelper.GetEnumValueFromAttribute<Oka, TextValue, string>(text);
                 o = (result != null) ? result.Value : default(Oka);
                 return result != null;
+            }
+
+            public static Oka GetOka(string text)
+            {
+                Oka? result = EnumHelper.GetEnumValueFromAttribute<Oka, TextValue, string>(text);
+                CommonHelpers.Check((result != null), ("Failed to parse Oka: " + text));
+                return result.Value;
             }
         }
     #endregion
@@ -281,6 +311,13 @@ namespace MahjongCore.Riichi
                 Yakitori? result = EnumHelper.GetEnumValueFromAttribute<Yakitori, TextValue, string>(text);
                 y = (result != null) ? result.Value : default(Yakitori);
                 return result != null;
+            }
+
+            public static Yakitori GetYakitori(string text)
+            {
+                Yakitori? result = EnumHelper.GetEnumValueFromAttribute<Yakitori, TextValue, string>(text);
+                CommonHelpers.Check((result != null), "Failed to parse RedDora: " + text);
+                return result.Value;
             }
         }
     #endregion
@@ -323,6 +360,7 @@ namespace MahjongCore.Riichi
         T GetSetting<T>(GameOption option);
         void SetSetting(GameOption option, object value);
         bool HasCustomSettings();
+        void Reset();
     }
 
     public static class GameSettingsFactory

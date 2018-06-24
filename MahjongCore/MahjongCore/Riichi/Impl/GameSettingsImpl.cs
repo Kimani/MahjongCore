@@ -9,7 +9,8 @@ namespace MahjongCore.Riichi.Impl
 {
     internal class GameSettingsImpl : IGameSettings
     {
-        private Dictionary<GameOption, object> CustomSettings = new Dictionary<GameOption, object>();
+        // IGameSettings
+        public void Reset() { CustomSettings.Clear(); }
 
         public T GetSetting<T>(GameOption option)
         {
@@ -34,6 +35,24 @@ namespace MahjongCore.Riichi.Impl
             }
             CustomSettings.Add(option, value);
         }
+
+        public bool HasCustomSettings()
+        {
+            bool hasCustomSetting = false;
+            foreach (KeyValuePair<GameOption, object> tuple in CustomSettings)
+            {
+                object defaultValue = EnumAttributes.GetAttributeValue<DefaultOptionValue, object>(tuple.Key);
+                if (!defaultValue.Equals(tuple.Value))
+                {
+                    hasCustomSetting = true;
+                    break;
+                }
+            }
+            return hasCustomSetting;
+        }
+
+        // GameSettingsImpl
+        private Dictionary<GameOption, object> CustomSettings = new Dictionary<GameOption, object>();
 
         public void SetSettingField(uint bitfield, CustomBitfields field)
         {
@@ -77,21 +96,6 @@ namespace MahjongCore.Riichi.Impl
                 }
             }
             return bitfield;
-        }
-
-        public bool HasCustomSettings()
-        {
-            bool hasCustomSetting = false;
-            foreach (KeyValuePair<GameOption, object> tuple in CustomSettings)
-            {
-                object defaultValue = EnumAttributes.GetAttributeValue<DefaultOptionValue, object>(tuple.Key);
-                if (!defaultValue.Equals(tuple.Value))
-                {
-                    hasCustomSetting = true;
-                    break;
-                }
-            }
-            return hasCustomSetting;
         }
     }
 }

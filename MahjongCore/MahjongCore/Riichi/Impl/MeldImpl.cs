@@ -9,19 +9,17 @@ namespace MahjongCore.Riichi.Impl
         public Player          Target     { get; internal set; } = Player.None;
         public MeldState       State      { get; internal set; } = MeldState.None;
         public CalledDirection Direction  { get; internal set; } = CalledDirection.None;
-        public ITile[]         Tiles      { get { return _Tiles; } }
-
-        internal TileImpl[] _Tiles = new TileImpl[] { new TileImpl(), new TileImpl(), new TileImpl(), new TileImpl() };
+        public ITile[]         Tiles      { get { return TilesRaw; } }
 
         public ITile CalledTile
         {
             get
             {
-                return _Tiles[0].Called ? _Tiles[0] :
-                       _Tiles[1].Called ? _Tiles[1] :
-                       _Tiles[2].Called ? _Tiles[2] :
-                       _Tiles[3].Called ? _Tiles[3] :
-                                          null;
+                return TilesRaw[0].Called ? TilesRaw[0] :
+                       TilesRaw[1].Called ? TilesRaw[1] :
+                       TilesRaw[2].Called ? TilesRaw[2] :
+                       TilesRaw[3].Called ? TilesRaw[3] :
+                                            null;
             }
         }
 
@@ -29,10 +27,10 @@ namespace MahjongCore.Riichi.Impl
         {
             get
             {
-                return (_Tiles[0].Type.IsRedDora() ? 1 : 0) +
-                       (_Tiles[1].Type.IsRedDora() ? 1 : 0) +
-                       (_Tiles[2].Type.IsRedDora() ? 1 : 0) +
-                       (_Tiles[3].Type.IsRedDora() ? 1 : 0);
+                return (TilesRaw[0].Type.IsRedDora() ? 1 : 0) +
+                       (TilesRaw[1].Type.IsRedDora() ? 1 : 0) +
+                       (TilesRaw[2].Type.IsRedDora() ? 1 : 0) +
+                       (TilesRaw[3].Type.IsRedDora() ? 1 : 0);
             }
         }
 
@@ -43,12 +41,12 @@ namespace MahjongCore.Riichi.Impl
                 Global.Assert(State == MeldState.Pon);
                 Global.Assert(Target != Player.None);
                 Global.Assert(Direction != CalledDirection.None);
-                Global.Assert(!_Tiles[3].Type.IsTile());
+                Global.Assert(!TilesRaw[3].Type.IsTile());
             }
 
             State = MeldState.KanPromoted;
 
-            TileImpl tileD = _Tiles[3];
+            TileImpl tileD = TilesRaw[3];
             tileD.Reset();
             tileD.Type = kanTile;
             tileD.Location = Location.Call;
@@ -67,28 +65,47 @@ namespace MahjongCore.Riichi.Impl
         // IComparable<IMeld>
         public int CompareTo(IMeld other)
         {
-            int value = Owner.CompareTo(other.Owner);              if (value != 0) { return value; }
-            value = Target.CompareTo(other.Target);                if (value != 0) { return value; }
-            value = State.CompareTo(other.State);                  if (value != 0) { return value; }
-            value = Direction.CompareTo(other.Direction);          if (value != 0) { return value; }
-            value = _Tiles[0].Type.CompareTo(other.Tiles[0].Type); if (value != 0) { return value; }
-            value = _Tiles[1].Type.CompareTo(other.Tiles[1].Type); if (value != 0) { return value; }
-            value = _Tiles[2].Type.CompareTo(other.Tiles[2].Type); if (value != 0) { return value; }
-            value = _Tiles[3].Type.CompareTo(other.Tiles[3].Type); if (value != 0) { return value; }
+            int value = Owner.CompareTo(other.Owner);                if (value != 0) { return value; }
+            value = Target.CompareTo(other.Target);                  if (value != 0) { return value; }
+            value = State.CompareTo(other.State);                    if (value != 0) { return value; }
+            value = Direction.CompareTo(other.Direction);            if (value != 0) { return value; }
+            value = TilesRaw[0].Type.CompareTo(other.Tiles[0].Type); if (value != 0) { return value; }
+            value = TilesRaw[1].Type.CompareTo(other.Tiles[1].Type); if (value != 0) { return value; }
+            value = TilesRaw[2].Type.CompareTo(other.Tiles[2].Type); if (value != 0) { return value; }
+            value = TilesRaw[3].Type.CompareTo(other.Tiles[3].Type); if (value != 0) { return value; }
             return 0;
         }
 
         // MeldImpl
+        internal TileImpl[] TilesRaw { get; set; } = new TileImpl[] { new TileImpl(), new TileImpl(), new TileImpl(), new TileImpl() };
+
+        internal void Reset()
+        {
+            Owner = Player.None;
+            Target = Player.None;
+            State  = MeldState.None;
+            Direction = CalledDirection.None;
+            TilesRaw[0].Reset();
+            TilesRaw[1].Reset();
+            TilesRaw[2].Reset();
+            TilesRaw[3].Reset();
+        }
+
         internal void Set(MeldImpl meld)
         {
             Owner = meld.Owner;
             Target = meld.Target;
             State = meld.State;
             Direction = meld.Direction;
-            _Tiles[0].Set(meld._Tiles[0]);
-            _Tiles[1].Set(meld._Tiles[1]);
-            _Tiles[2].Set(meld._Tiles[2]);
-            _Tiles[3].Set(meld._Tiles[3]);
+            TilesRaw[0].Set(meld.TilesRaw[0]);
+            TilesRaw[1].Set(meld.TilesRaw[1]);
+            TilesRaw[2].Set(meld.TilesRaw[2]);
+            TilesRaw[3].Set(meld.TilesRaw[3]);
+        }
+
+        internal void Set(MeldState state, TileImpl tileA, TileImpl tileB, TileImpl tileC, TileImpl tileD)
+        {
+
         }
 
         internal void SortMeldTilesForClosedKan()
@@ -145,9 +162,9 @@ namespace MahjongCore.Riichi.Impl
 
         private void Swap(int a, int b)
         {
-            TileImpl temp = _Tiles[a];
-            _Tiles[a] = _Tiles[b];
-            _Tiles[b] = temp;
+            TileImpl temp = TilesRaw[a];
+            TilesRaw[a] = TilesRaw[b];
+            TilesRaw[b] = temp;
         }
     }
 }

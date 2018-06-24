@@ -1,5 +1,6 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 
@@ -86,9 +87,16 @@ namespace MahjongCore.Riichi
 
             public static bool TryGetRound(string text, out Round c)
             {
-                Round? rResult = EnumHelper.GetEnumValueFromAttribute<Round, TextValue, string>(text);
-                c = (rResult != null) ? rResult.Value : default(Round);
-                return rResult != null;
+                Round? result = EnumHelper.GetEnumValueFromAttribute<Round, TextValue, string>(text);
+                c = (result != null) ? result.Value : default(Round);
+                return result != null;
+            }
+
+            public static Round GetRound(string text)
+            {
+                Round? result = EnumHelper.GetEnumValueFromAttribute<Round, TextValue, string>(text);
+                CommonHelpers.Check((result != null), ("Failed to parse into Round: " + text));
+                return result.Value;
             }
         }
     #endregion
@@ -146,6 +154,13 @@ namespace MahjongCore.Riichi
                        (targetPlayer == 2) ? Player.Player2 :
                        (targetPlayer == 3) ? Player.Player3 :
                                              Player.Player4;
+            }
+
+            public static Player GetPlayer(string text)
+            {
+                Player p;
+                CommonHelpers.Check(EnumHelper.TryGetEnumByCode<Player, PlayerValue>(text, out p), ("Failed to parse into Player: " + text));
+                return p;
             }
         }
     #endregion

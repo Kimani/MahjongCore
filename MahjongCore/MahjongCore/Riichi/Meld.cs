@@ -35,17 +35,35 @@ namespace MahjongCore.Riichi
 
         public static class MeldStateExtensionMethods
         {
-            public static MeldType GetMeldType(this MeldState ms)         { return EnumAttributes.GetAttributeValue<MeldTypeAttribute, MeldType>(ms); }
-            public static bool     IsOpen(this MeldState ms)              { return EnumAttributes.GetAttributeValue<MeldOpen, bool>(ms); }
-            public static bool     IsCalled(this MeldState ms)            { var meldType = EnumAttributes.GetAttributeValue<MeldTypeAttribute, MeldType>(ms);
-                                                                            return EnumAttributes.GetAttributeValue<MeldCalled, bool>(meldType); }
-            public static int      GetTileCount(this MeldState ms)        { var meldType = EnumAttributes.GetAttributeValue<MeldTypeAttribute, MeldType>(ms);
-                                                                            return EnumAttributes.GetAttributeValue<MeldTileCount, int>(meldType); }
-            public static int      GetFlippedTileCount(this MeldState ms) { return EnumAttributes.GetAttributeValue<MeldFlippedTileCount, int>(ms); }
-            public static int      GetMeldCode(this MeldState ms)         { return EnumAttributes.GetAttributeValue<MeldCode, int>(ms); }
-            public static int      GetMeldSimpleFu(this MeldState ms)     { return EnumAttributes.GetAttributeValue<MeldSimpleFu, int>(ms); }
-            public static int      GetMeldNonSimpleFu(this MeldState ms)  { return EnumAttributes.GetAttributeValue<MeldNonSimpleFu, int>(ms); }
+            public static MeldType GetMeldType(this MeldState ms)                  { return EnumAttributes.GetAttributeValue<MeldTypeAttribute, MeldType>(ms); }
+            public static bool     IsOpen(this MeldState ms)                       { return EnumAttributes.GetAttributeValue<MeldOpen, bool>(ms); }
+            public static int      GetFlippedTileCount(this MeldState ms)          { return EnumAttributes.GetAttributeValue<MeldFlippedTileCount, int>(ms); }
+            public static int      GetMeldCode(this MeldState ms)                  { return EnumAttributes.GetAttributeValue<MeldCode, int>(ms); }
+            public static int      GetMeldSimpleFu(this MeldState ms)              { return EnumAttributes.GetAttributeValue<MeldSimpleFu, int>(ms); }
+            public static int      GetMeldNonSimpleFu(this MeldState ms)           { return EnumAttributes.GetAttributeValue<MeldNonSimpleFu, int>(ms); }
             public static bool     TryGetMeldState(string value, out MeldState ms) { return EnumHelper.TryGetEnumByCode<MeldState, MeldCode>(value, out ms); }
+
+            public static bool IsCalled(this MeldState ms)
+            {
+                var meldType = EnumAttributes.GetAttributeValue<MeldTypeAttribute, MeldType>(ms);
+                return EnumAttributes.GetAttributeValue<MeldCalled, bool>(meldType);
+            }
+
+            public static int GetTileCount(this MeldState ms)
+            {
+                var meldType = EnumAttributes.GetAttributeValue<MeldTypeAttribute, MeldType>(ms);
+                return EnumAttributes.GetAttributeValue<MeldTileCount, int>(meldType);
+            }
+
+            public static MeldState TryGetMeldState(string value)
+            {
+                MeldState state;
+                if (!EnumHelper.TryGetEnumByCode<MeldState, MeldCode>(value, out state))
+                {
+                    throw new Exception("Failed to parse MeldState: " + value);
+                }
+                return state;
+            }
         }
     #endregion
 

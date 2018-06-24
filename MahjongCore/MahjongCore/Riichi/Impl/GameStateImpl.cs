@@ -36,6 +36,16 @@ namespace MahjongCore.Riichi.Impl
             public static int  GetSkyValue(this GameAction ga)                  { return EnumAttributes.GetAttributeValue<SkyValue, int>(ga); }
             public static bool TryGetGameAction(string text, out GameAction ga) { return EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga); }
             public static bool IsAgari(this GameAction ga)                      { return (ga == GameAction.Ron) || (ga == GameAction.Tsumo); }
+
+            public static GameAction GetGameAction(string text)
+            {
+                GameAction ga;
+                if (!EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga))
+                {
+                throw new Exception("Failed to parse GameAction: " + text);
+                }
+                return ga;
+            }
         }
     #endregion
 
@@ -99,7 +109,7 @@ namespace MahjongCore.Riichi.Impl
 
         public void       Advance() { AdvancePlayState(State.GetNext(), EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(State.GetNext()), false); }
         public void       Resume()  { AdvancePlayState(State, false, true); }
-        public ISaveState Save()    { return SaveStateImpl.GetState(this); }
+        public ISaveState Save()    { return new SaveStateImpl(this); }
 
         public void Rewind()
         {
@@ -122,15 +132,18 @@ namespace MahjongCore.Riichi.Impl
         }
 
         // GameStateImpl
-        internal GameAction PrevAction           { get; private set; } = GameAction.Nothing;
-        internal GameAction NextAction           { get; private set; } = GameAction.Nothing;
-        internal TileImpl[] WallRaw              { get; private set; } = new TileImpl[TileHelpers.MAIN_WALL_TILE_COUNT];
-        internal TileImpl[] DoraIndicatorsRaw    { get; private set; } = new TileImpl[5];
-        internal TileImpl[] UraDoraIndicatorsRaw { get; private set; } = new TileImpl[5];
-        internal HandImpl   Player1HandRaw       { get; private set; }
-        internal HandImpl   Player2HandRaw       { get; private set; }
-        internal HandImpl   Player3HandRaw       { get; private set; }
-        internal HandImpl   Player4HandRaw       { get; private set; }
+        internal GameAction PrevAction               { get; set; } = GameAction.Nothing;
+        internal GameAction NextAction               { get; set; } = GameAction.Nothing;
+        internal TileImpl[] WallRaw                  { get; private set; } = new TileImpl[TileHelpers.MAIN_WALL_TILE_COUNT];
+        internal TileImpl[] DoraIndicatorsRaw        { get; private set; } = new TileImpl[5];
+        internal TileImpl[] UraDoraIndicatorsRaw     { get; private set; } = new TileImpl[5];
+        internal HandImpl   Player1HandRaw           { get; private set; }
+        internal HandImpl   Player2HandRaw           { get; private set; }
+        internal HandImpl   Player3HandRaw           { get; private set; }
+        internal HandImpl   Player4HandRaw           { get; private set; }
+        internal Player     PlayerRecentOpenKan      { get; set; } = Player.None;
+        internal bool       PlayerDeadWallPick       { get; set; } = false;
+        internal bool       FlipDoraAfterNextDiscard { get; set; } = false;
 
         private Dictionary<PlayState, Action> _PreBreakStateHandlers    = new Dictionary<PlayState, Action>();
         private Dictionary<PlayState, Action> _PostBreakStateHandlers   = new Dictionary<PlayState, Action>();
@@ -142,21 +155,18 @@ namespace MahjongCore.Riichi.Impl
         private IDiscardInfo                  _DiscardInfoCache         = new DiscardInfoImpl();
         private TileType                      _NextActionTile           = TileType.None;
         private Player                        _NextActionPlayer         = Player.None;
-        private Player                        _PlayerRecentOpenKan      = Player.None;
         private Player                        _NextActionPlayerTarget   = Player.None;
         private GameAction                    _NextAction1              = GameAction.Nothing;
         private GameAction                    _NextAction2              = GameAction.Nothing;
         private GameAction                    _NextAction3              = GameAction.Nothing;
         private GameAction                    _NextAction4              = GameAction.Nothing;
         private GameAction                    _RewindAction             = GameAction.Nothing;
-        private bool                          _FlipDoraAfterNextDiscard = false;
+        
         private bool                          _SkipAdvancePlayer        = false;
-        private bool                          _PlayerDeadWallPick       = false;
         private bool                          _ChankanFlag              = false;
         private bool                          _KanburiFlag              = false;
         private bool                          _HasExtraSettings         = false;
         private int                           _NextActionSlot           = -1;
-
 
         internal GameStateImpl()                                       { InitializeCommon(null, null, true); }
         internal GameStateImpl(IGameSettings settings)                 { Initialize(settings, null); }
@@ -243,6 +253,13 @@ namespace MahjongCore.Riichi.Impl
 
         private void InitializeCommon(IGameSettings settings, IExtraSettings extra, bool skipHandlers = false)
         {
+            for (int i = 0; i < WallRaw.Length; ++i)
+            {
+                WallRaw[i] = new TileImpl();
+                WallRaw[i].Slot = i;
+                WallRaw[i].Location = Location.Wall;
+            }
+
             // Set settings and determine if we're in tutorial mode if ts is null or not.
             Settings          = (settings != null) ? settings : new GameSettingsImpl();
             _HasExtraSettings = (extra != null);
@@ -1238,13 +1255,13 @@ namespace MahjongCore.Riichi.Impl
             return tileNumber;
         }
 
-        public Hand GetHandZeroIndexed(int slot)
+        public HandImpl GetHandZeroIndexed(int slot)
         {
             Global.Assert((slot >= 0) && (slot <= 3));
-            return (slot == 0) ? Player1Hand :
-                   (slot == 1) ? Player2Hand :
-                   (slot == 2) ? Player3Hand :
-                                 Player4Hand;
+            return (slot == 0) ? Player1HandRaw :
+                   (slot == 1) ? Player2HandRaw :
+                   (slot == 2) ? Player3HandRaw :
+                                 Player4HandRaw;
         }
 
         public List<ExtendedTile> GetDiscardsZeroIndexed(int slot)
@@ -1421,7 +1438,7 @@ namespace MahjongCore.Riichi.Impl
         public void HandCleared(Player p)                            { Sink.HandCleared(p); }
         public void HandSort(Player p, bool fAnimation)              { Sink.HandSort(p, fAnimation); }
         public void HandPerformedStoredCall(Player p, CallOption co) { Sink.HandPerformedStoredCall(p, co); }
-        public IHand GetHand(Player p)                                { return GetHandZeroIndexed(p.GetZeroIndex()); }
+        internal HandImpl GetHand(Player p)                          { return GetHandZeroIndexed(p.GetZeroIndex()); }
         public List<ExtendedTile> GetDiscards(Player p)              { return GetDiscardsZeroIndexed(p.GetZeroIndex()); }
         private GameAction GetNextPlayerAction(Player p)             { return GetNextPlayerActionZeroIndexed(p.GetZeroIndex()); }
     }

@@ -1,5 +1,6 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Impl;
@@ -66,6 +67,13 @@ namespace MahjongCore.Riichi
             public static PlayState GetNext(this PlayState s)                 { return EnumAttributes.HasAttributeValue(s, typeof(NextState)) ? EnumAttributes.GetAttributeValue<NextState, PlayState>(s) : PlayState.NA; }
             public static int  GetSkyValue(this PlayState ps)                 { return EnumAttributes.GetAttributeValue<SkyValue, int>(ps); }
             public static bool TryGetPlayState(string text, out PlayState ps) { return EnumHelper.TryGetEnumByCode<PlayState, SkyValue>(text, out ps); }
+
+            public static PlayState GetPlayState(string text)
+            {
+                PlayState ps;
+                CommonHelpers.Check(EnumHelper.TryGetEnumByCode<PlayState, SkyValue>(text, out ps), ("Could not parse into PlayState: " + text));
+                return ps;
+            }
         }
     #endregion
 
