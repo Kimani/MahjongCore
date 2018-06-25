@@ -1,5 +1,6 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using System;
@@ -10,16 +11,20 @@ namespace MahjongCore.Riichi.Impl
     internal class GameSettingsImpl : IGameSettings
     {
         // IGameSettings
-        public void Reset() { CustomSettings.Clear(); }
+        public void Reset()
+        {
+            CommonHelpers.Check(!Locked, "Settings are locked. Cannot edit!");
+            _CustomSettings.Clear();
+        }
 
         public T GetSetting<T>(GameOption option)
         {
             Type optionType = EnumAttributes.GetAttributeValue<OptionValueType, Type>(option);
             Global.Assert(optionType == typeof(T));
-            if ((optionType == typeof(T)) && CustomSettings.ContainsKey(option))
+            if ((optionType == typeof(T)) && _CustomSettings.ContainsKey(option))
             {
                 object settingObject;
-                if (CustomSettings.TryGetValue(option, out settingObject))
+                if (_CustomSettings.TryGetValue(option, out settingObject))
                 {
                     return (T)settingObject;
                 }
@@ -29,17 +34,18 @@ namespace MahjongCore.Riichi.Impl
 
         public void SetSetting(GameOption option, object value)
         {
-            if (CustomSettings.ContainsKey(option))
+            CommonHelpers.Check(!Locked, "Settings are locked. Cannot edit!");
+            if (_CustomSettings.ContainsKey(option))
             {
-                CustomSettings.Remove(option);
+                _CustomSettings.Remove(option);
             }
-            CustomSettings.Add(option, value);
+            _CustomSettings.Add(option, value);
         }
 
         public bool HasCustomSettings()
         {
             bool hasCustomSetting = false;
-            foreach (KeyValuePair<GameOption, object> tuple in CustomSettings)
+            foreach (KeyValuePair<GameOption, object> tuple in _CustomSettings)
             {
                 object defaultValue = EnumAttributes.GetAttributeValue<DefaultOptionValue, object>(tuple.Key);
                 if (!defaultValue.Equals(tuple.Value))
@@ -51,11 +57,25 @@ namespace MahjongCore.Riichi.Impl
             return hasCustomSetting;
         }
 
+        // ICloneable
+        public object Clone()
+        {
+            GameSettingsImpl settings = new GameSettingsImpl(_CustomSettings);
+            settings.Locked = Locked;
+            return settings;
+        }
+
         // GameSettingsImpl
-        private Dictionary<GameOption, object> CustomSettings = new Dictionary<GameOption, object>();
+        internal bool Locked { get; set; } = false;
+
+        private Dictionary<GameOption, object> _CustomSettings = new Dictionary<GameOption, object>();
+
+        internal GameSettingsImpl()                                               { _CustomSettings = new Dictionary<GameOption, object>(); }
+        internal GameSettingsImpl(Dictionary<GameOption, object> settingsToClone) { _CustomSettings = new Dictionary<GameOption, object>(settingsToClone); }
 
         public void SetSettingField(uint bitfield, CustomBitfields field)
         {
+            CommonHelpers.Check(!Locked, "Settings are locked. Cannot edit!");
             CustomSettingType fieldType = field.GetCustomSettingType();
             int fieldValue = field.GetTargetTypeValue();
 

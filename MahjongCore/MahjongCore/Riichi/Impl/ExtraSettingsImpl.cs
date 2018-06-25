@@ -23,6 +23,25 @@ namespace MahjongCore.Riichi.Impl
         public bool            DisableAbortiveDraw   { get; set; } = false;
         public int?            OverrideDiceRoll      { get; set; } = null;
 
+        public void Reset()
+        {
+            RestrictDiscardTiles.Clear();
+            DisableAnyDiscard = false;
+            DisableCall = false;
+            DisableCalling  = false;
+            DisableCallPass  = false;
+            DisableCPUWin = false;
+            DisableCPUCalling  = false;
+            DisablePlainDiscard  = false;
+            DisableRonPass  = false;
+            DisableReach  = false;
+            DisableRed5 = true;
+            DisableNonReach = false;
+            DisableAbortiveDraw  = false;
+            OverrideDiceRoll = null;
+        }
+
+        // ICloneable
         object ICloneable.Clone()
         {
             ExtraSettingsImpl extra = new ExtraSettingsImpl();
@@ -43,6 +62,7 @@ namespace MahjongCore.Riichi.Impl
             return extra;
         }
 
+        // IComparable<IExtraSettings>
         public int CompareTo(IExtraSettings other)
         {
             int value = DisableAnyDiscard.CompareTo(other.DisableAnyDiscard); if (value != 0) { return value; }

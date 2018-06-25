@@ -26,7 +26,7 @@ namespace MahjongCore.Riichi
         public int             ActiveTileCount       { get; internal set; } = 0;
         public int             Streak                { get; internal set; } = 0;
         public int             MeldCount             { get { return (MeldsRaw[0].State.IsCalled() ? 1 : 0) + (MeldsRaw[1].State.IsCalled() ? 1 : 0) + (MeldsRaw[2].State.IsCalled() ? 1 : 0) + (MeldsRaw[3].State.IsCalled() ? 1 : 0); } }
-        public int             MeldedTileCount       { get; internal set; }
+        public int             MeldedTileCount       { get { return MeldsRaw[0].State.GetTileCount() + MeldsRaw[1].State.GetTileCount() + MeldsRaw[2].State.GetTileCount() + MeldsRaw[3].State.GetTileCount(); } }
         public int             KanCount              { get { return (MeldsRaw[0].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (MeldsRaw[1].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (MeldsRaw[2].State.GetMeldType() == MeldType.Kan ? 1 : 0) + (MeldsRaw[3].State.GetMeldType() == MeldType.Kan ? 1 : 0); } }
         public bool            Dealer                { get { return Player == Parent.Dealer; } }
         public bool            Open                  { get { return MeldsRaw[0].State.IsOpen() || MeldsRaw[1].State.IsOpen() || MeldsRaw[2].State.IsOpen() || MeldsRaw[3].State.IsOpen(); } }
@@ -106,11 +106,10 @@ namespace MahjongCore.Riichi
         internal List<TileImpl> DiscardsImpl        { get; set; } = new List<TileImpl>();
         internal TileImpl[]     ActiveHandRaw       { get; set; } = new TileImpl[TileHelpers.HAND_SIZE];
         internal MeldImpl[]     MeldsRaw            { get; set; } = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
-        internal bool           IppatsuFlag         { get; set; } = false;
         internal bool           OverrideNoReachFlag { get; set; } = false;
 
-        public List<TileType>[]   ActiveTileWaits       { get; private set; } = new List<TileType>[TileHelpers.HAND_SIZE];
-        public Stack<TileCommand> DrawsAndKans          { get; private set; } = new Stack<TileCommand>();
+        private List<TileType>[]   ActiveTileWaits       { get; private set; } = new List<TileType>[TileHelpers.HAND_SIZE];
+        private Stack<TileCommand> DrawsAndKans          { get; private set; } = new Stack<TileCommand>();
 
         private bool               HasTemporaryTile      = false;
         private List<TileType>     WaitTiles             = new List<TileType>();
@@ -120,8 +119,6 @@ namespace MahjongCore.Riichi
                                                                               new TileType[4], new TileType[4], new TileType[4], new TileType[4],
                                                                               new TileType[4], new TileType[4] };
 
-        public int GetCalledMeldCount()              { return (OpenMeld[0].State.IsCalled() ? 1 : 0) + (OpenMeld[1].State.IsCalled() ? 1 : 0) + (OpenMeld[2].State.IsCalled() ? 1 : 0) + (OpenMeld[3].State.IsCalled() ? 1 : 0); }
-        public int GetMeldedTileCount()              { return OpenMeld[0].State.GetTileCount() + OpenMeld[1].State.GetTileCount() + OpenMeld[2].State.GetTileCount() + OpenMeld[3].State.GetTileCount(); }
         public bool IsFullHand()                     { return ((GetCalledMeldCount() * 3) + ActiveTileCount) == TileHelpers.HAND_SIZE; }
         public bool IsFuriten()                      { return Parent.Settings.GetSetting<bool>(GameOption.Furiten) && Furiten; }
         public bool IsWaramePlayer()                 { return Player == Parent.WaremePlayer; }
@@ -133,10 +130,10 @@ namespace MahjongCore.Riichi
         public int GetClosedKanFlippedTileCount()    { return OpenMeld[0].State.GetFlippedTileCount() + OpenMeld[1].State.GetFlippedTileCount() + OpenMeld[2].State.GetFlippedTileCount() + OpenMeld[3].State.GetFlippedTileCount(); }
         public bool IsInOpenReach()                  { return Parent.IsInOpenReach(Player); }
         public List<TileType> GetWaits()             { return CommonHelpers.SafeCopyByValue(WaitTiles); } // Make a copy, so the caller can't mess with our waits.
-        public List<CallOption> GetCalls()           { return RiichiHandHelpers.GetCalls(this, Parent); }
-        public TileCommand PeekLastDrawKan()         { return DrawsAndKans.Peek(); }
+        public List<IMeld> GetCalls()                { return RiichiHandHelpers.GetCalls(this, Parent); }
+        public ICommand PeekLastDrawKan()            { return DrawsAndKans.Peek(); }
 
-        public HandImpl(IGameState parent, Player p, int score)
+        internal HandImpl(IGameState parent, Player p, int score)
         {
             Parent               = parent;
             Player               = p;
@@ -150,35 +147,20 @@ namespace MahjongCore.Riichi
             }
         }
 
-        public void Reset()
+        internal void Reset()
         {
             asdfasdf
             foreach (MeldImpl meld in hand.MeldsRaw) { meld.Reset(); }
         }
 
-        public void Load(SaveState.PlayerValue values)
+        internal void Rebuild()
         {
-            // Load from values.
-            Score    = values.Score;
-            Streak   = values.ConsecutiveWinStreak;
-            Furiten  = values.Furiten;
-            Yakitori = values.Yakitori;
+            // Gets called after loading from a save state and fields like score, streak, yakitori, hands, calls, and discards
+            // have been set. This method should reconstruct everything else like furiten, waits, ippatsu flags, etc.
 
-            ActiveTileCount = 0;
-            for (int iActiveTile = 0; iActiveTile < values.ActiveHand.Length; ++iActiveTile)
-            {
-                ActiveHand[iActiveTile] = values.ActiveHand[iActiveTile];
-                if (ActiveHand[iActiveTile].IsTile())
-                {
-                    ActiveTileCount++;
-                }
-            }
+            CouldIppatsu = DetermineIppatsu(state, player, pickedTileCount);
+            Furiten = DetermineFuriten(hand);
 
-            // Initialize everything else. Discards and ippatsu are already taken care of at this point.
-            for (int i = 0; i < values.Melds.Count; ++i)
-            {
-                OpenMeld[i].CopyFrom(values.Melds[i]);
-            }
 
             ActiveRiichiKanTiles = new TileType[4];
             WaitTiles = HandEvaluator.GetWaits(this, -1, ActiveRiichiKanTiles);
@@ -192,6 +174,9 @@ namespace MahjongCore.Riichi
                 DrawsAndKans.Push(tc);
             }
             Global.Log(sb.ToString());
+
+            RebuildFuriten();
+            RebuildIppatsu();
         }
 
         public bool IsTempai()
@@ -219,7 +204,7 @@ namespace MahjongCore.Riichi
             return fTempai;
         }
 
-        public Meld GetPonMeld(TileType tile)
+        public IMeld GetPonMeld(TileType tile)
         {
             foreach (Meld meld in OpenMeld)
             {
@@ -916,6 +901,77 @@ namespace MahjongCore.Riichi
                     Furiten = tile.IsEqual(WaitTiles[iWaitTile]);
                 }
             }
+        }
+
+        private bool RebuildFuriten()
+        {
+            // Get the list of waits.
+            bool anyCalls = (Players[0].Melds.Count + Players[1].Melds.Count + Players[2].Melds.Count + Players[3].Melds.Count) > 0;
+            bool overrideNoReachDummy;
+            List<TileType> waits = HandEvaluator.GetWaits(activeHand, null, discards, anyCalls, out overrideNoReachDummy);
+
+            bool furiten = false;
+            if ((waits != null) && (waits.Count > 0))
+            {
+                // If any of our discards match one of the waits, then we're furiten!
+                foreach (ExtendedTile et in discards)
+                {
+                    foreach (TileType tv in waits)
+                    {
+                        if (tv == et.Tile)
+                        {
+                            furiten = true;
+                            break;
+                        }
+
+                        if (furiten == true)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                // Check if we've passed up a wait since our last discard. Reset on our discard unless we've reached.
+                if (!furiten)
+                {
+                    // TODO: this
+                }
+            }
+            return furiten;
+        }
+
+        private bool RebuildIppatsu()
+        {
+            int[] slots = new int[] { 0, 0, 0, 0 };
+            bool ippatsu = false;
+
+            Player currentPlayer = dealer;
+            for (int iTile = 0; iTile < tilesPicked; ++iTile)
+            {
+                int currPlayerIndex = currentPlayer.GetZeroIndex();
+
+                ITile et = players[currPlayerIndex].Discards[slots[currPlayerIndex]];
+                slots[currPlayerIndex]++;
+
+                if (currentPlayer == p)
+                {
+                    ippatsu = et.Reach || et.OpenReach;
+                }
+
+                if (et.Called)
+                {
+                    ippatsu = false;
+                    currentPlayer = et.Caller;
+
+                    // Roll back because the next discard wont count as a picked.
+                    iTile--;
+                }
+                else
+                {
+                    currentPlayer = currentPlayer.GetNext();
+                }
+            }
+            return ippatsu;
         }
 
         /**

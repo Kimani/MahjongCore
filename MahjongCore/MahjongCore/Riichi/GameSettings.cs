@@ -355,9 +355,9 @@ namespace MahjongCore.Riichi
         }
     #endregion
 
-    public interface IGameSettings
+    public interface IGameSettings : ICloneable
     {
-        T GetSetting<T>(GameOption option);
+        T    GetSetting<T>(GameOption option);
         void SetSetting(GameOption option, object value);
         bool HasCustomSettings();
         void Reset();

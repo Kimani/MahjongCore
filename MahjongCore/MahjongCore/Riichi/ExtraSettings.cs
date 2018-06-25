@@ -22,6 +22,8 @@ namespace MahjongCore.Riichi
         bool            DisableNonReach       { get; set; } // Can only reach.
         bool            DisableAbortiveDraw   { get; set; } // Can't abortive draw.
         int?            OverrideDiceRoll      { get; set; }
+
+        void Reset();
     }
 
     public static class ExtraSettingsFactory

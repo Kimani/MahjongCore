@@ -6,26 +6,54 @@ namespace MahjongCore.Riichi.Impl
 {
     internal class DiscardInfoImpl : IDiscardInfo
     {
+        // IDiscardInfo
         public IHand           Hand               { get; internal set; }
         public IList<TileType> PromotedKanTiles   { get; } = new List<TileType>();
         public IList<TileType> ClosedKanTiles     { get; } = new List<TileType>();
         public IList<TileType> RestrictedTiles    { get; } = new List<TileType>();
-        public TileType        SuufurendanTile    { get; internal set; }
-        public TileSource      Source             { get; internal set; }
-        public bool            CanNormalDiscard   { get; internal set; }
-        public bool            CanKyuushuuKyuuhai { get; internal set; }
-        public bool            CanTsumo           { get; internal set; }
-        public bool            CanReach           { get; internal set; }
+        public TileType        SuufurendanTile    { get; internal set; } = TileType.None;
+        public TileSource      Source             { get; internal set; } = TileSource.Wall;
+        public bool            CanNormalDiscard   { get; internal set; } = false;
+        public bool            CanKyuushuuKyuuhai { get; internal set; } = false;
+        public bool            CanTsumo           { get; internal set; } = false;
+        public bool            CanReach           { get; internal set; } = false;
+
+        // DiscardInfoImpl
+        internal void Reset()
+        {
+            Hand = null;
+            PromotedKanTiles.Clear();
+            ClosedKanTiles.Clear();
+            RestrictedTiles.Clear();
+            SuufurendanTile = TileType.None;
+            Source = TileSource.Wall;
+            CanNormalDiscard = false;
+            CanKyuushuuKyuuhai = false;
+            CanTsumo  = false;
+            CanReach  = false;
+        }
     }
 
     internal class PostDiscardInfoImpl : IPostDiscardInfo
     {
+        // IPostDiscardInfo
         public IHand        Hand          { get; internal set; }
         public IHand        TargetPlayer  { get; internal set; }
         public IList<IMeld> Calls         { get; } = new List<IMeld>();
         public ITile        DiscardedTile { get; internal set; }
-        public bool         CanRon        { get; internal set; }
-        public bool         CanChankanRon { get; internal set; }
+        public bool         CanRon        { get; internal set; } = false;
+        public bool         CanChankanRon { get; internal set; } = false;
+
+        // PostDiscardInfoImpl
+        internal void Reset()
+        {
+            Hand = null;
+            TargetPlayer = null;
+            Calls.Clear();
+            DiscardedTile = null;
+            CanRon = false;
+            CanChankanRon = false;
+        }
     }
 
     internal class DiscardDecisionImpl : IDiscardDecision
