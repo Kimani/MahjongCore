@@ -59,7 +59,7 @@ namespace MahjongCore.Riichi
 
         public void ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd)
         {
-            Global.Assert(tilesRemove.Count == tilesAdd.Count);
+            CommonHelpers.Check((tilesRemove.Count == tilesAdd.Count), ("Count of tiles to add must add count of tiles to remove. Remove: " + tilesRemove.Count + " add: " + tilesAdd.Count));
 
             // Remove from the hand one of each tile in tilesRemove.
             foreach (TileType ripTile in tilesRemove)
@@ -67,7 +67,7 @@ namespace MahjongCore.Riichi
                 bool fFound = false;
                 for (int iHandTile = 0; iHandTile < ActiveTileCount; ++iHandTile)
                 {
-                    if (ripTile.IsEqual(ActiveHandRaw[iHandTile]) && (ripTile.IsRedDora() == ActiveHandRaw[iHandTile].IsRedDora()))
+                    if (ripTile.IsEqual(ActiveHandRaw[iHandTile].Type, true))
                     {
                         ActiveHand[iHandTile] = ActiveHand[ActiveTileCount - 1];
                         ActiveHand[ActiveTileCount - 1] = TileType.None;

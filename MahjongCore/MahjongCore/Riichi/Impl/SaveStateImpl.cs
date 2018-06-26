@@ -1,7 +1,6 @@
 // [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
 using MahjongCore.Common;
-using MahjongCore.Riichi.Evaluator;
 using MahjongCore.Riichi.Helpers;
 using System;
 using System.Collections.Generic;
@@ -51,7 +50,7 @@ namespace MahjongCore.Riichi.Impl
         internal SaveStateImpl(GameStateImpl state)
         {
             InitializeCommon(state);
-            _State = SaveToString(state);
+            _State = SaveToString(state, _Tags);
         }
 
         internal GameStateImpl PopulateState(GameStateImpl state, Dictionary<string, string> tags)
@@ -79,7 +78,9 @@ namespace MahjongCore.Riichi.Impl
             Queue<string> lines = new Queue<string>(_State.Split(null)); // Passing in null splits at any whitespace.
             CommonHelpers.Check(PREFIX_V2.Equals(lines.Dequeue()), "");
 
-            // Get data from the save string.
+            state.Reset();
+
+            // Read game state.
             state.State               = PlayStateExtentionMethods.GetPlayState(lines.Dequeue());
             lines.Dequeue();          // TileColor
             state.Round               = RoundExtensionMethods.GetRound(lines.Dequeue());
@@ -109,7 +110,6 @@ namespace MahjongCore.Riichi.Impl
             foreach (Player p in PlayerExtensionMethods.Players)
             {
                 HandImpl hand = state.GetHand(p);
-                hand.Reset();
 
                 // Get the name and score.
                 string name = lines.Dequeue();
@@ -154,25 +154,21 @@ namespace MahjongCore.Riichi.Impl
 
                 // Get discards.
                 int discardCount = int.Parse(lines.Dequeue());
-                hand.DiscardsImpl.Clear();
                 for (int i = 0; i < discardCount; ++i)
                 {
                     hand.DiscardsImpl.Add(TileImpl.GetTile(lines.Dequeue()));
                 }
             }
 
-            // Get custom rules.
-            state.Settings.Reset();
-            bool hasCustomRules = bool.Parse(lines.Dequeue());
-            GameSettingsImpl settings = state.Settings as GameSettingsImpl;
-
-            if (hasCustomRules && (settings != null))
+            // Read settings.
+            if (bool.Parse(lines.Dequeue()) && (state.Settings is GameSettingsImpl)) // Bool if there are custom game settings.
             {
+                GameSettingsImpl settings = state.Settings as GameSettingsImpl;
                 settings.SetSettingField(uint.Parse(lines.Dequeue()), CustomBitfields.CustomGameRules1);
                 settings.SetSettingField(uint.Parse(lines.Dequeue()), CustomBitfields.CustomGameRules2);
-                settings.SetSettingField(uint.Parse(lines.Dequeue()),  CustomBitfields.CustomGameYaku1);
-                settings.SetSettingField(uint.Parse(lines.Dequeue()),  CustomBitfields.CustomGameYaku2);
-                settings.SetSettingField(uint.Parse(lines.Dequeue()),  CustomBitfields.CustomGameYaku3);
+                settings.SetSettingField(uint.Parse(lines.Dequeue()), CustomBitfields.CustomGameYaku1);
+                settings.SetSettingField(uint.Parse(lines.Dequeue()), CustomBitfields.CustomGameYaku2);
+                settings.SetSettingField(uint.Parse(lines.Dequeue()), CustomBitfields.CustomGameYaku3);
                 settings.SetSetting(GameOption.VictoryPoints, int.Parse(lines.Dequeue()));
                 settings.SetSetting(GameOption.UmaOption, UmaExtensionMethods.GetUma(lines.Dequeue()));
                 settings.SetSetting(GameOption.RedDoraOption, RedDoraExtensionMethods.GetRedDora(lines.Dequeue()));
@@ -181,224 +177,129 @@ namespace MahjongCore.Riichi.Impl
                 settings.SetSetting(GameOption.YakitoriOption, YakitoriExtensionMethods.GetYakitori(lines.Dequeue()));
             }
 
+            // TODO: Populate tags with remaining lines.
+
             // Extrapolate other data.
+            if (state.PrevAction == GameAction.ReplacementTilePick)
+            {
+                MeldImpl latestMeld = state.GetHand(state.Current).GetLatestMeld();
+                state.FlipDoraAfterNextDiscard = (latestMeld != null) && ((latestMeld.State == MeldState.KanOpen) || (latestMeld.State == MeldState.KanPromoted));
+            }
+
             state.Dealer = state.FirstDealer.AddOffset(state.Round.GetOffset());
             state.Wareme = state.Settings.GetSetting<bool>(GameOption.Wareme) ? state.Dealer.AddOffset(state.Roll - 1) : Player.None;
             state.Offset = GameStateHelpers.GetOffset(state.Dealer, state.Roll);
             state.TilesRemaining = 122 - (13 * 4) - pickedTileCount;
-            state.FlipDoraAfterNextDiscard = false;
             state.DoraCount = 1 + (state.Player1Hand.KanCount + state.Player2Hand.KanCount + state.Player3Hand.KanCount + state.Player4Hand.KanCount) - (state.FlipDoraAfterNextDiscard ? 1 : 0);
+            state.Player1HandRaw.Rebuild();
+            state.Player2HandRaw.Rebuild();
+            state.Player3HandRaw.Rebuild();
+            state.Player4HandRaw.Rebuild();
+            state.NextActionPlayer = state.Current;
+            state.PopulateDoraIndicators();
 
-            if (state.PrevAction == GameAction.ReplacementTilePick)
+            if (state.State == PlayState.GatherDecisions)
             {
-                HandImpl currentHand = state.GetHand(state.Current);
-                if (currentHand.MeldCount > 0)
-                {
-                    MeldState ms = currentHand.GetLatestMeld().State;
-                    state.FlipDoraAfterNextDiscard = (ms == MeldState.KanOpen) || (ms == MeldState.KanPromoted);
-                }
+                state.NextActionTile = state.GetHand(state.Current).Discards.Last().Type;
+            }
+            else if (state.State == PlayState.KanPerformDecision)
+            {
+                // Set NextActionTile to the last tile of the most recent Kan. Should be for the current player.
+                // TODO: This. We need to figure out which promoted kan was the thing. Probably need to store NextActionTile in the state I guess.
             }
 
-            foreach (Player player in PlayerExtensionMethods.Players)
-            {
-                HandImpl hand = state.GetHand(player);
-                hand.CouldIppatsu = DetermineIppatsu(state, player, pickedTileCount);
-                hand.Furiten = DetermineFuriten(hand);
-            }
+            // TODO: Populate state.DiscardPlayerList, Chankan flag, Kanburi flag
         }
 
-        private string SaveToString(GameStateImpl state)
+        private static void AppendMultiString(StringBuilder sb, string value)
+        {
+            string[] tokens = value.Trim().Split(null);
+            sb.AppendWithSpace(tokens.Length.ToString());
+            foreach (string token in tokens)
+            {
+                sb.AppendWithSpace(token);
+            }
+            sb.AppendWithSpace(MULTI_STRING_NAME_END);
+        }
+
+        private static string SaveToString(GameStateImpl state, Dictionary<string, string> tags)
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendWithSpace(PREFIX_V2);
 
-            // Save individual values.
-            sb.AppendWithSpace(CurrentState.GetSkyValue().ToString());
-            sb.AppendWithSpace(TileColor.GetTextValue());
-            sb.AppendWithSpace(CurrentRound.GetTextValue());
-            sb.AppendWithSpace(CurrentRoundLapped.ToString());
-            sb.AppendWithSpace(Bonus.ToString());
-            sb.AppendWithSpace(Pool.ToString());
-            sb.AppendWithSpace(CurrentDealer.AddOffset(-CurrentRound.GetOffset()).GetPlayerValue().ToString()); // Starting dealer
-            sb.AppendWithSpace(CurrentPlayer.GetPlayerValue().ToString());
-            sb.AppendWithSpace(PlayerRecentOpenKan.GetPlayerValue().ToString());
-            sb.AppendWithSpace(Roll.ToString());
-            sb.AppendWithSpace(PlayerDeadWallPick.ToString());
+            // Save state values.
+            sb.AppendWithSpace(state.State.GetSkyValue().ToString());
+            sb.AppendWithSpace("o"); // TileColor (orange).
+            sb.AppendWithSpace(state.Round.GetTextValue());
+            sb.AppendWithSpace(state.Lapped.ToString());
+            sb.AppendWithSpace(state.Bonus.ToString());
+            sb.AppendWithSpace(state.Pool.ToString());
+            sb.AppendWithSpace(state.FirstDealer.ToString()); // Starting dealer
+            sb.AppendWithSpace(state.Current.GetPlayerValue().ToString());
+            sb.AppendWithSpace(state.PlayerRecentOpenKan.GetPlayerValue().ToString());
+            sb.AppendWithSpace(state.Roll.ToString());
+            sb.AppendWithSpace(state.PlayerDeadWallPick.ToString());
+            sb.AppendWithSpace(NEUTRAL_FLAGS_STR); // GameTypeFlags
+            sb.AppendWithSpace((122 - (13 * 4) - state.TilesRemaining).ToString()); // PickedTileCount
+            sb.AppendWithSpace(state.PrevAction.GetSkyValue().ToString());
+            sb.AppendWithSpace(state.NextAction.GetSkyValue().ToString());
 
-            string flags = GameTypeFlags;
-            if ((flags == null) || (flags.Trim().Length == 0))
-            {
-                flags = NEUTRAL_FLAGS_STR;
-            }
-            else
-            {
-                CommonHelpers.Check(!flags.Contains(' '));
-                CommonHelpers.Check(!flags.Contains('\n'));
-            }
-            sb.AppendWithSpace(flags);
-
-            int pickedTileCount = 122 - (13 * 4) - TilesRemaining;
-            sb.AppendWithSpace(pickedTileCount.ToString());
-            sb.AppendWithSpace(PrevAction.GetSkyValue().ToString());
-            sb.AppendWithSpace(NextAction.GetSkyValue().ToString());
-
-            // Save wall.
-            for (int i = 0; i < 136; ++i)
-            {
-                sb.Append(Wall[i].GetHexString());
-            }
+            for (int i = 0; i < 136; ++i) { sb.Append(state.Wall[i].Type.GetHexString()); }
             sb.Append(' ');
 
             // Save player values.
-            for (int iPlayer = 0; iPlayer < 4; ++iPlayer)
+            foreach (Player p in PlayerExtensionMethods.Players)
             {
-                PlayerValue p = Players[iPlayer];
+                sb.AppendWithSpace("P" + p.GetPlayerValue()); // Name
 
-                // Save the name. If there are multiple tokens, first output the number, the each token, then the end token.
-                string name = p.Name;
-                if ((name == null) || (name.Trim().Length == 0))
-                {
-                    name = "Player " + (iPlayer + 1);
-                }
+                HandImpl hand = state.GetHand(p);
+                sb.AppendWithSpace(hand.Score.ToString());
+                sb.AppendWithSpace(hand.Streak.ToString());
+                sb.AppendWithSpace(hand.Yakitori.ToString());
 
-                string[] nameTokens = p.Name.Trim().Split(null);
-                if (nameTokens.Length == 1)
-                {
-                    sb.AppendWithSpace(nameTokens[0]);
-                }
-                else
-                {
-                    sb.AppendWithSpace(nameTokens.Length.ToString());
-                    foreach (string nameToken in nameTokens)
-                    {
-                        sb.AppendWithSpace(nameToken);
-                    }
-                    sb.AppendWithSpace(MULTI_STRING_NAME_END);
-                }
-
-                // Save some values.
-                sb.AppendWithSpace(p.Score.ToString());
-                sb.AppendWithSpace(p.ConsecutiveWinStreak.ToString());
-                sb.AppendWithSpace(p.Yakitori.ToString());
-
-                // Save the active hand.
-                for (int i = 0; i < 13; ++i)
-                {
-                    sb.Append(p.ActiveHand[i].GetHexString());
-                }
+                for (int i = 0; i < 13; ++i) { sb.Append(hand.ActiveHandRaw[i].GetHexString()); }
                 sb.Append(" ");
 
-                // Save the melds.
-                sb.AppendWithSpace(p.Melds.Count.ToString());
-                foreach (Meld m in p.Melds)
+                sb.AppendWithSpace(hand.MeldCount.ToString());
+                for (int i = 0; i < hand.MeldCount; ++i)
                 {
-                    sb.AppendWithSpace(m.State.GetMeldCode().ToString());
-                    sb.AppendWithSpace(m.Tiles[0].GetHexString());
-                    sb.AppendWithSpace(m.Tiles[1].GetHexString());
-                    sb.AppendWithSpace(m.Tiles[2].GetHexString());
-                    sb.AppendWithSpace(m.Tiles[3].GetHexString());
+                    MeldImpl meld = hand.MeldsRaw[i];
+                    sb.AppendWithSpace(meld.State.GetMeldCode().ToString());
+                    foreach (TileImpl meldTile in meld.TilesRaw) { sb.AppendWithSpace(meldTile.GetHexString()); }
                 }
 
-                // Get discards.
-                sb.AppendWithSpace(p.Discards.Count.ToString());
-                foreach (ExtendedTile et in p.Discards)
-                {
-                    sb.AppendWithSpace(et.GetHexString());
-                }
+                sb.AppendWithSpace(hand.Discards.Count.ToString());
+                foreach (TileImpl discard in hand.DiscardsImpl) { sb.AppendWithSpace(discard.GetHexString()); }
             }
 
-            // Get custom rules.
-            bool hasCustomRules = CustomSettings.HasCustomSettings();
+            // Save settings.
+            bool hasCustomRules = state.Settings.HasCustomSettings();
             sb.AppendWithSpace(hasCustomRules.ToString());
-            if (hasCustomRules)
+            if (hasCustomRules && (state.Settings is GameSettingsImpl))
             {
-                sb.AppendWithSpace(CustomSettings.GetSettingField(CustomBitfields.CustomGameRules1).ToString());
-                sb.AppendWithSpace(CustomSettings.GetSettingField(CustomBitfields.CustomGameRules2).ToString());
-                sb.AppendWithSpace(CustomSettings.GetSettingField(CustomBitfields.CustomGameYaku1).ToString());
-                sb.AppendWithSpace(CustomSettings.GetSettingField(CustomBitfields.CustomGameYaku2).ToString());
-                sb.AppendWithSpace(CustomSettings.GetSettingField(CustomBitfields.CustomGameYaku3).ToString());
-
-                sb.AppendWithSpace(CustomSettings.GetSetting<int>(GameOption.VictoryPoints).ToString());
-                sb.AppendWithSpace(CustomSettings.GetSetting<Uma>(GameOption.UmaOption).GetTextValue());
-                sb.AppendWithSpace(CustomSettings.GetSetting<RedDora>(GameOption.RedDoraOption).GetTextValue());
-                sb.AppendWithSpace(CustomSettings.GetSetting<Oka>(GameOption.OkaOption).GetTextValue());
-                sb.AppendWithSpace(CustomSettings.GetSetting<IisouSanjunHan>(GameOption.IisouSanjunHanOption).GetTextValue());
-                sb.AppendWithSpace(CustomSettings.GetSetting<Yakitori>(GameOption.YakitoriOption).GetTextValue());
+                GameSettingsImpl settings = state.Settings as GameSettingsImpl;
+                sb.AppendWithSpace(settings.GetSettingField(CustomBitfields.CustomGameRules1).ToString());
+                sb.AppendWithSpace(settings.GetSettingField(CustomBitfields.CustomGameRules2).ToString());
+                sb.AppendWithSpace(settings.GetSettingField(CustomBitfields.CustomGameYaku1).ToString());
+                sb.AppendWithSpace(settings.GetSettingField(CustomBitfields.CustomGameYaku2).ToString());
+                sb.AppendWithSpace(settings.GetSettingField(CustomBitfields.CustomGameYaku3).ToString());
+                sb.AppendWithSpace(settings.GetSetting<int>(GameOption.VictoryPoints).ToString());
+                sb.AppendWithSpace(settings.GetSetting<Uma>(GameOption.UmaOption).GetTextValue());
+                sb.AppendWithSpace(settings.GetSetting<RedDora>(GameOption.RedDoraOption).GetTextValue());
+                sb.AppendWithSpace(settings.GetSetting<Oka>(GameOption.OkaOption).GetTextValue());
+                sb.AppendWithSpace(settings.GetSetting<IisouSanjunHan>(GameOption.IisouSanjunHanOption).GetTextValue());
+                sb.AppendWithSpace(settings.GetSetting<Yakitori>(GameOption.YakitoriOption).GetTextValue());
             }
 
-            // Return the final state string.
+            // Save tags.
+            foreach (KeyValuePair<string, string> tuple in tags)
+            {
+                AppendMultiString(sb, tuple.Key);
+                AppendMultiString(sb, tuple.Value);
+            }
+
+            // Output the final string.
             return sb.ToString().Trim();
-        }
-
-        private bool DetermineIppatsu(GameStateImpl state, Player player, int tilesPicked)
-        {
-            int [] slots = new int[] { 0, 0, 0, 0 };
-            bool ippatsu = false;
-
-            Player currentPlayer = dealer;
-            for (int iTile = 0; iTile < tilesPicked; ++iTile)
-            {
-                int currPlayerIndex = currentPlayer.GetZeroIndex();
-
-                ExtendedTile et = players[currPlayerIndex].Discards[slots[currPlayerIndex]];
-                slots[currPlayerIndex]++;
-
-                if (currentPlayer == p)
-                {
-                    ippatsu = et.Reach || et.OpenReach;
-                }
-
-                if (et.Called)
-                {
-                    ippatsu = false;
-                    currentPlayer = et.Caller;
-
-                    // Roll back because the next discard wont count as a picked.
-                    iTile--;
-                }
-                else
-                {
-                    currentPlayer = currentPlayer.GetNext();
-                }
-            }
-            return ippatsu;
-        }
-
-        private bool DetermineFuriten(HandImpl hand)
-        {
-            // Get the list of waits.
-            bool anyCalls = (Players[0].Melds.Count + Players[1].Melds.Count + Players[2].Melds.Count + Players[3].Melds.Count) > 0;
-            bool overrideNoReachDummy;
-            List<TileType> waits = HandEvaluator.GetWaits(activeHand, null, discards, anyCalls, out overrideNoReachDummy);
-
-            bool furiten = false;
-            if ((waits != null) && (waits.Count > 0))
-            {
-                // If any of our discards match one of the waits, then we're furiten!
-                foreach (ExtendedTile et in discards)
-                {
-                    foreach (TileType tv in waits)
-                    {
-                        if (tv == et.Tile)
-                        {
-                            furiten = true;
-                            break;
-                        }
-
-                        if (furiten == true)
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                // Check if we've passed up a wait since our last discard. Reset on our discard unless we've reached.
-                if (!furiten)
-                {
-                    // TODO: this
-                }
-            }
-            return furiten;
         }
     }
 }

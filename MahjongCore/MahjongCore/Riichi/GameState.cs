@@ -77,34 +77,34 @@ namespace MahjongCore.Riichi
         }
     #endregion
 
-    public abstract class HandSortedEventArgs      : EventArgs { public abstract Player           Player  { get; } }
-    public abstract class HandPickingTileArgs      : EventArgs { public abstract Player           Player  { get; }
-                                                                 public abstract int              Count   { get; } }
-    public abstract class HandTileAddedArgs        : EventArgs { public abstract ITile[]          Tiles   { get; }
-                                                                 public abstract TileSource       Source  { get; } }
-    public abstract class HandDiscardArgs          : EventArgs { public abstract ITile            Tile    { get; } }
-    public abstract class HandReachArgs            : EventArgs { public abstract ITile            Tile    { get; } }
-    public abstract class HandKanArgs              : EventArgs { public abstract IMeld            Meld    { get; } }
-    public abstract class HandCallArgs             : EventArgs { public abstract IMeld            Meld    { get; } }
-    public abstract class WallTilesPicked          : EventArgs { public abstract ITile[]          Tiles   { get; } }
-    public abstract class DiscardRequestedArgs     : EventArgs { public abstract IDiscardInfo     Info    { get; } }
-    public abstract class PostDiscardRequstedArgs  : EventArgs { public abstract IPostDiscardInfo Info    { get; } }
-    public abstract class HandRonArgs              : EventArgs { public abstract Player           Player  { get; }
-                                                                 public abstract IWinResults      Results { get; } }
-    public abstract class HandTsumoArgs            : EventArgs { public abstract Player           Player  { get; }
-                                                                 public abstract IWinResults      Results { get; } }
-    public abstract class MultiWinArgs             : EventArgs { public abstract IWinResults[]    Results { get; } }
-    public abstract class ExhaustiveDrawArgs       : EventArgs { public abstract IWinResults      Results { get; } }
-    public abstract class AbortiveDrawArgs         : EventArgs { public abstract AbortiveDrawType Type    { get; }
-                                                                 public abstract ITile            Tile    { get; } } // Tile might be null if not applicable.
-    public abstract class GameCompleteArgs         : EventArgs { public abstract IGameResults     Results { get; } }
-    public abstract class DiscardUndoneArgs        : EventArgs { public abstract Player           Player  { get; }
-                                                                 public abstract TileType         Tile    { get; } }
-    public abstract class WinUndoneArgs            : EventArgs { public abstract Player           Player  { get; } }
-    public abstract class TilePickUndoneArgs       : EventArgs { public abstract Player           Player  { get; }
-                                                                 public abstract ITile            Tile    { get; } } // Will be the wall tile.
-    public abstract class PlayerChomboArgs         : EventArgs { public abstract Player           Player  { get; } }
-    public abstract class DoraIndicatorFlippedArgs : EventArgs { public abstract ITile            Tile    { get; } }
+    public abstract class HandSortedEventArgs      : EventArgs { public abstract Player           Player  { get; internal set; } }
+    public abstract class HandPickingTileArgs      : EventArgs { public abstract Player           Player  { get; internal set; }
+                                                                 public abstract int              Count   { get; internal set; } }
+    public abstract class HandTileAddedArgs        : EventArgs { public abstract ITile[]          Tiles   { get; internal set; }
+                                                                 public abstract TileSource       Source  { get; internal set; } }
+    public abstract class HandDiscardArgs          : EventArgs { public abstract ITile            Tile    { get; internal set; } }
+    public abstract class HandReachArgs            : EventArgs { public abstract ITile            Tile    { get; internal set; } }
+    public abstract class HandKanArgs              : EventArgs { public abstract IMeld            Meld    { get; internal set; } }
+    public abstract class HandCallArgs             : EventArgs { public abstract IMeld            Meld    { get; internal set; } }
+    public abstract class WallTilesPicked          : EventArgs { public abstract ITile[]          Tiles   { get; internal set; } }
+    public abstract class DiscardRequestedArgs     : EventArgs { public abstract IDiscardInfo     Info    { get; internal set; } }
+    public abstract class PostDiscardRequstedArgs  : EventArgs { public abstract IPostDiscardInfo Info    { get; internal set; } }
+    public abstract class HandRonArgs              : EventArgs { public abstract Player           Player  { get; internal set; }
+                                                                 public abstract IWinResults      Results { get; internal set; } }
+    public abstract class HandTsumoArgs            : EventArgs { public abstract Player           Player  { get; internal set; }
+                                                                 public abstract IWinResults      Results { get; internal set; } }
+    public abstract class MultiWinArgs             : EventArgs { public abstract IWinResults[]    Results { get; internal set; } }
+    public abstract class ExhaustiveDrawArgs       : EventArgs { public abstract IWinResults      Results { get; internal set; } }
+    public abstract class AbortiveDrawArgs         : EventArgs { public abstract AbortiveDrawType Type    { get; internal set; }
+                                                                 public abstract ITile            Tile    { get; internal set; } } // Tile might be null if not applicable.
+    public abstract class GameCompleteArgs         : EventArgs { public abstract IGameResults     Results { get; internal set; } }
+    public abstract class DiscardUndoneArgs        : EventArgs { public abstract Player           Player  { get; internal set; }
+                                                                 public abstract TileType         Tile    { get; internal set; } }
+    public abstract class WinUndoneArgs            : EventArgs { public abstract Player           Player  { get; internal set; } }
+    public abstract class TilePickUndoneArgs       : EventArgs { public abstract Player           Player  { get; internal set; }
+                                                                 public abstract ITile            Tile    { get; internal set; } } // Will be the wall tile.
+    public abstract class PlayerChomboArgs         : EventArgs { public abstract Player           Player  { get; internal set; } }
+    public abstract class DoraIndicatorFlippedArgs : EventArgs { public abstract ITile            Tile    { get; internal set; } }
 
     public interface IGameState
     {
