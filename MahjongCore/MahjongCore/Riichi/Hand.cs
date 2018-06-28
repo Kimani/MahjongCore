@@ -15,6 +15,7 @@ namespace MahjongCore.Riichi
         IList<TileType> Waits                { get; }
         IList<ICommand> DrawsAndKans         { get; }
         IList<IMeld>    AvailableCalls       { get; }
+        ReachType       Reach                { get; }
         int             Score                { get; }
         int             ActiveTileCount      { get; }
         int             Streak               { get; }
@@ -25,9 +26,6 @@ namespace MahjongCore.Riichi
         bool            Open                 { get; }
         bool            Closed               { get; }
         bool            Tempai               { get; }
-        bool            InReach              { get; }
-        bool            InDoubleReach        { get; }
-        bool            InOpenReach          { get; }
         bool            Furiten              { get; }
         bool            Yakitori             { get; }
         bool            HasFullHand          { get; }

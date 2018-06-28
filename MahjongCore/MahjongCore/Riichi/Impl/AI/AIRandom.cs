@@ -6,13 +6,13 @@ namespace MahjongCore.Riichi.Impl.AI
 {
     public class AIRandom : IPlayerAI
     {
-        DiscardDecision stashedDecision = new DiscardDecision();
-        PostDiscardDecision stashedPostDecision = new PostDiscardDecision();
+        DiscardDecisionImpl stashedDecision = new DiscardDecisionImpl();
+        PostDiscardDecisionImpl stashedPostDecision = new PostDiscardDecisionImpl();
 
         public void Initialize(Player player) { }
         public void StartRound(Round round)   { }
 
-        public IDiscardDecision GetDiscardDecision(DiscardInfo info)
+        public IDiscardDecision GetDiscardDecision(IDiscardInfo info)
         {
             if (info.CanTsumo)
             {
@@ -68,7 +68,7 @@ namespace MahjongCore.Riichi.Impl.AI
             return stashedDecision;
         }
 
-        public IPostDiscardDecision GetPostDiscardDecision(PostDiscardInfo info)
+        public IPostDiscardDecision GetPostDiscardDecision(IPostDiscardInfo info)
         {
             PostDiscardDecision decision = new PostDiscardDecision();
 

@@ -22,6 +22,7 @@ namespace MahjongCore.Riichi
         public IList<TileType> Waits                 { get; internal set; }
         public IList<ICommand> DrawsAndKans          { get; internal set; }
         public IList<IMeld>    AvailableCalls        { get; internal set; }
+        public ReachType       Reach                 { get; internal set; }
         public int             Score                 { get; internal set; } = 0;
         public int             ActiveTileCount       { get; internal set; } = 0;
         public int             Streak                { get; internal set; } = 0;
@@ -32,9 +33,6 @@ namespace MahjongCore.Riichi
         public bool            Open                  { get { return MeldsRaw[0].State.IsOpen() || MeldsRaw[1].State.IsOpen() || MeldsRaw[2].State.IsOpen() || MeldsRaw[3].State.IsOpen(); } }
         public bool            Closed                { get { return !Open; } }
         public bool            Tempai                { get; internal set; }
-        public bool            InReach               { get; internal set; }
-        public bool            InDoubleReach         { get; internal set; }
-        public bool            InOpenReach           { get; internal set; }
         public bool            Furiten               { get; internal set; } = false;
         public bool            Yakitori              { get; internal set; } = true;
         public bool            HasFullHand           { get; internal set; }
@@ -106,10 +104,21 @@ namespace MahjongCore.Riichi
         internal List<TileImpl> DiscardsImpl        { get; set; } = new List<TileImpl>();
         internal TileImpl[]     ActiveHandRaw       { get; set; } = new TileImpl[TileHelpers.HAND_SIZE];
         internal MeldImpl[]     MeldsRaw            { get; set; } = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
-        internal bool           OverrideNoReachFlag { get; set; } = false;
+        internal bool           OverrideNoReachFlag { get; set; } = false; // Used for things like thirteen broken, which you can't reach for.
+        internal bool IsFullHand()                     { return ((GetCalledMeldCount() * 3) + ActiveTileCount) == TileHelpers.HAND_SIZE; }
+        internal bool IsFuriten()                      { return Parent.Settings.GetSetting<bool>(GameOption.Furiten) && Furiten; }
+        internal bool IsWaramePlayer()                 { return Player == Parent.WaremePlayer; }
+        internal bool IsInDoubleReach()                { return Parent.IsInDoubleReach(Player); }
+        internal bool IsFourKans()                     { return GetKanCount() == 4; }
+        internal List<TileType> GetTileWaits(int slot) { return ActiveTileWaits[(slot == -1) ? (ActiveTileCount - 1) : slot]; }
+        internal int GetClosedKanFlippedTileCount()    { return OpenMeld[0].State.GetFlippedTileCount() + OpenMeld[1].State.GetFlippedTileCount() + OpenMeld[2].State.GetFlippedTileCount() + OpenMeld[3].State.GetFlippedTileCount(); }
+        internal bool IsInOpenReach()                  { return Parent.IsInOpenReach(Player); }
+        internal List<TileType> GetWaits()             { return CommonHelpers.SafeCopyByValue(WaitTiles); } // Make a copy, so the caller can't mess with our waits.
+        internal List<IMeld> GetCalls()                { return RiichiHandHelpers.GetCalls(this, Parent); }
+        internal ICommand PeekLastDrawKan()            { return DrawsAndKans.Peek(); }
 
-        private List<TileType>[]   ActiveTileWaits       { get; private set; } = new List<TileType>[TileHelpers.HAND_SIZE];
-        private Stack<TileCommand> DrawsAndKans          { get; private set; } = new Stack<TileCommand>();
+        private List<TileType>[]   _ActiveTileWaits    =  new List<TileType>[TileHelpers.HAND_SIZE];
+        private Stack<CommandImpl> _DrawsAndKans       = new Stack<CommandImpl>();
 
         private bool               HasTemporaryTile      = false;
         private List<TileType>     WaitTiles             = new List<TileType>();
@@ -118,20 +127,6 @@ namespace MahjongCore.Riichi
                                                                               new TileType[4], new TileType[4], new TileType[4], new TileType[4],
                                                                               new TileType[4], new TileType[4], new TileType[4], new TileType[4],
                                                                               new TileType[4], new TileType[4] };
-
-        public bool IsFullHand()                     { return ((GetCalledMeldCount() * 3) + ActiveTileCount) == TileHelpers.HAND_SIZE; }
-        public bool IsFuriten()                      { return Parent.Settings.GetSetting<bool>(GameOption.Furiten) && Furiten; }
-        public bool IsWaramePlayer()                 { return Player == Parent.WaremePlayer; }
-        public bool IsInReach()                      { return Parent.IsInReach(Player); }
-        public bool IsInDoubleReach()                { return Parent.IsInDoubleReach(Player); }
-        public bool IsIppatsu()                      { return Parent.GetIppatsu(Player); }
-        public bool IsFourKans()                     { return GetKanCount() == 4; }
-        public List<TileType> GetTileWaits(int slot) { return ActiveTileWaits[(slot == -1) ? (ActiveTileCount - 1) : slot]; }
-        public int GetClosedKanFlippedTileCount()    { return OpenMeld[0].State.GetFlippedTileCount() + OpenMeld[1].State.GetFlippedTileCount() + OpenMeld[2].State.GetFlippedTileCount() + OpenMeld[3].State.GetFlippedTileCount(); }
-        public bool IsInOpenReach()                  { return Parent.IsInOpenReach(Player); }
-        public List<TileType> GetWaits()             { return CommonHelpers.SafeCopyByValue(WaitTiles); } // Make a copy, so the caller can't mess with our waits.
-        public List<IMeld> GetCalls()                { return RiichiHandHelpers.GetCalls(this, Parent); }
-        public ICommand PeekLastDrawKan()            { return DrawsAndKans.Peek(); }
 
         internal HandImpl(IGameState parent, Player p, int score)
         {
@@ -149,8 +144,12 @@ namespace MahjongCore.Riichi
 
         internal void Reset()
         {
+            Furiten = false;
+            CouldIppatsu = false;
+
             asdfasdf
-            foreach (MeldImpl meld in hand.MeldsRaw) { meld.Reset(); }
+
+            foreach (MeldImpl meld in MeldsRaw) { meld.Reset(); }
         }
 
         internal void Rebuild()
@@ -541,7 +540,7 @@ namespace MahjongCore.Riichi
             Parent.HandPerformedDiscard(tile, targetSlot);
         }
 
-        public void Reach(int slot, bool fOpenReach)
+        public void PerformReach(int slot, bool fOpenReach)
         {
             int targetSlot = (slot == -1) ? (ActiveTileCount - 1) : slot;
             TileType tile = ActiveHand[targetSlot];
@@ -683,35 +682,20 @@ namespace MahjongCore.Riichi
             return fTsumo;
         }
 
-        public KanOptions GetKanOptions()
+        internal List<TileType> GetAvailablePromotedKans(List<TileType> existingArray)
         {
-            TileType pickedTile = ActiveHand[ActiveTileCount - 1];
-            KanOptions options = new KanOptions();
-
-            bool fNoClosedKanPrevCall = (Parent.PrevAction == GameAction.Chii) ||
-                                        (Parent.PrevAction == GameAction.Pon) ||
+                        bool fNoClosedKanPrevCall = (Parent.PrevAction == GameAction.Chii) ||
+                                        (Parent.PrevAction == GameAction.Pon) ||*
                                         (Parent.PrevAction == GameAction.OpenKan);
 
-            bool fPrevCall = (Parent.PrevAction == GameAction.Chii) ||
-                             (Parent.PrevAction == GameAction.Pon) ||
-                             (Parent.PrevAction == GameAction.OpenKan) ||
-                             (Parent.PrevAction == GameAction.PromotedKan) ||
-                             (Parent.PrevAction == GameAction.ClosedKan);
 
-            if (IsInReach())
-            {
-                // Check to see if we can make a concealed kan. This is can only be made if the kan will not change the shape of the hand.
-                // Lets only kan if the three tiles in your hand is being considered to make a concealed kan is a three of a kind.
-                // This is determined earlier so we only need to look in RiichiKanTiles to see if we can kan.
-                if (Parent.Settings.GetSetting<bool>(GameOption.KanAfterRiichi) &&
-                    (ActiveRiichiKanTiles[0].IsEqual(pickedTile) ||
-                     ActiveRiichiKanTiles[1].IsEqual(pickedTile) ||
-                     ActiveRiichiKanTiles[2].IsEqual(pickedTile) ||
-                     ActiveRiichiKanTiles[3].IsEqual(pickedTile)))
-                {
-                    options.Closed = true;
-                }
-            }
+            bool fPrevCall = (Parent.PrevAction == GameAction.Chii) ||
+                 (Parent.PrevAction == GameAction.Pon) ||
+                 (Parent.PrevAction == GameAction.OpenKan) ||
+                 (Parent.PrevAction == GameAction.PromotedKan) ||
+                 (Parent.PrevAction == GameAction.ClosedKan);
+
+           
             else
             {
                 // Check if we can do a promoted kan.
@@ -733,41 +717,67 @@ namespace MahjongCore.Riichi
                     }
                 }
 
-                // Check for a possible concealed kan. Now... the hand except for the last tile is sorted. So we can look for
-                // either four of the same tile in our sorted active hand or three of the same tile + the picked tile. We can
-                // also make sure we have enough tiles in our active hand. We can very well have just 2 (next highest should be 5.)
-                if (!fNoClosedKanPrevCall && (ActiveTileCount > 4))
+
+            }
+            return options;
+        }
+
+        internal List<TileType> GetAvailableClosedKans(List<TileType> existingArray)
+        {
+            bool fNoClosedKanPrevCall = (Parent.PrevAction == GameAction.Chii) ||
+                            (Parent.PrevAction == GameAction.Pon) || *
+                            (Parent.PrevAction == GameAction.OpenKan);
+
+
+            if (IsInReach())
+            {
+                // Check to see if we can make a concealed kan. This is can only be made if the kan will not change the shape of the hand.
+                // Lets only kan if the three tiles in your hand is being considered to make a concealed kan is a three of a kind.
+                // This is determined earlier so we only need to look in RiichiKanTiles to see if we can kan.
+                if (Parent.Settings.GetSetting<bool>(GameOption.KanAfterRiichi) &&
+                    (ActiveRiichiKanTiles[0].IsEqual(pickedTile) ||
+                     ActiveRiichiKanTiles[1].IsEqual(pickedTile) ||
+                     ActiveRiichiKanTiles[2].IsEqual(pickedTile) ||
+                     ActiveRiichiKanTiles[3].IsEqual(pickedTile)))
                 {
-                    TileType searchTile = ActiveHand[0];
-                    int tileCount = 1;
-                    for (int i = 1; i < (ActiveTileCount - 1); ++i)
+                    options.Closed = true;
+                }
+            }
+
+
+            // Check for a possible concealed kan. Now... the hand except for the last tile is sorted. So we can look for
+            // either four of the same tile in our sorted active hand or three of the same tile + the picked tile. We can
+            // also make sure we have enough tiles in our active hand. We can very well have just 2 (next highest should be 5.)
+            if (!fNoClosedKanPrevCall && (ActiveTileCount > 4))
+            {
+                TileType searchTile = ActiveHand[0];
+                int tileCount = 1;
+                for (int i = 1; i < (ActiveTileCount - 1); ++i)
+                {
+                    TileType checkTile = ActiveHand[i];
+                    if (checkTile.IsEqual(searchTile))
                     {
-                        TileType checkTile = ActiveHand[i];
-                        if (checkTile.IsEqual(searchTile))
+                        tileCount++;
+                        if (((tileCount == 3) && pickedTile.IsEqual(searchTile)) || (tileCount == 4))
                         {
-                            tileCount++;
-                            if (((tileCount == 3) && pickedTile.IsEqual(searchTile)) || (tileCount == 4))
-                            {
-                                options.Closed = true;
-                                break;
-                            }
+                            options.Closed = true;
+                            break;
                         }
-                        else
-                        {
-                            searchTile = checkTile;
-                            tileCount = 1;
-                        }
+                    }
+                    else
+                    {
+                        searchTile = checkTile;
+                        tileCount = 1;
                     }
                 }
             }
-            return options;
         }
 
         public void StartDiscardState()
         {
             OverrideNoReachFlag = false;
 
-            if (!IsInReach())
+            if (!Reach.IsReach())
             {
                 Furiten = false;
 
@@ -802,7 +812,7 @@ namespace MahjongCore.Riichi
             return fRiichi;
         }
 
-        public TileType GetNoDiscardTile()
+        public TileType GetKuikaeTile()
         {
             TileType noDiscardTile = TileType.None;
 

@@ -213,13 +213,6 @@ namespace MahjongCore.Riichi
         Call
     }
 
-    public enum ReachType
-    {
-        None,
-        Reach,
-        OpenReach
-    }
-
     public interface ITile : ICloneable
     {
         TileType  Type        { get; }

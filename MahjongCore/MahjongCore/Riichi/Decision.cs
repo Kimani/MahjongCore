@@ -42,7 +42,6 @@ namespace MahjongCore.Riichi
         TileType        SuufurendanTile    { get; }
         TileSource      Source             { get; }
         bool            CanNormalDiscard   { get; }
-        bool            CanKyuushuuKyuuhai { get; }
         bool            CanTsumo           { get; }
         bool            CanReach           { get; }
     }

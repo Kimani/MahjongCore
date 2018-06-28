@@ -1,5 +1,8 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
+using MahjongCore.Riichi.Impl;
+
 namespace MahjongCore.Riichi.Helpers
 {
     public class TileHelpers
@@ -56,10 +59,22 @@ namespace MahjongCore.Riichi.Helpers
             return tTile % TOTAL_TILE_COUNT;
         }
 
-        public static TileType[] GetRandomBoard(TileType[] existingArray, RedDora redDoraSetting)
+        public static ITile[] GetRandomBoard(ITile[] existingArray, RedDora redDoraSetting)
         {
-            Global.Assert((existingArray == null) || (existingArray.Length == TOTAL_TILE_COUNT));
-            TileType[] targetArray = (existingArray != null) ? existingArray : new TileType[TOTAL_TILE_COUNT];
+            CommonHelpers.Check(((existingArray == null) || existingArray is TileImpl[]), "Supplied tile array must consist of inbox ITile implementations.");
+            CommonHelpers.Check(((existingArray == null) || (existingArray.Length == TOTAL_TILE_COUNT)), "Supplied tile array must be " + TOTAL_TILE_COUNT + " tiles.");
+
+            TileImpl[] targetArray = existingArray as TileImpl[];
+            if (targetArray == null)
+            {
+                targetArray = new TileImpl[TOTAL_TILE_COUNT];
+                for (int i = 0; i < TOTAL_TILE_COUNT; ++i)
+                {
+                    targetArray[i] = new TileImpl();
+                    targetArray[i].Slot = i;
+                    targetArray[i].Location = Location.Wall;
+                }
+            }
 
             // Build a list with all the tiles in it. One red dora for each suit.
             int counter = 0;
@@ -89,7 +104,7 @@ namespace MahjongCore.Riichi.Helpers
                 TileType pickedTile = TileSource[slot];
                 TileSource[slot] = TileSource[136 - i - 1];
 
-                targetArray[i] = pickedTile;
+                targetArray[i].Type = pickedTile;
             }
 
             if (Global.AssertHandler != null)
@@ -111,7 +126,7 @@ namespace MahjongCore.Riichi.Helpers
                     int seen = 0;
                     for (int j = 0; j < 136; ++j)
                     {
-                        if (targetArray[j].GetSkyValue() == i)
+                        if (targetArray[j].Type.GetSkyValue() == i)
                         {
                             ++seen;
                         }

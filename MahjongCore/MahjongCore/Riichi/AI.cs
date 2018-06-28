@@ -19,10 +19,10 @@ namespace MahjongCore.Riichi
         // You are told whether or not your draw came from the wall, the dead wall after a kan, or via calling pon/chii/open kan.
         // If you are in reach and you decide to discard, the selected tile is ignored. Discarding a suufurendan tile regardless of
         // What IDiscardDecision.Decision is set to will return in an abortive draw.
-        IDiscardDecision GetDiscardDecision(DiscardInfo info);
+        IDiscardDecision GetDiscardDecision(IDiscardInfo info);
 
         // Make a decision based on the most recently discard tile by another players. Should decide to chii, pon, open kan, ron, or chankan.
-        IPostDiscardDecision GetPostDiscardDecision(PostDiscardInfo info);
+        IPostDiscardDecision GetPostDiscardDecision(IPostDiscardInfo info);
     }
 
     public static class InboxAIFactory

@@ -32,6 +32,20 @@ namespace MahjongCore.Riichi
     }
 
     #region Wind
+        public enum ReachType
+        {
+            [IsReach(false)] None,
+            [IsReach(true)]  Reach,
+            [IsReach(true)]  OpenReach
+        }
+
+        public static class ReachTypeExtensionMethods
+        {
+            public static bool IsReach(this ReachType rt) { return EnumAttributes.GetAttributeValue<IsReach, bool>(rt); }
+        }
+    #endregion
+
+    #region Wind
         public enum Wind
         {
                                                                          None,
@@ -44,7 +58,7 @@ namespace MahjongCore.Riichi
         public static class WindExtensionMethods
         {
             public static TileType GetTile(this Wind w) { return EnumAttributes.GetAttributeValue<Tile, TileType>(w); }
-        
+
             public static Wind GetWind(Player current, Player dealer)
             {
                 Global.Assert(current.IsPlayer());
