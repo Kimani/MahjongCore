@@ -105,6 +105,8 @@ namespace MahjongCore.Riichi
                                                                  public abstract ITile            Tile    { get; internal set; } } // Will be the wall tile.
     public abstract class PlayerChomboArgs         : EventArgs { public abstract Player           Player  { get; internal set; } }
     public abstract class DoraIndicatorFlippedArgs : EventArgs { public abstract ITile            Tile    { get; internal set; } }
+    public abstract class DecisionCancelledArgs    : EventArgs { public abstract Player           Player  { get; internal set; } 
+                                                                 public abstract IMeld            Meld    { get; internal set; } } // If null, it was a ron that was head bumped.
 
     public interface IGameState
     {
@@ -135,6 +137,7 @@ namespace MahjongCore.Riichi
         event EventHandler<DiscardUndoneArgs>        DiscardUndone;
         event EventHandler<WinUndoneArgs>            WinUndone;
         event EventHandler<TilePickUndoneArgs>       TilePickUndone;
+        event EventHandler<DecisionCancelledArgs>    DecisionCancelled;
 
         ITile[]        Wall               { get; }
         ITile[]        DoraIndicators     { get; }

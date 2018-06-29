@@ -14,7 +14,6 @@ namespace MahjongCore.Riichi
         IList<ITile>    Discards             { get; }
         IList<TileType> Waits                { get; }
         IList<ICommand> DrawsAndKans         { get; }
-        IList<IMeld>    AvailableCalls       { get; }
         ReachType       Reach                { get; }
         int             Score                { get; }
         int             ActiveTileCount      { get; }

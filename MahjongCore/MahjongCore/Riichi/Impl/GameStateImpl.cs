@@ -11,41 +11,6 @@ using System.Reflection;
 
 namespace MahjongCore.Riichi.Impl
 {
-    internal class HandSortedEventArgsImpl      : HandSortedEventArgs      { public override Player           Player                 { get; internal set; }
-                                                                             internal HandSortedEventArgsImpl(Player p)              { Player = p; } }
-    internal class HandPickingTileArgsImpl      : HandPickingTileArgs      { public override Player           Player                 { get; internal set; }
-                                                                             public override int              Count                  { get; internal set; }
-                                                                             internal HandPickingTileArgsImpl(Player p, int c)       { Player = p;
-                                                                                                                                       Count = c; } }
-    internal class HandTileAddedArgsImpl        : HandTileAddedArgs        { public override ITile[]          Tiles                  { get; internal set; }
-                                                                             public override TileSource       Source                 { get; internal set; }
-                                                                             internal HandTileAddedArgsImpl(ITile[] t, TileSource s) { Tiles = t;
-                                                                                                                                       Source = s; } }
-    internal class HandDiscardArgsImpl          : HandDiscardArgs          { public override ITile            Tile    { get; internal set; } }
-    internal class HandReachArgsImpl            : HandReachArgs            { public override ITile            Tile    { get; internal set; } }
-    internal class HandKanArgsImpl              : HandKanArgs              { public override IMeld            Meld    { get; internal set; } }
-    internal class HandCallArgsImpl             : HandCallArgs             { public override IMeld            Meld    { get; internal set; } }
-    internal class WallTilesPickedImpl          : WallTilesPicked          { public override ITile[]          Tiles   { get; internal set; } }
-    internal class DiscardRequestedArgsImpl     : DiscardRequestedArgs     { public override IDiscardInfo     Info    { get; internal set; } }
-    internal class PostDiscardRequstedArgsImpl  : PostDiscardRequstedArgs  { public override IPostDiscardInfo Info    { get; internal set; } }
-    internal class HandRonArgsImpl              : HandRonArgs              { public override Player           Player  { get; internal set; }
-                                                                             public override IWinResults      Results { get; internal set; } }
-    internal class HandTsumoArgsImpl            : HandTsumoArgs            { public override Player           Player  { get; internal set; }
-                                                                             public override IWinResults      Results { get; internal set; } }
-    internal class MultiWinArgsImpl             : MultiWinArgs             { public override IWinResults[]    Results { get; internal set; } }
-    internal class ExhaustiveDrawArgsImpl       : ExhaustiveDrawArgs       { public override IWinResults      Results { get; internal set; } }
-    internal class AbortiveDrawArgsImpl         : AbortiveDrawArgs         { public override AbortiveDrawType Type    { get; internal set; }
-                                                                             public override ITile            Tile    { get; internal set; } } // Tile might be null if not applicable.
-    internal class GameCompleteArgsImpl         : GameCompleteArgs         { public override IGameResults     Results { get; internal set; } }
-    internal class DiscardUndoneArgsImpl        : DiscardUndoneArgs        { public override Player           Player  { get; internal set; }
-                                                                             public override TileType         Tile    { get; internal set; } }
-    internal class WinUndoneArgsImpl            : WinUndoneArgs            { public override Player           Player  { get; internal set; } }
-    internal class TilePickUndoneArgsImpl       : TilePickUndoneArgs       { public override Player           Player  { get; internal set; }
-                                                                             public override ITile            Tile    { get; internal set; } } // Will be the wall tile.
-    internal class PlayerChomboArgsImpl         : PlayerChomboArgs         { public override Player           Player  { get; internal set; } }
-    internal class DoraIndicatorFlippedArgsImpl : DoraIndicatorFlippedArgs { public override ITile            Tile    { get; internal set; } }
-
-
     #region GameAction
         internal enum GameAction
         {
@@ -84,6 +49,14 @@ namespace MahjongCore.Riichi.Impl
         }
     #endregion
 
+    internal enum AdvanceAction
+    {
+        Done,
+        Advance,
+        KanChosenTile,
+        HandEnd
+    }
+
     internal class GameStateImpl : IGameState
     {
         // IGameState
@@ -114,6 +87,7 @@ namespace MahjongCore.Riichi.Impl
         public event EventHandler<DiscardUndoneArgs>        DiscardUndone;
         public event EventHandler<WinUndoneArgs>            WinUndone;
         public event EventHandler<TilePickUndoneArgs>       TilePickUndone;
+        public event EventHandler<DecisionCancelledArgs>    DecisionCancelled;
 
         public ITile[]          Wall               { get { return WallRaw; } }
         public ITile[]          DoraIndicators     { get { return DoraIndicatorsRaw; } }
@@ -142,9 +116,19 @@ namespace MahjongCore.Riichi.Impl
         public int              DoraCount          { get; internal set; } = 0;
         public int              Roll               { get; internal set; } = 0;
 
-        public void       Advance() { AdvancePlayState(State.GetNext(), EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(State.GetNext()), false); }
-        public void       Resume()  { AdvancePlayState(State, false, true); }
-        public ISaveState Save()    { return new SaveStateImpl(this); }
+        public ISaveState Save() { return new SaveStateImpl(this); }
+
+        public void Advance()
+        {
+            CommonHelpers.Check(_CanAdvance, "Advance reentry detected! Cannot call advance at this time.");
+            Advance(State.GetNext(), EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(State.GetNext()), false);
+        }
+
+        public void Resume()
+        {
+            CommonHelpers.Check(_CanResume, "Cannot resume, as this hasn't been paused.");
+            Advance(State, false, true);
+        }
 
         public void Rewind()
         {
@@ -164,16 +148,38 @@ namespace MahjongCore.Riichi.Impl
         {
             CommonHelpers.Check(_ExpectingPause, "Not expecting pause at this time. Can only pause during PreCheckAdvance or PreCheckRewind handlers.");
             _ShouldPause = true;
+            _CanResume = true;
         }
 
         public void SubmitDiscard(IDiscardDecision decision)
         {
+            CommonHelpers.Check(_ExpectingDiscard, "Not expecting discard decision at this time!");
+            _ExpectingDiscard = false;
 
+            // If we're currently processing DecideMove (evidenced by the _CanAdvance reentry flag being cleared)
+            // then we want to setup _AdvanceAction. Otherwise we want to pump state advancement at this time.
+            _AdvanceAction = ProcessDiscardDecision(decision);
+            if (_CanAdvance)
+            {
+                PlayState state;
+                bool advancePlayer;
+                DetermineAdvanceState(_AdvanceAction, out state, out advancePlayer);
+                Advance(state, advancePlayer, false);
+            }
         }
 
         public void SubmitPostDiscard(IPostDiscardDecision decision)
         {
+            CommonHelpers.Check(((GetNextAction(decision.Player) == GameAction.DecisionPending) && (State == PlayState.GatherDecisions)),
+                                "Not expecting post discard decision at this time.");
 
+            // If we're currently processing DecideMove (evidenced by the _CanAdvance reentry flag being cleared)
+            // then we just want to leave _AdvanceAction set. Otherwise we want to pump state advancement at this time.
+            _AdvanceAction = ProcessPostDiscardDecision(decision);
+            if ((_AdvanceAction == AdvanceAction.Advance) && _CanAdvance)
+            {
+                Advance();
+            }
         }
 
         // GameStateImpl
@@ -203,29 +209,32 @@ namespace MahjongCore.Riichi.Impl
         private WinResultsImpl[]              _MultiWinResults        = new WinResultsImpl[] { new WinResultsImpl(), new WinResultsImpl(), new WinResultsImpl(), new WinResultsImpl() };
         private DiscardInfoImpl               _DiscardInfoCache       = new DiscardInfoImpl();
         private PostDiscardInfoImpl           _PostDiscardInfoCache   = new PostDiscardInfoImpl();
+        private PostDiscardDecisionImpl       _CachedPostDiscardPass  = new PostDiscardDecisionImpl();
         private Player                        _NextActionPlayerTarget = Player.None;
         private GameAction                    _NextAction1            = GameAction.Nothing;
         private GameAction                    _NextAction2            = GameAction.Nothing;
         private GameAction                    _NextAction3            = GameAction.Nothing;
         private GameAction                    _NextAction4            = GameAction.Nothing;
         private GameAction                    _RewindAction           = GameAction.Nothing;
+        private AdvanceAction                 _AdvanceAction          = AdvanceAction.Done;
         private bool                          _SkipAdvancePlayer      = false;
         private bool                          _HasExtraSettings       = false;
         private int                           _NextActionSlot         = -1;
         private bool                          _ExpectingPause         = false;
         private bool                          _ShouldPause            = false;
+        private bool                          _CanAdvance             = true;
+        private bool                          _CanResume              = false;
+        private bool                          _ExpectingDiscard       = false;
 
         internal GameStateImpl()                                       { InitializeCommon(null, null, true); }
         internal GameStateImpl(IGameSettings settings)                 { Initialize(settings, null); }
         internal GameStateImpl(IExtraSettings extra)                   { Initialize(null, extra); }
         internal GameStateImpl(ISaveState state)                       { InitializeFromState(state, null); }
         internal GameStateImpl(ISaveState state, IExtraSettings extra) { InitializeFromState(state, extra); }
-        private HandImpl GetHand(Player p)                             { return GetHandZeroIndexed(p.GetZeroIndex()); }
-        private void StartPlayState(PlayState mode)                    { AdvancePlayState(mode, EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(mode), false); }
+        private void StartPlayState(PlayState mode)                    { Advance(mode, EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(mode), false); }
         //internal void HandCleared(Player p)                            { Sink.HandCleared(p); }
         //internal void HandSort(Player p, bool fAnimation)              { Sink.HandSort(p, fAnimation); }
         //internal void HandPerformedStoredCall(Player p, CallOption co) { Sink.HandPerformedStoredCall(p, co); }
-        //internal GameAction GetNextPlayerAction(Player p)              { return GetNextPlayerActionZeroIndexed(p.GetZeroIndex()); }
         public void ExecuteRewindModeChange_HandEnd()                  { PerformRoundEndRewindStep(); }
         public void ExecuteRewindModeChange_TableCleanup()             { PerformRoundEndRewindStep(); }
         public void ExecuteRewindModeChange_GameEnd()                  { PerformRoundEndRewindStep(); }
@@ -315,11 +324,15 @@ namespace MahjongCore.Riichi.Impl
             _NextAction3 = GameAction.Nothing;
             _NextAction4 = GameAction.Nothing;
             _RewindAction = GameAction.Nothing;
+            _AdvanceAction = AdvanceAction.Done;
             _SkipAdvancePlayer = false;
             _HasExtraSettings = false;
             _NextActionSlot = -1;
             _ExpectingPause = false;
             _ShouldPause = false;
+            _CanAdvance = true;
+            _CanResume = false;
+            _ExpectingDiscard = false;
         }
 
         private void Initialize(IGameSettings settings, IExtraSettings extra)
@@ -371,7 +384,67 @@ namespace MahjongCore.Riichi.Impl
             }
         }
 
-        private void SubmitPostDiscardDecision(IPostDiscardDecision decision)
+        private void Advance(PlayState nextMode, bool advancePlayer, bool skipCheck)
+        {
+            _RewindAction = GameAction.Nothing;
+            _CanAdvance = false;
+            bool queuedSkipCheck = skipCheck;
+            bool queuedAdvancePlayer = advancePlayer;
+            PlayState queuedMode = nextMode;
+
+            do
+            {
+                _AdvanceAction = AdvanceAction.Done;
+
+                if (!queuedSkipCheck)
+                {
+                    // Advance player, set flags/game mode/etc.
+                    State = queuedMode;
+                    queuedSkipCheck = false;
+
+                    if (_SkipAdvancePlayer)
+                    {
+                        _SkipAdvancePlayer = false;
+                    }
+                    else if (queuedAdvancePlayer)
+                    {
+                        Current = Current.GetNext();
+                    }
+
+                    // Execute a pre-break handler which will make the new state valid if we end up pausing here.
+                    // Skip this if we previously paused because we already did it.
+                    _PreBreakStateHandlers[queuedMode]?.Invoke();
+                    if (CheckForPause(PreCheckAdvance))
+                    {
+                        _AdvanceAction = AdvanceAction.Done;
+                        break;
+                    }
+                }
+
+                // Execute the bulk of the game mode.
+                _PostBreakStateHandlers[queuedMode]?.Invoke();
+
+                // Determine what the next step will be.
+                DetermineAdvanceState(_AdvanceAction, out queuedMode, out queuedAdvancePlayer);
+            } while (_AdvanceAction != AdvanceAction.Done);
+            _CanAdvance = true;
+        }
+
+        private void DetermineAdvanceState(AdvanceAction action, out PlayState state, out bool advancePlayer)
+        {
+            advancePlayer = false;
+
+            switch (_AdvanceAction)
+            {
+                case AdvanceAction.Advance: state = State.GetNext();
+                                            advancePlayer = EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(State.GetNext());
+                                            break;
+
+                default:                    throw new Exception("Unexpected AdvanceAction");
+            }
+        }
+
+        private AdvanceAction ProcessPostDiscardDecision(IPostDiscardDecision decision)
         {
             CommonHelpers.Check((!(decision is PostDiscardDecisionImpl) || ((PostDiscardDecisionImpl)decision).Validate()), "Post discard decision failed validation.");
 
@@ -386,59 +459,100 @@ namespace MahjongCore.Riichi.Impl
             else if (decision.Player == Player.Player3) { _NextAction3 = action; Player3HandRaw.CachedCall = decision.Call; }
             else if (decision.Player == Player.Player4) { _NextAction4 = action; Player4HandRaw.CachedCall = decision.Call; }
 
-            // Take action if all decisions are accounted for.
-            if ((_NextAction1 != GameAction.DecisionPending) && (_NextAction2 != GameAction.DecisionPending) &&
-                (_NextAction3 != GameAction.DecisionPending) && (_NextAction4 != GameAction.DecisionPending))
+            // Advance if all decisions are accounted for.
+            AdvanceAction nextAction = (_NextAction1 != GameAction.DecisionPending) &&
+                                       (_NextAction2 != GameAction.DecisionPending) &&
+                                       (_NextAction3 != GameAction.DecisionPending) &&
+                                       (_NextAction4 != GameAction.DecisionPending) ? AdvanceAction.Advance : AdvanceAction.Done;
+
+            if (nextAction == AdvanceAction.Advance)
             {
                 // Set up the next action that is to be taken.
                 NextAction = GameAction.Nothing;
-
-                if (_NextAction1.GetSkyValue() > NextAction.GetSkyValue()) { NextAction = _NextAction1; NextActionPlayer = Player.Player1; }
-                if (_NextAction2.GetSkyValue() > NextAction.GetSkyValue()) { NextAction = _NextAction2; NextActionPlayer = Player.Player2; }
-                if (_NextAction3.GetSkyValue() > NextAction.GetSkyValue()) { NextAction = _NextAction3; NextActionPlayer = Player.Player3; }
-                if (_NextAction4.GetSkyValue() > NextAction.GetSkyValue()) { NextAction = _NextAction4; NextActionPlayer = Player.Player4; }
-
-                // Check to see if multiple people have ronned.
-                if (NextAction == GameAction.Ron)
+                foreach (Player p in PlayerExtensionMethods.Players)
                 {
-                    int ronCount = ((_NextAction1 == GameAction.Ron) ? 1 : 0) + ((_NextAction2 == GameAction.Ron) ? 1 : 0) +
-                                    ((_NextAction3 == GameAction.Ron) ? 1 : 0) + ((_NextAction4 == GameAction.Ron) ? 1 : 0);
-                    if (ronCount > 1)
+                    if (GetNextAction(p).GetSkyValue() > NextAction.GetSkyValue())
                     {
-                        NextActionPlayer = Player.Multiple;
-                        if (_NextAction1 != GameAction.Ron) { Player1HandRaw.CachedCall = null; }
-                        if (_NextAction2 != GameAction.Ron) { Player2HandRaw.CachedCall = null; }
-                        if (_NextAction3 != GameAction.Ron) { Player3HandRaw.CachedCall = null; }
-                        if (_NextAction4 != GameAction.Ron) { Player4HandRaw.CachedCall = null; }
+                        NextAction = GetNextAction(p); NextActionPlayer = p;
                     }
                 }
 
-                if (NextActionPlayer != Player.Multiple)
+                // Check to see if multiple people have ronned.
+                // TODO: Implement head bump here. Be sure to invoke DecisionCancelled with a null call.
+                if ((NextAction == GameAction.Ron) &&
+                    (((_NextAction1.IsAgari() ? 1 : 0) + (_NextAction2.IsAgari() ? 1 : 0) + (_NextAction3.IsAgari() ? 1 : 0) + (_NextAction4.IsAgari() ? 1 : 0)) > 1))
                 {
-                    // Clear out stored call options on any players besides the one that won.
-                    if (NextActionPlayer != Player.Player1) { Player1HandRaw.CachedCall = null; }
-                    if (NextActionPlayer != Player.Player2) { Player2HandRaw.CachedCall = null; }
-                    if (NextActionPlayer != Player.Player3) { Player3HandRaw.CachedCall = null; }
-                    if (NextActionPlayer != Player.Player4) { Player4HandRaw.CachedCall = null; }
+                    NextActionPlayer = Player.Multiple;
                 }
 
-                // Goto the next step.
-                Advance();
+                // Clear out stored call options on anyone that didn't win the decision.
+                foreach (Player p in PlayerExtensionMethods.Players)
+                {
+                    if ((NextActionPlayer != p) && (GetHand(p).CachedCall != null))
+                    {
+                        DecisionCancelled?.Invoke(this, new DecisionCancelledArgsImpl(p, GetHand(p).CachedCall));
+                        GetHand(p).CachedCall = null;
+                    }
+                }
             }
+            return nextAction;
         }
 
-        public void SubmitDiscardDecision(DiscardDecision decision)
+        private AdvanceAction ProcessDiscardDecision(IDiscardDecision decision)
         {
-            decision.Validate(GetHand(Current));
+            _ExpectingDiscard = false;
+            HandImpl hand = GetHand(Current);
+            CommonHelpers.Check((!(decision is DiscardDecisionImpl) || ((DiscardDecisionImpl)decision).Validate(hand)), "Post discard decision failed validation.");
 
-            if      ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.Discard))           { GetHand(CurrentPlayer).Discard(decision.Slot); }
-            else if ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.RiichiDiscard))     { GetHand(CurrentPlayer).Reach(decision.Slot, false); }
-            else if ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.OpenRiichiDiscard)) { GetHand(CurrentPlayer).Reach(decision.Slot, true); }
-            else if ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.Tsumo))             { HandPerformedTsumo(CurrentPlayer); }
-            else if ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.ClosedKan))         { GetHand(CurrentPlayer).Kan(decision.Slot, false); }
-            else if ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.PromotedKan))       { GetHand(CurrentPlayer).Kan(decision.Slot, true); }
-            else if ((CurrentState == PlayState.DecideMove) && (decision.DecisionToMake == DiscardDecision.Decision.AbortiveDraw))      { GetHand(CurrentPlayer).AbortiveDraw(decision.Slot, (decision.Slot != -1)); }
-            else    { Global.Assert(false, "Action and Play State do not match! Action: " + decision.DecisionToMake + " State: " + CurrentState); }
+            AdvanceAction action = AdvanceAction.Advance;
+            switch (decision.Decision)
+            {
+                case DiscardDecisionType.Discard:           hand.PerformDiscard(decision.Tile);
+                                                            PerformDiscardState(decision.Tile, GameAction.Discard);
+                                                            HandDiscard?.Invoke(this, new HandDiscardArgsImpl(decision.Tile));
+                                                            break;
+
+                case DiscardDecisionType.OpenRiichiDiscard:
+                case DiscardDecisionType.RiichiDiscard:     bool openReach = (decision.Decision == DiscardDecisionType.OpenRiichiDiscard);
+                                                            hand.PerformReach(decision.Tile, openReach);
+                                                            PerformDiscardState(decision.Tile, (openReach ? GameAction.OpenRiichiDiscard : GameAction.RiichiDiscard));
+                                                            hand.Score -= 1000;
+                                                            hand.CouldIppatsu = true;
+                                                            HandReach?.Invoke(this, new HandReachArgsImpl(decision.Tile));
+                                                            break;
+
+                case DiscardDecisionType.Tsumo:             NextAction = GameAction.Tsumo;
+                                                            NextActionPlayer = Current;
+                                                            action = AdvanceAction.HandEnd;
+                                                            break;
+
+                case DiscardDecisionType.ClosedKan:         hand.PerformClosedKan(decision.Tile);
+                                                            NextActionTile = decision.Tile.Type;
+                                                            _NextActionSlot = decision.Tile.Slot;
+                                                            NextAction = GameAction.ClosedKan;
+                                                            action = AdvanceAction.KanChosenTile;
+                                                            break;
+
+                case DiscardDecisionType.PromotedKan:       hand.PerformPromotedKan(decision.Tile);
+                                                            NextActionTile = decision.Tile.Type;
+                                                            _NextActionSlot = decision.Tile.Slot;
+                                                            NextAction = GameAction.PromotedKan;
+                                                            action = AdvanceAction.KanChosenTile;
+                                                            break;
+
+                case DiscardDecisionType.AbortiveDraw:      hand.PerformAbortiveDraw(decision.Tile);
+                                                            NextActionPlayer = Current;
+                                                            if (decision.Tile != null)
+                                                            {
+                                                                NextActionTile = decision.Tile.Type;
+                                                                _NextActionSlot = decision.Tile.Slot;
+                                                            }
+                                                            NextAction = GameAction.AbortiveDraw;
+                                                            break;
+
+                default:                                    throw new Exception("Unexpected discard decision.");
+            }
+            return action;
         }
 
         private void TryAddStateHandlerFunction(PlayState state, Dictionary<PlayState, Action> basket, string prefix)
@@ -481,42 +595,6 @@ namespace MahjongCore.Riichi.Impl
             return pause;
         }
 
-        private void AdvancePlayState(PlayState nextMode, bool advancePlayer, bool fSkipCheck)
-        {
-            // Advance player, set flags/game mode/etc.
-            State = nextMode;
-            _RewindAction = GameAction.Nothing;
-
-            if (_SkipAdvancePlayer)
-            {
-                _SkipAdvancePlayer = false;
-            }
-            else if (advancePlayer)
-            {
-                Current = Current.GetNext();
-            }
-
-            // Perform things based on the state that can happen before a potential breakpoint. If we're skipping the
-            // breakpoint check that also means we shouldn't do this, since we already did it.
-            if (!fSkipCheck && _PreBreakStateHandlers.ContainsKey(nextMode))
-            {
-                _PreBreakStateHandlers[nextMode]?.Invoke();
-            }
-
-            // Check to see if we should continue to execute the game mode.
-            bool fContinue = true;
-            if (!fSkipCheck && IsTutorial)
-            {
-                fContinue = Sink.PreCheckPlayState(CurrentState);
-            }
-
-            // Execute the bulk of the game mode.
-            if (fContinue && _PostBreakStateHandlers.ContainsKey(nextMode))
-            {
-                _PostBreakStateHandlers[nextMode]?.Invoke();
-            }
-        }
-
         public void ExecutePreBreak_DeadWallMove()
         {
             // Before we move the dead wall, sort all the hands.
@@ -528,90 +606,100 @@ namespace MahjongCore.Riichi.Impl
 
         public void ExecutePostBreak_RandomizingBreak()
         {
-            Roll                     = TutorialSettings.OverrideDiceRoll ? TutorialSettings.OverrideDiceRollValue : (Global.RandomRange(1, 7) + Global.RandomRange(1, 7));
-            Offset                   = GameStateHelpers.GetOffset(CurrentDealer, Roll);
+            Roll                     = (ExtraSettings.OverrideDiceRoll != null) ? ExtraSettings.OverrideDiceRoll.Value : (Global.RandomRange(1, 7) + Global.RandomRange(1, 7));
+            Offset                   = GameStateHelpers.GetOffset(Dealer, Roll);
             TilesRemaining           = 122;
             DoraCount                = 0;
-            Wareme                   = Settings.GetSetting<bool>(GameOption.Wareme) ? CurrentDealer.AddOffset(Roll - 1) : Player.None;
-            Player1HandRaw.Furiten   = false;
-            Player2HandRaw.Furiten   = false;
-            Player3HandRaw.Furiten   = false;
-            Player4HandRaw.Furiten   = false;
+            Wareme                   = Settings.GetSetting<bool>(GameOption.Wareme) ? Dealer.AddOffset(Roll - 1) : Player.None;
             PlayerRecentOpenKan      = Player.None;
             PlayerDeadWallPick       = false;
             FlipDoraAfterNextDiscard = false;
-            _IppatsuFlag1            = false;
-            _IppatsuFlag2            = false;
-            _IppatsuFlag3            = false;
-            _IppatsuFlag4            = false;
 
-            if (!TutorialSettings.OverrideDiceRoll)
+            PopulateDoraIndicators();
+            Player1HandRaw.Reset();
+            Player2HandRaw.Reset();
+            Player3HandRaw.Reset();
+            Player4HandRaw.Reset();
+
+            if (ExtraSettings.OverrideDiceRoll == null)
             {
-                Wall = TileHelpers.GetRandomBoard(Wall, Settings.GetSetting<RedDora>(GameOption.RedDoraOption));
+                TileHelpers.GetRandomBoard(WallRaw, Settings.GetSetting<RedDora>(GameOption.RedDoraOption));
             }
 
-            GetDoraIndicators();
-            Sink.PerformRandomizingBreak(Roll);
+            DiceRolled?.Invoke(this, null);
         }
 
         public void ExecutePostBreak_DeadWallMove()
         {
             ++DoraCount;
-            Sink.PerformDeadWallMove();
             Player1HandRaw.Sort(true);
             Player2HandRaw.Sort(true);
             Player3HandRaw.Sort(true);
             Player4HandRaw.Sort(true);
+
+            DeadWallMoved?.Invoke(this, null);
         }
 
         public void ExecutePostBreak_DecideMove()
         {
-            // Collect discard information.
-            Hand hand = GetHand(CurrentPlayer);
-            bool fOverrideNoReach = hand.OverrideNoReachFlag;
+            HandImpl hand = GetHand(Current);
+            _DiscardInfoCache.Populate(hand);
             hand.StartDiscardState();
 
-            _DiscardInfoCache.InReach            = hand.IsInReach();
-            _DiscardInfoCache.CanKyuushuuKyuuhai = hand.CanKyuushuuKyuuhai();
-            _DiscardInfoCache.CanTsumo           = hand.CanTsumo();
-            _DiscardInfoCache.CanReach           = !fOverrideNoReach && hand.CanReach() && (TilesRemaining >= 4);
-            _DiscardInfoCache.CanOpenReach       = _DiscardInfoCache.CanReach && Settings.GetSetting<bool>(GameOption.OpenRiichi);
-            _DiscardInfoCache.SuufurendanTile    = hand.GetSuufurendanTile();
-            _DiscardInfoCache.KanOptions         = hand.GetKanOptions();
-            _DiscardInfoCache.CanNormalDiscard   = (!_DiscardInfoCache.InReach || _DiscardInfoCache.KanOptions.HasOptions()) && (!IsTutorial || !TutorialSettings.DisableAnyDiscard);
-
-            _DiscardInfoCache.RestrictedTiles.Clear();
-            TileType noDiscardTile = hand.GetNoDiscardTile();
-            if (noDiscardTile != TileType.None)
+            // Query the AI for the discard decision, or raise the event requesting for the discard decision. If we 
+            // can query the AI or the discard decision is supplied immediately during the event, then _AdvanceAction
+            // will get set. Otherwise, _AdvanceAction will remain "Done" and our caller can supply discard info later.
+            IPlayerAI ai = GetAI(Current);
+            _ExpectingDiscard = true;
+            if (ai != null)
             {
-                _DiscardInfoCache.RestrictedTiles.Add(noDiscardTile);
+                SubmitDiscard(ai.GetDiscardDecision(_DiscardInfoCache));
             }
-
-            if (IsTutorial && (TutorialSettings.RestrictDiscardTiles != null) && (TutorialSettings.RestrictDiscardTiles.Count > 0))
+            else
             {
-                foreach (TileType tt in TutorialSettings.RestrictDiscardTiles)
+                DiscardRequested?.Invoke(this, new DiscardRequestedArgsImpl(_DiscardInfoCache));
+            }
+        }
+
+        private void QueryPostDiscardDecision(GameAction currAction, HandImpl hand, IPlayerAI ai)
+        {
+            if (currAction == GameAction.DecisionPending)
+            {
+                // Determine if a post discard decision can even be made. Otherwise just set nothing.
+                _PostDiscardInfoCache.Populate(hand);
+                if (_PostDiscardInfoCache.CanRon || (_PostDiscardInfoCache.CallsRaw.Count > 0))
                 {
-                    _DiscardInfoCache.RestrictedTiles.Add(tt);
+                    if (ai != null)
+                    {
+                        SubmitPostDiscard(ai.GetPostDiscardDecision(_PostDiscardInfoCache));
+                    }
+                    else
+                    {
+                        PostDiscardRequested?.Invoke(this, new PostDiscardRequstedArgsImpl(_PostDiscardInfoCache));
+                    }
+                }
+                else
+                {
+                    _CachedPostDiscardPass.Reset();
+                    _CachedPostDiscardPass.Player = hand.Player;
+                    SubmitPostDiscard(_CachedPostDiscardPass);
                 }
             }
-
-            Sink.PerformDiscard(CurrentPlayer, _DiscardInfoCache);
         }
 
         public void ExecutePostBreak_GatherDecisions()
         {
-            // Should save now.
-            Sink.PerformSave();
+            // Clear actions except for current player which will make no decision.
+            _NextAction1 = (Current == Player.Player1) ? GameAction.Nothing : GameAction.DecisionPending;
+            _NextAction2 = (Current == Player.Player2) ? GameAction.Nothing : GameAction.DecisionPending;
+            _NextAction3 = (Current == Player.Player3) ? GameAction.Nothing : GameAction.DecisionPending;
+            _NextAction4 = (Current == Player.Player4) ? GameAction.Nothing : GameAction.DecisionPending;
+            NextActionPlayer = Current;
 
-            // Set up all the actions that will happen. The current player has no say since they just discarded.
-            _NextAction1 = (CurrentPlayer == Player.Player1) ? GameAction.Nothing : GameAction.DecisionPending;
-            _NextAction2 = (CurrentPlayer == Player.Player2) ? GameAction.Nothing : GameAction.DecisionPending;
-            _NextAction3 = (CurrentPlayer == Player.Player3) ? GameAction.Nothing : GameAction.DecisionPending;
-            _NextAction4 = (CurrentPlayer == Player.Player4) ? GameAction.Nothing : GameAction.DecisionPending;
-            NextActionPlayer = CurrentPlayer;
-
-            // Tell the sink that all four players should now submit decisions.
-            Sink.GatherPostDiscardDecisions();
+            // Poll decisions from AI, or query decisions from caller. If we populate all actions then _AdvanceAction
+            // will get set. Otherwise a later call by the caller to SubmitPostDiscard will pump advancements.
+            _AdvanceAction = AdvanceAction.Done;
+            foreach (Player p in PlayerExtensionMethods.Players) { QueryPostDiscardDecision(GetNextAction(p), GetHand(p), GetAI(p)); }
         }
 
         public void ExecutePostBreak_PerformDecision()
@@ -1290,61 +1378,31 @@ namespace MahjongCore.Riichi.Impl
             return tileNumber;
         }
 
-        public HandImpl GetHandZeroIndexed(int slot)
+        private HandImpl GetHand(Player p)
         {
-            Global.Assert((slot >= 0) && (slot <= 3));
-            return (slot == 0) ? Player1HandRaw :
-                   (slot == 1) ? Player2HandRaw :
-                   (slot == 2) ? Player3HandRaw :
-                                 Player4HandRaw;
+            CommonHelpers.Check(p.IsPlayer(), "Tried to get hand for non-player: " + p);
+            return (p == Player.Player1) ? Player1HandRaw :
+                   (p == Player.Player2) ? Player2HandRaw :
+                   (p == Player.Player3) ? Player3HandRaw :
+                                           Player4HandRaw;
         }
 
-        public List<ExtendedTile> GetDiscardsZeroIndexed(int slot)
+        private IPlayerAI GetAI(Player p)
         {
-            Global.Assert((slot >= 0) && (slot <= 3));
-            return (slot == 0) ? _Player1Discards :
-                   (slot == 1) ? _Player2Discards :
-                   (slot == 2) ? _Player3Discards :
-                                 _Player4Discards;
+            CommonHelpers.Check(p.IsPlayer(), "Tried to get hand for non-player: " + p);
+            return (p == Player.Player1) ? Player1AI :
+                   (p == Player.Player2) ? Player2AI :
+                   (p == Player.Player3) ? Player3AI :
+                                           Player4AI;
         }
 
-        private GameAction GetNextPlayerActionZeroIndexed(int slot)
+        private GameAction GetNextAction(Player p)
         {
-            Global.Assert((slot >= 0) && (slot <= 3));
-            return (slot == 0) ? _NextAction1 :
-                   (slot == 1) ? _NextAction2 :
-                   (slot == 2) ? _NextAction3 :
-                                 _NextAction4;
-        }
-
-        public bool IsInReach(Player p)
-        {
-            List<ExtendedTile> discards = GetDiscards(p);
-            bool inReach = false;
-            foreach (ExtendedTile et in discards)
-            {
-                if (et.Reach || et.OpenReach)
-                {
-                    inReach = true;
-                    break;
-                }
-            }
-            return inReach;
-        }
-
-        public bool IsInOpenReach(Player p)
-        {
-            List<ExtendedTile> discards = GetDiscards(p);
-            bool inOpenReach = false;
-            foreach (ExtendedTile et in discards)
-            {
-                if (et.OpenReach)
-                {
-                    inOpenReach = true;
-                    break;
-                }
-            }
-            return inOpenReach;
+            CommonHelpers.Check(p.IsPlayer(), "Tried to get action for non-player: " + p);
+            return (p == Player.Player1) ? _NextAction1 :
+                   (p == Player.Player2) ? _NextAction2 :
+                   (p == Player.Player3) ? _NextAction3 :
+                                           _NextAction4;
         }
 
         public bool IsInDoubleReach(Player p)
@@ -1371,95 +1429,27 @@ namespace MahjongCore.Riichi.Impl
 
         internal void PopulateDoraIndicators()
         {
-            DoraIndicators[0] = Wall[TileHelpers.ClampTile(Offset - 6)];
-            DoraIndicators[1] = Wall[TileHelpers.ClampTile(Offset - 8)];
-            DoraIndicators[2] = Wall[TileHelpers.ClampTile(Offset - 10)];
-            DoraIndicators[3] = Wall[TileHelpers.ClampTile(Offset - 12)];
-            DoraIndicators[4] = Wall[TileHelpers.ClampTile(Offset - 14)];
-            UraDoraIndicators[0] = Wall[TileHelpers.ClampTile(Offset - 5)];
-            UraDoraIndicators[1] = Wall[TileHelpers.ClampTile(Offset - 7)];
-            UraDoraIndicators[2] = Wall[TileHelpers.ClampTile(Offset - 9)];
-            UraDoraIndicators[3] = Wall[TileHelpers.ClampTile(Offset - 11)];
-            UraDoraIndicators[4] = Wall[TileHelpers.ClampTile(Offset - 13)];
+            DoraIndicatorsRaw[0] = WallRaw[TileHelpers.ClampTile(Offset - 6)];
+            DoraIndicatorsRaw[1] = WallRaw[TileHelpers.ClampTile(Offset - 8)];
+            DoraIndicatorsRaw[2] = WallRaw[TileHelpers.ClampTile(Offset - 10)];
+            DoraIndicatorsRaw[3] = WallRaw[TileHelpers.ClampTile(Offset - 12)];
+            DoraIndicatorsRaw[4] = WallRaw[TileHelpers.ClampTile(Offset - 14)];
+            UraDoraIndicatorsRaw[0] = WallRaw[TileHelpers.ClampTile(Offset - 5)];
+            UraDoraIndicatorsRaw[1] = WallRaw[TileHelpers.ClampTile(Offset - 7)];
+            UraDoraIndicatorsRaw[2] = WallRaw[TileHelpers.ClampTile(Offset - 9)];
+            UraDoraIndicatorsRaw[3] = WallRaw[TileHelpers.ClampTile(Offset - 11)];
+            UraDoraIndicatorsRaw[4] = WallRaw[TileHelpers.ClampTile(Offset - 13)];
         }
 
-        public void HandPerformedTsumo(Player p)
-        {
-            NextAction = GameAction.Tsumo;
-            NextActionPlayer = p;
-            StartPlayState(PlayState.HandEnd);
-        }
-
-        public void HandPerformedKan(Player p, int handSlot, TileType tile, KanType type)
-        {
-            Global.Assert(p == CurrentPlayer);
-
-            NextActionTile = tile;
-            NextActionSlot = handSlot;
-            NextAction = (type == KanType.Promoted) ? GameAction.PromotedKan : GameAction.ClosedKan;
-
-            // Advance the game state.
-            StartPlayState(PlayState.KanChosenTile);
-        }
-
-        private void PerformDiscardState(ExtendedTile et, int slot, GameAction nextAction)
+        private void PerformDiscardState(ITile tile, GameAction nextAction)
         {
             NextAction = nextAction;
-            NextActionTile = et.Tile;
-            NextActionSlot = slot;
-
-            GetDiscards(CurrentPlayer).Add(et);
+            NextActionTile = tile.Type;
+            _NextActionSlot = tile.Slot;
             PlayerRecentOpenKan = Player.None;
-            DiscardPlayerList.Push(CurrentPlayer);
 
-            // Reset appropriate ippatsu flags.
-            if      (CurrentPlayer == Player.Player1) { _IppatsuFlag1 = false; }
-            else if (CurrentPlayer == Player.Player2) { _IppatsuFlag2 = false; }
-            else if (CurrentPlayer == Player.Player3) { _IppatsuFlag3 = false; }
-            else if (CurrentPlayer == Player.Player4) { _IppatsuFlag4 = false; }
-        }
-
-        public void HandPerformedDiscard(TileType tile, int handSlot)
-        {
-            PerformDiscardState(new ExtendedTile(tile), handSlot, GameAction.Discard);
-
-            // Notify the sink that the discard occured.
-            Sink.HandPerformedDiscard(CurrentPlayer, tile, handSlot);
-
-            // Advance the game state.
-            StartPlayState(PlayState.GatherDecisions);
-        }
-
-        public void HandPerformedReach(TileType tile, int handSlot, bool fOpenReach)
-        {
-            PerformDiscardState(new ExtendedTile(tile, fOpenReach), handSlot, (fOpenReach ? GameAction.OpenRiichiDiscard : GameAction.RiichiDiscard));
-            Hand hand = GetHand(CurrentPlayer);
-            if (Settings.GetSetting<bool>(GameOption.Buttobi))
-            {
-                Global.Assert((hand.Score >= 1000), "Tried to reach with less than 1000 points!");
-            }
-            hand.Score -= 1000;
-
-            if      (CurrentPlayer == Player.Player1) { _IppatsuFlag1 = true; }
-            else if (CurrentPlayer == Player.Player2) { _IppatsuFlag2 = true; }
-            else if (CurrentPlayer == Player.Player3) { _IppatsuFlag3 = true; }
-            else if (CurrentPlayer == Player.Player4) { _IppatsuFlag4 = true; }
-
-            // Notify the sink that the reach occured.
-            Sink.HandPerformedReach(CurrentPlayer, tile, handSlot, fOpenReach);
-
-            // Advance the game state.
-            StartPlayState(PlayState.GatherDecisions);
-        }
-
-        public void HandPerformedAbortiveDraw(Player p, TileType tile, int handSlot)
-        {
-            NextActionPlayer = p;
-            NextActionTile = tile;
-            NextActionSlot = handSlot;
-            NextAction = GameAction.AbortiveDraw;
-
-            StartPlayState(PlayState.HandEnd);
+            DiscardPlayerList.Push(Current);
+            GetHand(Current).CouldIppatsu = false;
         }
     }
 }

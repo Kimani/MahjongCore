@@ -114,4 +114,16 @@ namespace MahjongCore.Riichi.Impl
             Tile = t;
         }
     }
+
+    internal class DecisionCancelledArgsImpl : DecisionCancelledArgs
+    {
+        public override Player Player { get; internal set; }
+        public override IMeld  Meld   { get; internal set; }
+
+        internal DecisionCancelledArgsImpl(Player p, IMeld m)
+        {
+            Player = p;
+            Meld = m;
+        }
+    }
 }

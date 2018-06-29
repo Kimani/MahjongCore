@@ -1,5 +1,6 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
 using System.Collections.Generic;
 
 namespace MahjongCore.Riichi.Impl
@@ -34,6 +35,65 @@ namespace MahjongCore.Riichi.Impl
             CanTsumo  = false;
             CanReach  = false;
         }
+
+        internal void Populate(HandImpl hand)
+        {
+            CommonHelpers.Check(hand.Parent is GameStateImpl, "Non inbox GameState not supported for populating DiscardInfo at this time.");
+            GameStateImpl state = hand.Parent as GameStateImpl;
+            IExtraSettings extraSettings = state.ExtraSettings;
+
+            Reset();
+            Hand             = hand;
+            SuufurendanTile  = hand.GetSuufurendanTile();
+            CanNormalDiscard = !extraSettings.DisableAnyDiscard && !extraSettings.DisablePlainDiscard && !extraSettings.DisableNonReach;
+            CanTsumo         = hand.CanTsumo();
+            CanReach         = !hand.OverrideNoReachFlag && hand.CanReach() && (state.TilesRemaining >= 4) && !extraSettings.DisableReach;
+
+            if (Settings.GetSetting<bool>(GameOption.Buttobi))
+            {
+                Global.Assert((hand.Score >= 1000), "Tried to reach with less than 1000 points!");
+            }
+
+
+            Source           = (state.PrevAction == GameAction.PickedFromWall)      ? TileSource.Wall :
+                               (state.PrevAction == GameAction.ReplacementTilePick) ? TileSource.DeadWall :
+                                                                                      TileSource.Call;
+
+            TileType kuikae = hand.GetKuikaeTile();
+            if (kuikae != TileType.None)
+            {
+                RestrictedTilesRaw.AddUnique(kuikae);
+            }
+
+            foreach (TileType tt in extraSettings.RestrictDiscardTiles)
+            {
+                RestrictedTilesRaw.AddUnique(tt);
+            }
+
+            bool disableNonReachTiles = extraSettings.DisablePlainDiscard || extraSettings.DisableNonReach;
+
+            if (extraSettings.DisableAnyDiscard || (disableNonReachTiles && hand.Open))
+            {
+                foreach (TileImpl tile in hand.ActiveHandRaw)
+                {
+                    RestrictedTilesRaw.AddUnique(tile.Type);
+                }
+            }
+            else if (disableNonReachTiles)
+            {
+                for (int i = 0; i < hand.ActiveTileCount; ++i)
+                {
+                    IList<TileType> waits = hand.GetWaitsForDiscard(i);
+                    if ((waits == null) || (waits.Count == 0))
+                    {
+                        RestrictedTilesRaw.AddUnique(hand.ActiveHandRaw[i].Type);
+                    }
+                }
+            }
+
+            hand.GetAvailablePromotedKans(PromotedKanTilesRaw);
+            hand.GetAvailableClosedKans(ClosedKanTilesRaw);
+        }
     }
 
     internal class PostDiscardInfoImpl : IPostDiscardInfo
@@ -58,7 +118,26 @@ namespace MahjongCore.Riichi.Impl
             CanRon = false;
             CanChankanRon = false;
         }
-    }
+
+        internal void Populate(HandImpl hand)
+        {
+            CommonHelpers.Check(hand.Parent is GameStateImpl, "Non inbox GameState not supported for populating DiscardInfo at this time.");
+            GameStateImpl state = hand.Parent as GameStateImpl;
+
+            Reset();
+            CanRon = !hand.Furiten && hand.CheckRon(state.PrevAction == GameAction.ClosedKan);
+            CanChankanRon = state.Settings.GetSetting<bool>(GameOption.Chankan) && CanRon && (state.PrevAction == GameAction.PromotedKan);
+
+            List<IMeld> callList = ((state.TilesRemaining <= 0) ||
+                                    (state.PrevAction == GameAction.PromotedKan) ||
+                                    (state.PrevAction == GameAction.ClosedKan) ||
+                                    hand.Reach.IsReach()) ? null : hand.GetCalls();
+            if (callList != null)
+            {
+                CallsRaw.AddRange(callList);
+            }
+        }
+        }
 
     internal class DiscardDecisionImpl : IDiscardDecision
     {
@@ -123,7 +202,7 @@ namespace MahjongCore.Riichi.Impl
 
                     case DiscardDecisionType.Discard:           valid = (Tile != null) && 
                                                                         (Tile.Type != TileType.None) &&
-                                                                        (!hand.InReach || Tile.Type.IsEqual(hand.ActiveHand[hand.ActiveTileCount - 1].Type));
+                                                                        (!hand.Reach.IsReach() || Tile.Type.IsEqual(hand.ActiveHand[hand.ActiveTileCount - 1].Type));
                                                                 break;
 
                     case DiscardDecisionType.RiichiDiscard:     valid = hand.Parent.Settings.GetSetting<bool>(GameOption.Riichi) && hand.Tempai && hand.Closed;
@@ -151,11 +230,13 @@ namespace MahjongCore.Riichi.Impl
     internal class PostDiscardDecisionImpl : IPostDiscardDecision
     {
         // IPostDiscardDecision
-        public Player                  Player   { get; internal set; }
-        public PostDiscardDecisionType Decision { get; internal set; }
-        public IMeld                   Call     { get; internal set; }
+        public Player                  Player   { get; internal set; } = Player.None;
+        public PostDiscardDecisionType Decision { get; internal set; } = PostDiscardDecisionType.Nothing;
+        public IMeld                   Call     { get; internal set; } = null;
 
         // PostDiscardDecisionImpl
+        public PostDiscardDecisionImpl() { }
+
         public PostDiscardDecisionImpl(Player player, PostDiscardDecisionType decision, IMeld call)
         {
             Player = player;

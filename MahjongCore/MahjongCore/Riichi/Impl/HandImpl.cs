@@ -21,7 +21,6 @@ namespace MahjongCore.Riichi
         public IList<ITile>    Discards              { get { return (IList<ITile>)DiscardsImpl; } }
         public IList<TileType> Waits                 { get; internal set; }
         public IList<ICommand> DrawsAndKans          { get; internal set; }
-        public IList<IMeld>    AvailableCalls        { get; internal set; }
         public ReachType       Reach                 { get; internal set; }
         public int             Score                 { get; internal set; } = 0;
         public int             ActiveTileCount       { get; internal set; } = 0;
@@ -105,14 +104,14 @@ namespace MahjongCore.Riichi
         internal TileImpl[]     ActiveHandRaw       { get; set; } = new TileImpl[TileHelpers.HAND_SIZE];
         internal MeldImpl[]     MeldsRaw            { get; set; } = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
         internal bool           OverrideNoReachFlag { get; set; } = false; // Used for things like thirteen broken, which you can't reach for.
+
         internal bool IsFullHand()                     { return ((GetCalledMeldCount() * 3) + ActiveTileCount) == TileHelpers.HAND_SIZE; }
-        internal bool IsFuriten()                      { return Parent.Settings.GetSetting<bool>(GameOption.Furiten) && Furiten; }
-        internal bool IsWaramePlayer()                 { return Player == Parent.WaremePlayer; }
+        //internal bool IsFuriten()                      { return Parent.Settings.GetSetting<bool>(GameOption.Furiten) && Furiten; }
+        //internal bool IsWaramePlayer()                 { return Player == Parent.WaremePlayer; }
         internal bool IsInDoubleReach()                { return Parent.IsInDoubleReach(Player); }
         internal bool IsFourKans()                     { return GetKanCount() == 4; }
         internal List<TileType> GetTileWaits(int slot) { return ActiveTileWaits[(slot == -1) ? (ActiveTileCount - 1) : slot]; }
         internal int GetClosedKanFlippedTileCount()    { return OpenMeld[0].State.GetFlippedTileCount() + OpenMeld[1].State.GetFlippedTileCount() + OpenMeld[2].State.GetFlippedTileCount() + OpenMeld[3].State.GetFlippedTileCount(); }
-        internal bool IsInOpenReach()                  { return Parent.IsInOpenReach(Player); }
         internal List<TileType> GetWaits()             { return CommonHelpers.SafeCopyByValue(WaitTiles); } // Make a copy, so the caller can't mess with our waits.
         internal List<IMeld> GetCalls()                { return RiichiHandHelpers.GetCalls(this, Parent); }
         internal ICommand PeekLastDrawKan()            { return DrawsAndKans.Peek(); }
@@ -501,12 +500,9 @@ namespace MahjongCore.Riichi
         }
 
 
-        public void AbortiveDraw(int slot, bool fDiscard)
+        public void PerformAbortiveDraw(ITile tile)
         {
-            int targetSlot = slot;
-            TileType tile = TileType.None;
-
-            if (fDiscard)
+            if (tile != null)
             {
                 targetSlot = (slot == -1) ? (ActiveTileCount - 1) : slot;
                 tile = ActiveHand[targetSlot];
@@ -516,10 +512,9 @@ namespace MahjongCore.Riichi
                 ActiveTileCount--;
                 Sort(false);
             }
-            Parent.HandPerformedAbortiveDraw(Player, tile, targetSlot);
         }
 
-        public void Discard(int slot)
+        public void PerformDiscard(ITile tile)
         {
             int targetSlot = (slot == -1) ? (ActiveTileCount - 1) : slot;
             TileType tile = ActiveHand[targetSlot];
@@ -528,6 +523,8 @@ namespace MahjongCore.Riichi
             ActiveHand[ActiveTileCount - 1] = TileType.None;
             ActiveTileCount--;
             Sort(false);
+
+            ADD TO DISCARDS
 
             WinningHandCache = null;
 
@@ -536,11 +533,9 @@ namespace MahjongCore.Riichi
             {
                 UpdateWaitTiles(targetSlot);
             }
-
-            Parent.HandPerformedDiscard(tile, targetSlot);
         }
 
-        public void PerformReach(int slot, bool fOpenReach)
+        public void PerformReach(ITile tile, bool fOpenReach)
         {
             int targetSlot = (slot == -1) ? (ActiveTileCount - 1) : slot;
             TileType tile = ActiveHand[targetSlot];
@@ -550,11 +545,11 @@ namespace MahjongCore.Riichi
             ActiveTileCount--;
             Sort(false);
 
+            ADD TO DISCARDS
+
             UpdateWaitTiles(targetSlot);
             WinningHandCache = null;
             ActiveRiichiKanTiles = RiichiKanTilesPerSlot[targetSlot];
-
-            Parent.HandPerformedReach(tile, targetSlot, fOpenReach);
         }
 
         public void Kan(int slot, bool fPromoted)
