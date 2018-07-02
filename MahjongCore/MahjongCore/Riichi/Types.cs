@@ -127,7 +127,7 @@ namespace MahjongCore.Riichi
             [IsSinglePlayer(true),  PlayerNext(Player.Player1), PlayerPrevious(Player.Player3), TextValue("4"), PlayerValue(4), ZeroIndex(3)] Player4
         };
 
-        public static class PlayerExtensionMethods
+        public static class PlayerHelpers
         {
             public static Player[] Players = new Player[] { Player.Player1, Player.Player2, Player.Player3, Player.Player4 };
 
