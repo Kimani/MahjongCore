@@ -6,6 +6,7 @@ namespace MahjongCore.Riichi
 {
     public enum WinType
     {
+        None,
         Ron,
         Tsumo,
         Draw
@@ -27,13 +28,13 @@ namespace MahjongCore.Riichi
         Player         WinningPlayer    { get; }
         ICandidateHand WinningHand      { get; }
         WinType        Action           { get; }
-        int            ScoreHi          { get; }
+        int            ScoreHi          { get; } // Includes bonus. Hi == Lo in case of ron.
         int            ScoreLo          { get; }
-        int            Player1Delta     { get; }
+        int            Player1Delta     { get; } // Does NOT include pool. DOES include bonus.
         int            Player2Delta     { get; }
         int            Player3Delta     { get; }
         int            Player4Delta     { get; }
-        int            Player1PoolDelta { get; }
+        int            Player1PoolDelta { get; } // Any pool winnings.
         int            Player2PoolDelta { get; }
         int            Player3PoolDelta { get; }
         int            Player4PoolDelta { get; }

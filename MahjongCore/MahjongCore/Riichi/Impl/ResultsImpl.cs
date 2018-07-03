@@ -216,15 +216,18 @@ namespace MahjongCore.Riichi
         public bool           Limit            { get; internal set; }
 
         // WinResultsImpl
-        public void Reset()
+        internal WinResultsImpl()                                                                    { }
+        internal WinResultsImpl(IGameState s, Player w, Player t, Player r, WinType a, int b, int p) { Populate(s, w, t, r, a, b, p); }
+
+        internal void Reset()
         {
             WinningPlayer = Player.None;
             WinningHand = null;
-            Action = WinType.Draw;
+            Action = WinType.None;
             ResetScores();
         }
 
-        public void ResetScores()
+        internal void ResetScores()
         {
             ScoreHi = 0;
             ScoreLo = 0;
@@ -239,7 +242,7 @@ namespace MahjongCore.Riichi
             Limit = false;
         }
 
-        public int GetPlayerDelta(Player p)
+        internal int GetPlayerDelta(Player p)
         {
             return (p == Player.Player1) ? Player1Delta :
                    (p == Player.Player2) ? Player2Delta :
@@ -247,7 +250,15 @@ namespace MahjongCore.Riichi
                                            Player4Delta;
         }
 
-        public void SetPlayerScore(Player p, int score)
+        internal int GetPlayerPoolDelta(Player p)
+        {
+            return (p == Player.Player1) ? Player1PoolDelta :
+                   (p == Player.Player2) ? Player2PoolDelta :
+                   (p == Player.Player3) ? Player3PoolDelta :
+                                           Player4PoolDelta;
+        }
+
+        internal void SetPlayerScore(Player p, int score)
         {
             Global.Assert(p.IsPlayer());
             if      (p == Player.Player1) { Player1Delta = score; }
@@ -256,7 +267,7 @@ namespace MahjongCore.Riichi
             else if (p == Player.Player4) { Player4Delta = score; }
         }
 
-        public void SetPlayerPool(Player p, int pool)
+        internal void SetPlayerPool(Player p, int pool)
         {
             Global.Assert(p.IsPlayer());
             if      (p == Player.Player1) { Player1PoolDelta = pool; }
@@ -265,7 +276,7 @@ namespace MahjongCore.Riichi
             else if (p == Player.Player4) { Player4PoolDelta = pool; }
         }
 
-        public void Populate(IGameState state, Player winner, Player target, Player recentOpenKan, WinType action, int pool)
+        internal void Populate(IGameState state, Player winner, Player target, Player recentOpenKan, WinType action, int bonus, int pool)
         {
             Reset();
             WinningPlayer = winner;
@@ -275,10 +286,6 @@ namespace MahjongCore.Riichi
             HandImpl hand = stateImpl.GetHand(winner) as HandImpl;
             if ((action == WinType.Ron) || (action == WinType.Tsumo))
             {
-                // Mark the win. Advance streak and mark as not yakitori.
-                hand.Streak++;
-                hand.Yakitori = false;
-
                 WinningHand = hand.WinningHandCache;
 
                 // Can only have sekinin barai in multi-win scenarios if there's a ron. So don't calculate if this is a tsumo.
@@ -296,7 +303,7 @@ namespace MahjongCore.Riichi
             }
             else
             {
-                hand.Streak = 0;
+                %%%%%%%%%  hand.Streak = 0;
             }
         }
 

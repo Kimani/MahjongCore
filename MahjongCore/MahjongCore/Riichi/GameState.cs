@@ -89,14 +89,11 @@ namespace MahjongCore.Riichi
     public abstract class WallTilesPicked          : EventArgs { public abstract ITile[]          Tiles   { get; internal set; } }
     public abstract class DiscardRequestedArgs     : EventArgs { public abstract IDiscardInfo     Info    { get; internal set; } }
     public abstract class PostDiscardRequstedArgs  : EventArgs { public abstract IPostDiscardInfo Info    { get; internal set; } }
-    public abstract class HandRonArgs              : EventArgs { public abstract Player           Player  { get; internal set; }
-                                                                 public abstract IWinResults      Results { get; internal set; } }
-    public abstract class HandTsumoArgs            : EventArgs { public abstract Player           Player  { get; internal set; }
-                                                                 public abstract IWinResults      Results { get; internal set; } }
+    public abstract class HandRonArgs              : EventArgs { public abstract IWinResults      Results { get; internal set; } }
+    public abstract class HandTsumoArgs            : EventArgs { public abstract IWinResults      Results { get; internal set; } }
     public abstract class MultiWinArgs             : EventArgs { public abstract IWinResults[]    Results { get; internal set; } }
     public abstract class ExhaustiveDrawArgs       : EventArgs { public abstract IWinResults      Results { get; internal set; } }
-    public abstract class AbortiveDrawArgs         : EventArgs { public abstract AbortiveDrawType Type    { get; internal set; }
-                                                                 public abstract ITile            Tile    { get; internal set; } } // Tile might be null if not applicable.
+    public abstract class AbortiveDrawArgs         : EventArgs { public abstract AbortiveDrawType Type    { get; internal set; } }
     public abstract class GameCompleteArgs         : EventArgs { public abstract IGameResults     Results { get; internal set; } }
     public abstract class DiscardUndoneArgs        : EventArgs { public abstract Player           Player  { get; internal set; }
                                                                  public abstract TileType         Tile    { get; internal set; } }

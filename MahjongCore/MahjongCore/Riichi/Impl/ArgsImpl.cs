@@ -30,18 +30,12 @@ namespace MahjongCore.Riichi.Impl
                                                                              internal PlayerChomboArgsImpl(Player p)                  { Player = p; } }
     internal class DoraIndicatorFlippedArgsImpl : DoraIndicatorFlippedArgs { public override ITile            Tile                    { get; internal set; }
                                                                              internal DoraIndicatorFlippedArgsImpl(ITile t)           { Tile = t; } }
-
-    internal class AbortiveDrawArgsImpl : AbortiveDrawArgs
-    {
-        public override AbortiveDrawType Type { get; internal set; }
-        public override ITile            Tile { get; internal set; } // Tile might be null if not applicable.
-
-        internal AbortiveDrawArgsImpl(AbortiveDrawType a, ITile t)
-        {
-            Type = a;
-            Tile = t;
-        }
-    }
+    internal class HandRonArgsImpl              : HandRonArgs              { public override IWinResults      Results                 { get; internal set; }
+                                                                             internal HandRonArgsImpl(IWinResults w)                  { Results = w; } }
+    internal class HandTsumoArgsImpl            : HandTsumoArgs            { public override IWinResults      Results                 { get; internal set; }
+                                                                             internal HandTsumoArgsImpl(IWinResults w)                { Results = w; } }
+    internal class AbortiveDrawArgsImpl         : AbortiveDrawArgs         { public override AbortiveDrawType Type                    { get; internal set; }
+                                                                             internal AbortiveDrawArgsImpl(AbortiveDrawType a)        { Type = a; } }
 
     internal class HandPickingTileArgsImpl : HandPickingTileArgs
     {
@@ -64,30 +58,6 @@ namespace MahjongCore.Riichi.Impl
         {
             Tiles = t;
             Source = s;
-        }
-    }
-
-    internal class HandRonArgsImpl : HandRonArgs
-    {
-        public override Player      Player  { get; internal set; }
-        public override IWinResults Results { get; internal set; }
-
-        internal HandRonArgsImpl(Player p, IWinResults w)
-        {
-            Player = p;
-            Results = w;
-        }
-    }
-
-    internal class HandTsumoArgsImpl : HandTsumoArgs
-    {
-        public override Player      Player  { get; internal set; }
-        public override IWinResults Results { get; internal set; }
-
-        internal HandTsumoArgsImpl(Player p, IWinResults w)
-        {
-            Player = p;
-            Results = w;
         }
     }
 

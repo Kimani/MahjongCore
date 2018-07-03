@@ -4,6 +4,7 @@ using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Helpers;
+using MahjongCore.Riichi;
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -14,28 +15,29 @@ namespace MahjongCore.Riichi.Impl
     #region GameAction
         internal enum GameAction
         {
-            [SkyValue(0)]  Nothing,
-            [SkyValue(1)]  Discard,
-            [SkyValue(2)]  Chii,                // Sorting Chii, Pon, OpenKan and Ron
-            [SkyValue(3)]  Pon,                 // in ascending order on purpose so
-            [SkyValue(4)]  OpenKan,             // you can just sort in order to
-            [SkyValue(5)]  Ron,                 // determine what should be done.
-            [SkyValue(6)]  Tsumo,
-            [SkyValue(7)]  ClosedKan,
-            [SkyValue(8)]  PromotedKan,
-            [SkyValue(9)]  RiichiDiscard,
-            [SkyValue(10)] DecisionPending,
-            [SkyValue(11)] PickedFromWall,
-            [SkyValue(12)] ReplacementTilePick, // If set, we want to pick our tile from the dead wall instead of the regular wall.
-            [SkyValue(13)] AbortiveDraw,        // If Kyuushuukyuuhai or too many kans.
-            [SkyValue(14)] OpenRiichiDiscard,   // Will need to update marshalling if this goes over 0xf
+            [SkyValue(0),  WinValue(WinType.None)]  Nothing,
+            [SkyValue(1),  WinValue(WinType.None)]  Discard,
+            [SkyValue(2),  WinValue(WinType.None)]  Chii,                // Sorting Chii, Pon, OpenKan and Ron
+            [SkyValue(3),  WinValue(WinType.None)]  Pon,                 // in ascending order on purpose so
+            [SkyValue(4),  WinValue(WinType.None)]  OpenKan,             // you can just sort in order to
+            [SkyValue(5),  WinValue(WinType.Ron)]   Ron,                 // determine what should be done.
+            [SkyValue(6),  WinValue(WinType.Tsumo)] Tsumo,
+            [SkyValue(7),  WinValue(WinType.None)]  ClosedKan,
+            [SkyValue(8),  WinValue(WinType.None)]  PromotedKan,
+            [SkyValue(9),  WinValue(WinType.None)]  RiichiDiscard,
+            [SkyValue(10), WinValue(WinType.None)]  DecisionPending,
+            [SkyValue(11), WinValue(WinType.None)]  PickedFromWall,
+            [SkyValue(12), WinValue(WinType.None)]  ReplacementTilePick, // If set, we want to pick our tile from the dead wall instead of the regular wall.
+            [SkyValue(13), WinValue(WinType.None)]  AbortiveDraw,        // If Kyuushuukyuuhai or too many kans.
+            [SkyValue(14), WinValue(WinType.None)]  OpenRiichiDiscard,   // Will need to update marshalling if this goes over 0xf
         }
 
         internal static class GameActionExtentionMethods
         {
-            public static int  GetSkyValue(this GameAction ga)                  { return EnumAttributes.GetAttributeValue<SkyValue, int>(ga); }
-            public static bool TryGetGameAction(string text, out GameAction ga) { return EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga); }
-            public static bool IsAgari(this GameAction ga)                      { return (ga == GameAction.Ron) || (ga == GameAction.Tsumo); }
+            public static WinType GetWinType(this GameAction ga)                   { return EnumAttributes.GetAttributeValue<WinValue, WinType>(ga); }
+            public static int     GetSkyValue(this GameAction ga)                  { return EnumAttributes.GetAttributeValue<SkyValue, int>(ga); }
+            public static bool    TryGetGameAction(string text, out GameAction ga) { return EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga); }
+            public static bool    IsAgari(this GameAction ga)                      { return (ga == GameAction.Ron) || (ga == GameAction.Tsumo); }
 
             public static GameAction GetGameAction(string text)
             {
@@ -55,8 +57,10 @@ namespace MahjongCore.Riichi.Impl
         Advance,
         KanChosenTile,
         HandEnd,
+        GameEnd,
         ReplacementPickTile,
         DecidePostCallMove,
+        RandomizingBreak
     }
 
     internal class GameStateImpl : IGameState
@@ -218,6 +222,7 @@ namespace MahjongCore.Riichi.Impl
         private GameAction                    _NextAction4            = GameAction.Nothing;
         private GameAction                    _RewindAction           = GameAction.Nothing;
         private AdvanceAction                 _AdvanceAction          = AdvanceAction.Done;
+        private AbortiveDrawType              _NextAbortiveDrawType   = AbortiveDrawType.Other;
         private bool                          _SkipAdvancePlayer      = false;
         private bool                          _HasExtraSettings       = false;
         private int                           _NextActionSlot         = -1;
@@ -226,21 +231,22 @@ namespace MahjongCore.Riichi.Impl
         private bool                          _CanAdvance             = true;
         private bool                          _CanResume              = false;
         private bool                          _ExpectingDiscard       = false;
+        private bool                          _NagashiWin             = false;
 
         internal     GameStateImpl()                                       { InitializeCommon(null, null, true); }
         internal     GameStateImpl(IGameSettings settings)                 { Initialize(settings, null); }
         internal     GameStateImpl(IExtraSettings extra)                   { Initialize(null, extra); }
         internal     GameStateImpl(ISaveState state)                       { InitializeFromState(state, null); }
         internal     GameStateImpl(ISaveState state, IExtraSettings extra) { InitializeFromState(state, extra); }
-        public void  ExecuteRewindModeChange_HandEnd()                  { PerformRoundEndRewindStep(); }
-        public void  ExecuteRewindModeChange_TableCleanup()             { PerformRoundEndRewindStep(); }
-        public void  ExecuteRewindModeChange_GameEnd()                  { PerformRoundEndRewindStep(); }
-        public void  ExecuteRewindModeChange_GatherDecisions()          { State = PlayState.DecideMove; }
-        public void  ExecuteRewindModeChange_KanChosenTile()            { State = PlayState.DecideMove; }
-        public void  ExecuteRewindModeChange_NextTurn()                 { State = PlayState.GatherDecisions; }
-        public void  ExecuteRewindModeChange_PerformDecision()          { State = PlayState.NextTurn; }
-        public void  ExecuteRewindModeChange_PickTile()                 { State = PlayState.NextTurn; }
-        public void  ExecutePostBreak_PreTilePick1()                    { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 4)); }
+        public void  ExecuteRewindModeChange_HandEnd()                     { PerformRoundEndRewindStep(); }
+        public void  ExecuteRewindModeChange_TableCleanup()                { PerformRoundEndRewindStep(); }
+        public void  ExecuteRewindModeChange_GameEnd()                     { PerformRoundEndRewindStep(); }
+        public void  ExecuteRewindModeChange_GatherDecisions()             { State = PlayState.DecideMove; }
+        public void  ExecuteRewindModeChange_KanChosenTile()               { State = PlayState.DecideMove; }
+        public void  ExecuteRewindModeChange_NextTurn()                    { State = PlayState.GatherDecisions; }
+        public void  ExecuteRewindModeChange_PerformDecision()             { State = PlayState.NextTurn; }
+        public void  ExecuteRewindModeChange_PickTile()                    { State = PlayState.NextTurn; }
+        public void  ExecutePostBreak_PreTilePick1()                       { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 4)); }
         public void  ExecutePostBreak_PreTilePick2()                    { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 4)); }
         public void  ExecutePostBreak_PreTilePick3()                    { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 4)); }
         public void  ExecutePostBreak_PreTilePick4()                    { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 4)); }
@@ -275,6 +281,7 @@ namespace MahjongCore.Riichi.Impl
         public void  ExecutePostBreak_TilePick16()                      { PickIntoPlayerHand(Current, 1); }
         public void  ExecutePostBreak_PickTile()                        { PickIntoPlayerHand(Current, 1); }
         private void FlipDora()                                         { DoraIndicatorFlipped?.Invoke(this, new DoraIndicatorFlippedArgsImpl(DoraIndicators[DoraCount++])); }
+        private void ApplyWinResultsToPlayerScores(WinResultsImpl win)  { foreach (Player p in PlayerHelpers.Players) { GetHand(p).Score += win.GetPlayerDelta(p) + win.GetPlayerPoolDelta(p); } }
 
         internal void Reset()
         {
@@ -540,9 +547,11 @@ namespace MahjongCore.Riichi.Impl
                                                             NextAction = GameAction.AbortiveDraw;
                                                             if (decision.Tile != null)
                                                             {
-                                                                NextActionTile = decision.Tile.Type;
-                                                                _NextActionSlot = decision.Tile.Slot;
+                                                                hand.PerformDiscard(decision.Tile);
+                                                                PerformDiscardState(decision.Tile, GameAction.AbortiveDraw);
+                                                                HandDiscard?.Invoke(this, new HandDiscardArgsImpl(decision.Tile));
                                                             }
+                                                            _NextAbortiveDrawType = (decision.Tile == null) ? AbortiveDrawType.KyuushuuKyuuhai : AbortiveDrawType.Suufuurendan;
                                                             break;
 
                 default:                                    throw new Exception("Unexpected discard decision.");
@@ -715,6 +724,7 @@ namespace MahjongCore.Riichi.Impl
                 NextActionTile = TileType.None;
                 _NextActionSlot = -1;
                 _AdvanceAction = AdvanceAction.HandEnd;
+                _NextAbortiveDrawType = AbortiveDrawType.FourKans;
             }
             else if (NextAction == GameAction.Nothing)
             {
@@ -727,6 +737,7 @@ namespace MahjongCore.Riichi.Impl
                     NextActionTile = TileType.None;
                     _NextActionSlot = -1;
                     _AdvanceAction = AdvanceAction.HandEnd;
+                    _NextAbortiveDrawType = AbortiveDrawType.FourReach;
                 }
                 else
                 {
@@ -760,6 +771,7 @@ namespace MahjongCore.Riichi.Impl
                     NextAction = GameAction.AbortiveDraw;
                     _NextActionSlot = -1;
                     _AdvanceAction = AdvanceAction.HandEnd;
+                    _NextAbortiveDrawType = AbortiveDrawType.FiveKans;
                 }
                 else
                 {
@@ -803,6 +815,7 @@ namespace MahjongCore.Riichi.Impl
         public void ExecutePostBreak_HandEnd()
         {
             // Process Nagashi Mangan.
+            _NagashiWin = false;
             if ((TilesRemaining == 0) && (NextAction == GameAction.Nothing))
             {
                 bool player1Nagashi = Player1HandRaw.CheckNagashiMangan();
@@ -811,6 +824,8 @@ namespace MahjongCore.Riichi.Impl
                 bool player4Nagashi = Player4HandRaw.CheckNagashiMangan();
 
                 int nagashiCount = (player1Nagashi ? 1 : 0) + (player2Nagashi ? 1 : 0) + (player3Nagashi ? 1 : 0) + (player4Nagashi ? 1 : 0);
+                _NagashiWin = (nagashiCount != 0);
+
                 if (nagashiCount > 1)
                 {
                     NextActionPlayer = Player.Multiple;
@@ -820,144 +835,122 @@ namespace MahjongCore.Riichi.Impl
                     _NextAction4 = player4Nagashi ? GameAction.Tsumo : GameAction.Nothing;
                     _NextActionPlayerTarget = Dealer.GetPrevious(); // Start at the player before the dealer so that the dealer gets resolved first.
                 }
-                else if (nagashiCount == 1)
+                else if (_NagashiWin)
                 {
                     NextAction = GameAction.Tsumo;
                     NextActionPlayer = player1Nagashi ? Player.Player1 :
-                                       player2Nagashi ? Player.Player1 :
-                                       player3Nagashi ? Player.Player1 :
+                                       player2Nagashi ? Player.Player2 :
+                                       player3Nagashi ? Player.Player3 :
                                                         Player.Player4;
                 }
             }
 
-            NagashiConsumesPool,
-            NagashiUsesBonus,
-            NagashiBonusOnEastTempaiOnly,
-
             // Determine our state delta.
             WinResultsImpl[] multiWinResults = null;
+            bool consumePool = !_NagashiWin || Settings.GetSetting<bool>(GameOption.NagashiConsumesPool);
+            int bonus = (!_NagashiWin || Settings.GetSetting<bool>(GameOption.NagashiUsesBonus)) ? Bonus : 0;
+
             if (NextActionPlayer == Player.Multiple)
             {
                 int winCount = 0;
                 foreach (Player p in PlayerHelpers.Players) { if (GetNextAction(p).IsAgari()) { ++winCount; } }
                 multiWinResults = new WinResultsImpl[winCount];
 
-                Player processPlayer = _NextActionPlayerTarget;
+                Player processPlayer = _NagashiWin ? Dealer : _NextActionPlayerTarget;
+                int resultSlot = 0;
                 for (int i = 0; i < 4; ++i, processPlayer = processPlayer.GetNext())
                 {
-                    GameAction action = GetNextAction(processPlayer);
-                    Player target = (action == GameAction.Tsumo) ? Player.Multiple :
-                                    (action == GameAction.Ron)   ? _NextActionPlayerTarget :
-                                                                   Player.None;
-
-                    _MultiWinResults[i].Populate(this, processPlayer, target, PlayerRecentOpenKan, action, ConsumePool());
+                    HandImpl hand = GetHand(processPlayer);
+                    WinType winType = GetNextAction(processPlayer).GetWinType();
+                    if ((winType == WinType.Ron) || (winType == WinType.Tsumo))
+                    {
+                        hand.Streak++;
+                        hand.Yakitori = false;
+                        multiWinResults[resultSlot++] = new WinResultsImpl(this,
+                                                                           processPlayer,
+                                                                           ((winType == WinType.Tsumo) ? Player.Multiple : _NextActionPlayerTarget),
+                                                                           PlayerRecentOpenKan,
+                                                                           winType,
+                                                                           bonus,
+                                                                           (consumePool ? ConsumePool() : 0));
+                    }
+                    else
+                    {
+                        hand.Streak = 0;
+                    }
                 }
             }
             else if (NextAction.IsAgari())
             {
-                Player target = (NextAction == GameAction.Ron) ? _NextActionPlayerTarget : Player.Multiple;
-                _WinResultCache.Populate(this, NextActionPlayer, target, PlayerRecentOpenKan, NextAction, ConsumePool());
+                _WinResultCache.Populate(this,
+                                         NextActionPlayer,
+                                         ((NextAction == GameAction.Ron) ? _NextActionPlayerTarget : Player.Multiple),
+                                         PlayerRecentOpenKan,
+                                         NextAction.GetWinType(),
+                                         bonus,
+                                         (consumePool ? ConsumePool() : 0));
 
-                // Clear other player's streak.
-                if (NextActionPlayer != Player.Player1) { Player1HandRaw.Streak = 0; }
-                if (NextActionPlayer != Player.Player2) { Player2HandRaw.Streak = 0; }
-                if (NextActionPlayer != Player.Player3) { Player3HandRaw.Streak = 0; }
-                if (NextActionPlayer != Player.Player4) { Player4HandRaw.Streak = 0; }
+                HandImpl winner = GetHand(NextActionPlayer);
+                winner.Streak++;
+                winner.Yakitori = false;
+                foreach (Player p in PlayerHelpers.Players) { if (p != NextActionPlayer) { GetHand(p).Streak = 0; } }
             }
             else if (NextAction == GameAction.Nothing)
             {
+                _WinResultCache.Reset();
+                _WinResultCache.WinningPlayer = Player.Multiple;
+                _WinResultCache.Action = WinType.Draw;
+
                 // Draw game! Determine score outputs. No warame in this situation because the math doesn't work.
-                bool fP1Tempai = Player1Hand.Tempai;
-                bool fP2Tempai = Player2Hand.Tempai;
-                bool fP3Tempai = Player3Hand.Tempai;
-                bool fP4Tempai = Player4Hand.Tempai;
-                int tCount = (fP1Tempai ? 1 : 0) + (fP2Tempai ? 1 : 0) + (fP3Tempai ? 1 : 0) + (fP4Tempai ? 1 : 0);
+                bool p1Tempai = Player1Hand.Tempai;
+                bool p2Tempai = Player2Hand.Tempai;
+                bool p3Tempai = Player3Hand.Tempai;
+                bool p4Tempai = Player4Hand.Tempai;
+                int tempaiCount = (p1Tempai ? 1 : 0) + (p2Tempai ? 1 : 0) + (p3Tempai ? 1 : 0) + (p4Tempai ? 1 : 0);
 
-                if ((tCount == 1) || (tCount == 2) || (tCount == 3))
+                if ((tempaiCount == 1) || (tempaiCount == 2) || (tempaiCount == 3))
                 {
-                    int deltaGainPoints = 3000 / tCount;
-                    int deltaLosePoints = -(3000 / (4 - tCount));
+                    int deltaGainPoints = 3000 / tempaiCount;
+                    int deltaLosePoints = -(3000 / (4 - tempaiCount));
 
-                    _WinResultCache.Player1Delta = (fP1Tempai ? deltaGainPoints : deltaLosePoints);
-                    _WinResultCache.Player2Delta = (fP2Tempai ? deltaGainPoints : deltaLosePoints);
-                    _WinResultCache.Player3Delta = (fP3Tempai ? deltaGainPoints : deltaLosePoints);
-                    _WinResultCache.Player4Delta = (fP4Tempai ? deltaGainPoints : deltaLosePoints);
+                    _WinResultCache.Player1Delta = (p1Tempai ? deltaGainPoints : deltaLosePoints);
+                    _WinResultCache.Player2Delta = (p2Tempai ? deltaGainPoints : deltaLosePoints);
+                    _WinResultCache.Player3Delta = (p3Tempai ? deltaGainPoints : deltaLosePoints);
+                    _WinResultCache.Player4Delta = (p4Tempai ? deltaGainPoints : deltaLosePoints);
                 }
+
+                foreach (Player p in PlayerHelpers.Players) { GetHand(p).Streak = 0; }
             }
 
             // Apply deltas to the game state.
-            if (NextActionPlayer == Player.Multiple)
-            {
-                for (int i = 0; i < 4; ++i)
-                {
-                    Player1Hand.Score += _MultiWinResults[i].Player1Delta + _MultiWinResults[i].Player1PoolDelta;
-                    Player2Hand.Score += _MultiWinResults[i].Player2Delta + _MultiWinResults[i].Player2PoolDelta;
-                    Player3Hand.Score += _MultiWinResults[i].Player3Delta + _MultiWinResults[i].Player3PoolDelta;
-                    Player4Hand.Score += _MultiWinResults[i].Player4Delta + _MultiWinResults[i].Player4PoolDelta;
-                }
-            }
-            else
-            {
-                Player1Hand.Score += _WinResultCache.Player1Delta + _WinResultCache.Player1PoolDelta;
-                Player2Hand.Score += _WinResultCache.Player2Delta + _WinResultCache.Player2PoolDelta;
-                Player3Hand.Score += _WinResultCache.Player3Delta + _WinResultCache.Player3PoolDelta;
-                Player4Hand.Score += _WinResultCache.Player4Delta + _WinResultCache.Player4PoolDelta;
-            }
+            if (NextActionPlayer == Player.Multiple) { foreach (WinResultsImpl result in multiWinResults) { ApplyWinResultsToPlayerScores(result); } }
+            else                                     { ApplyWinResultsToPlayerScores(_WinResultCache); }
 
             // Notify the sink.
-            if (NextActionPlayer == Player.Multiple)
-            {
-                Sink.MultiWin(_MultiWinResults[0], _MultiWinResults[1], _MultiWinResults[2], _MultiWinResults[3]);
-            }
-            else if (NextAction == GameAction.Tsumo)
-            {
-                Sink.HandPerformedTsumo(NextActionPlayer, _WinResultCache);
-            }
-            else if (NextAction == GameAction.Ron)
-            {
-                Global.Assert(_NextActionPlayerTarget != NextActionPlayer); // NextActionPlayer rons on _NextActionPlayerTarget.
-                Sink.HandPerformedRon(NextActionPlayer, _WinResultCache);
-            }
-            else if (NextAction == GameAction.AbortiveDraw)
-            {
-                Sink.HandPerformedAbortiveDraw(NextActionPlayer, NextActionTile, NextActionSlot);
-            }
-            else
-            {
-                Global.Assert(NextAction == GameAction.Nothing);
-                Sink.ExhaustiveDraw(_WinResultCache);
-            }
+            if      (NextActionPlayer == Player.Multiple)   { MultiWin?.Invoke(this, new MultiWinArgsImpl(multiWinResults)); }
+            else if (NextAction == GameAction.Tsumo)        { HandTsumo?.Invoke(this, new HandTsumoArgsImpl(_WinResultCache)); }
+            else if (NextAction == GameAction.Ron)          { HandRon?.Invoke(this, new HandRonArgsImpl(_WinResultCache)); }
+            else if (NextAction == GameAction.Nothing)      { ExhaustiveDraw?.Invoke(this, new ExhaustiveDrawArgsImpl(_WinResultCache); }
+            else if (NextAction == GameAction.AbortiveDraw) { AbortiveDraw?.Invoke(this, new AbortiveDrawArgsImpl(_NextAbortiveDrawType)); }
+            else                                            { throw new Exception("Unexpected hand end state!"); }
         }
 
         public void ExecutePostBreak_TableCleanup()
         {
-            // Clean up the wall, discards, hands, etc.
-            Player1HandRaw.Reset();
-            Player2HandRaw.Reset();
-            Player3HandRaw.Reset();
-            Player4HandRaw.Reset();
-            DiscardPlayerList.Clear();
-
-            for (int i = 0; i < DoraIndicators.Length; ++i)        { DoraIndicatorsRaw[i] = null; }
-            for (int i = 0; i < UraDoraIndicators.Length; ++i)     { UraDoraIndicatorsRaw[i] = null; }
-            for (int i = 0; i < TileHelpers.TOTAL_TILE_COUNT; ++i) { WallRaw[i].Type = TileType.None;
-                                                                     WallRaw[i].Ghost = false; }
-
-            // Evaluate if the game is done here.
-            // If the game is done, then we goto PlayState.GameEnd. Otherwise we'll advance to the next round for cleanup.
-            int dealerPoints = GetHand(Dealer).Score;
-            int checkScore = Settings.GetSetting<int>(GameOption.VictoryPoints);
-            Round endRound = Settings.GetSetting<bool>(GameOption.Tonpussen) ? Round.East4 : Round.South4;
-            bool knockedOut = Settings.GetSetting<bool>(GameOption.Buttobi) && ((Player1Hand.Score < 0) || (Player2Hand.Score < 0) || (Player3Hand.Score < 0) || (Player4Hand.Score < 0));
-            bool dealerInLead = ((Dealer == Player.Player1) || (dealerPoints > Player1Hand.Score)) &&
-                                ((Dealer == Player.Player2) || (dealerPoints > Player2Hand.Score)) &&
-                                ((Dealer == Player.Player3) || (dealerPoints > Player3Hand.Score)) &&
-                                ((Dealer == Player.Player4) || (dealerPoints > Player4Hand.Score));
-            bool dealerWon = ((NextActionPlayer == Player.Multiple) && GetNextAction(Dealer).IsAgari()) ||
-                             ((NextActionPlayer == Dealer) && NextAction.IsAgari());
+            // If the game is done, then goto GameEnd. Otherwise reset for the next round.
+            Round endRound      = Settings.GetSetting<bool>(GameOption.Tonpussen) ? Round.East4 : Round.South4;
+            int dealerPoints    = GetHand(Dealer).Score;
+            int checkScore      = Settings.GetSetting<int>(GameOption.VictoryPoints);
+            bool knockedOut     = Settings.GetSetting<bool>(GameOption.Buttobi) && ((Player1Hand.Score < 0) || (Player2Hand.Score < 0) || (Player3Hand.Score < 0) || (Player4Hand.Score < 0));
+            bool dealerInLead   = ((Dealer == Player.Player1) || (dealerPoints > Player1Hand.Score)) &&
+                                  ((Dealer == Player.Player2) || (dealerPoints > Player2Hand.Score)) &&
+                                  ((Dealer == Player.Player3) || (dealerPoints > Player3Hand.Score)) &&
+                                  ((Dealer == Player.Player4) || (dealerPoints > Player4Hand.Score));
+            bool dealerWon      = ((NextActionPlayer == Player.Multiple) && GetNextAction(Dealer).IsAgari()) ||
+                                  ((NextActionPlayer == Dealer) && NextAction.IsAgari());
             bool endGameRenchan = (Round == endRound) &&
-                                   dealerWon &&
-                                   (!dealerInLead || !Settings.GetSetting<bool>(GameOption.EndgameDealerFinish));
+                                  dealerWon &&
+                                  (!dealerInLead || !Settings.GetSetting<bool>(GameOption.EndgameDealerFinish));
 
             if (knockedOut
                 ||
@@ -965,49 +958,49 @@ namespace MahjongCore.Riichi.Impl
                  !endGameRenchan &&
                  ((Player1Hand.Score >= checkScore) || (Player2Hand.Score >= checkScore) || (Player3Hand.Score >= checkScore) || (Player4Hand.Score >= checkScore)))
             {
-                StartPlayState(PlayState.GameEnd);
+                _AdvanceAction = AdvanceAction.GameEnd;
             }
             else
             {
-                // Clear a bunch of game state elements and advance it.
-                PlayerRecentOpenKan = Player.None;
+                // Clean up the wall, discards, hands, etc.
+                foreach (Player p in PlayerHelpers.Players) { GetHand(p).Reset(); }
+                DiscardPlayerList.Clear();
 
-                bool advanceHomba;
+                for (int i = 0; i < DoraIndicators.Length; ++i)        { DoraIndicatorsRaw[i] = null; }
+                for (int i = 0; i < UraDoraIndicators.Length; ++i)     { UraDoraIndicatorsRaw[i] = null; }
+                foreach (TileImpl tile in WallRaw)                     { tile.Type = TileType.None;
+                                                                         tile.Ghost = false; }
+
+                // Determine bonus and dealer.
+                bool advanceBonus = (NextActionPlayer == Player.Multiple) ? GetNextAction(Dealer).IsAgari() :
+                                    NextAction.IsAgari()                  ? (NextActionPlayer == Dealer) :
+                                                                            true;
                 bool advanceDealer;
-                if (NextActionPlayer == Player.Multiple)
+                if (NextAction == GameAction.Nothing)
                 {
-                    GameAction dealerAction = GetNextAction(Dealer);
-                    advanceHomba = dealerAction.IsAgari();
-                    advanceDealer = !advanceHomba;
-                }
-                else if (NextAction.IsAgari())
-                {
-                    advanceHomba = (NextActionPlayer == Dealer);
-                    advanceDealer = !advanceHomba;
-                }
-                else if (NextAction == GameAction.AbortiveDraw)
-                {
-                    advanceHomba = true;
-                    advanceDealer = false;
-                }
-                else // Draw
-                {
-                    advanceHomba = true;
                     advanceDealer = !GetHand(Dealer).IsTempai();
-
                     if (Settings.GetSetting<bool>(GameOption.SouthNotReady))
                     {
-                        Player south = Dealer.GetNext();
-                        advanceDealer &= GetHand(south).IsTempai();
+                        advanceDealer &= GetHand(Dealer.GetNext()).IsTempai();
                     }
                 }
-
-                Bonus = advanceHomba ? (Bonus + 1) : 0;
+                else
+                {
+                    if (_NagashiWin && Settings.GetSetting<bool>(GameOption.NagashiBonusOnEastTempaiOnly))
+                    {
+                        advanceBonus = GetHand(Dealer).IsTempai();
+                    }
+                    advanceDealer = !advanceBonus;
+                }
 
                 if (Settings.GetSetting<bool>(GameOption.EightWinRetire) && !advanceDealer && (Bonus >= 8))
                 {
                     advanceDealer = true;
                     Bonus = 0;
+                }
+                else
+                {
+                    Bonus = advanceBonus ? (Bonus + 1) : 0;
                 }
 
                 if (advanceDealer)
@@ -1021,6 +1014,7 @@ namespace MahjongCore.Riichi.Impl
                 }
 
                 // Reset state.
+                PlayerRecentOpenKan = Player.None;
                 Current = Dealer;
                 PrevAction = GameAction.Nothing;
                 NextAction = GameAction.Nothing;
@@ -1037,7 +1031,7 @@ namespace MahjongCore.Riichi.Impl
                 TableCleared?.Invoke(this, null);
 
                 // Start the next state.
-                StartPlayState(PlayState.RandomizingBreak);
+                _AdvanceAction = AdvanceAction.RandomizingBreak;
             }
         }
 
@@ -1295,7 +1289,7 @@ namespace MahjongCore.Riichi.Impl
             return tileNumber;
         }
 
-        private HandImpl GetHand(Player p)
+        internal HandImpl GetHand(Player p)
         {
             CommonHelpers.Check(p.IsPlayer(), "Tried to get hand for non-player: " + p);
             return (p == Player.Player1) ? Player1HandRaw :
