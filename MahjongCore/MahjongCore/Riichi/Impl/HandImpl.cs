@@ -18,7 +18,7 @@ namespace MahjongCore.Riichi
         public Wind            Seat                  { get { return WindExtensionMethods.GetWind(Player, Parent.Dealer); } }
         public ITile[]         ActiveHand            { get { return ActiveHandRaw; } }
         public IMeld[]         Melds                 { get { return MeldsRaw; } }
-        public IList<ITile>    Discards              { get { return (IList<ITile>)DiscardsImpl; } }
+        public IList<ITile>    Discards              { get { return (IList<ITile>)DiscardsRaw; } }
         public IList<TileType> Waits                 { get; internal set; } = new List<TileType>();
         public IList<ICommand> DrawsAndKans          { get; internal set; } = new List<ICommand>();
         public ReachType       Reach                 { get; internal set; } = ReachType.None;
@@ -98,7 +98,7 @@ namespace MahjongCore.Riichi
         // HandImpl
         internal ICandidateHand WinningHandCache               { get; set; } = null;
         internal IMeld          CachedCall                     { get; set; } = null;
-        internal List<TileImpl> DiscardsImpl                   { get; set; } = new List<TileImpl>();
+        internal List<TileImpl> DiscardsRaw                    { get; set; } = new List<TileImpl>();
         internal TileImpl[]     ActiveHandRaw                  { get; set; } = new TileImpl[TileHelpers.HAND_SIZE];
         internal MeldImpl[]     MeldsRaw                       { get; set; } = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
         internal bool           OverrideNoReachFlag            { get; set; } = false; // Used for things like thirteen broken, which you can't reach for.
@@ -151,7 +151,7 @@ namespace MahjongCore.Riichi
             Furiten = false;
             CouldIppatsu = false;
 
-            
+
 
             ActiveTileCount = 0;
             WaitTiles = null;
@@ -164,6 +164,7 @@ namespace MahjongCore.Riichi
             {
                 Streak = 0;
                 Score = 0;
+                Yakitori = true;
             }
         }
 
@@ -448,7 +449,7 @@ namespace MahjongCore.Riichi
             REDO ALL THIS..
         }
 
-        public void AddTile(TileType tile, bool rewind = false)
+        public ITile AddTile(ITile tile, bool rewind = false)
         {
             ActiveHand[ActiveTileCount++] = tile;
 
@@ -459,7 +460,7 @@ namespace MahjongCore.Riichi
             }
         }
 
-        public void RewindDiscardTile(TileType discardedTile)
+        public void RewindDiscardTile(TileImpl discardedTile)
         {
             // Add the tile at the end.
             AddTile(discardedTile, true);

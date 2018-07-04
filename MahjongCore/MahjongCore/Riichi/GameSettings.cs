@@ -71,6 +71,7 @@ namespace MahjongCore.Riichi
         [DescriptionName("Renhou Mangan"),                            OptionValueType(typeof(bool)), DefaultOptionValue(false), RuleValue(2), BitfieldMask(0x00001000)] RenhouMangan,
         [DescriptionName("Split Tie Uma"),                            OptionValueType(typeof(bool)), DefaultOptionValue(true),  RuleValue(2), BitfieldMask(0x00002000)] SplitTieUma,
         [DescriptionName("Use Integer Final Scores"),                 OptionValueType(typeof(bool)), DefaultOptionValue(false), RuleValue(2), BitfieldMask(0x00004000)] IntFinalScores,
+        [DescriptionName("Flip Dora Tiles Immediately"),              OptionValueType(typeof(bool)), DefaultOptionValue(false), RuleValue(2), BitfieldMask(0x00008000)] FlipDoraTilesImmediately,
 
         // Yaku
         [DescriptionName("Riichi"),           OptionValueType(typeof(bool)), DefaultOptionValue(true),  YakuValue(1), BitfieldMask(0x00000001)] Riichi,
