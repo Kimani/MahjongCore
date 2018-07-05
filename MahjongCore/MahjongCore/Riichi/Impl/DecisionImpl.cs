@@ -47,14 +47,7 @@ namespace MahjongCore.Riichi.Impl
             SuufurendanTile  = hand.GetSuufurendanTile();
             CanNormalDiscard = !extraSettings.DisableAnyDiscard && !extraSettings.DisablePlainDiscard && !extraSettings.DisableNonReach;
             CanTsumo         = hand.CanTsumo();
-            CanReach         = !hand.OverrideNoReachFlag && hand.CanReach() && (state.TilesRemaining >= 4) && !extraSettings.DisableReach;
-
-            if (Settings.GetSetting<bool>(GameOption.Buttobi))
-            {
-                Global.Assert((hand.Score >= 1000), "Tried to reach with less than 1000 points!");
-            }
-
-
+            CanReach         = hand.CanReach() && (state.TilesRemaining >= 4);
             Source           = (state.PrevAction == GameAction.PickedFromWall)      ? TileSource.Wall :
                                (state.PrevAction == GameAction.ReplacementTilePick) ? TileSource.DeadWall :
                                                                                       TileSource.Call;

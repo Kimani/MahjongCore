@@ -4,7 +4,6 @@ using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Helpers;
-using MahjongCore.Riichi;
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -630,17 +629,17 @@ namespace MahjongCore.Riichi.Impl
                 bool advanceDealer;
                 if (NextAction == GameAction.Nothing)
                 {
-                    advanceDealer = !GetHand(Dealer).IsTempai();
+                    advanceDealer = !GetHand(Dealer).Tempai;
                     if (Settings.GetSetting<bool>(GameOption.SouthNotReady))
                     {
-                        advanceDealer &= GetHand(Dealer.GetNext()).IsTempai();
+                        advanceDealer &= GetHand(Dealer.GetNext()).Tempai;
                     }
                 }
                 else
                 {
                     if (_NagashiWin && Settings.GetSetting<bool>(GameOption.NagashiBonusOnEastTempaiOnly))
                     {
-                        advanceBonus = GetHand(Dealer).IsTempai();
+                        advanceBonus = GetHand(Dealer).Tempai;
                     }
                     advanceDealer = !advanceBonus;
                 }
@@ -798,6 +797,7 @@ namespace MahjongCore.Riichi.Impl
             // Add the tile back into the discarding player's hand. Report the undone discard.
             discardPlayerHand.RewindDiscardTile(undoneDiscard);
             DiscardUndone?.Invoke(this, new DiscardUndoneArgsImpl(discardPlayerHand.Player, undoneDiscard.Type));
+            HandSorted?.Invoke(this, new HandSortedEventArgsImpl(discardPlayerHand.Player));
         }
 
         public void ExecuteRewindPostModeChange_PerformDecision()

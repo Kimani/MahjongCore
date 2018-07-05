@@ -4,6 +4,7 @@ using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Helpers;
 using System;
+using System.Text;
 
 namespace MahjongCore.Riichi
 {
@@ -200,6 +201,36 @@ namespace MahjongCore.Riichi
                        (t == TileType.Haku)        ? TileType.Hatsu :
                        t.IsTile()                  ? t.GetNext() :
                                                      TileType.None;
+            }
+
+            public static void GetSummary(this TileType t, StringBuilder sb, TileType? prev)
+            {
+                if (t.IsHonor())
+                {
+                    sb.Append((t == TileType.North) ? "n" :
+                              (t == TileType.East)  ? "e" :
+                              (t == TileType.South) ? "s" :
+                              (t == TileType.West)  ? "w" :
+                              (t == TileType.Chun)  ? "c" :
+                              (t == TileType.Haku)  ? "h" :
+                                                      "g");
+                }
+                else
+                {
+                    Suit suit = t.GetSuit();
+                    if (suit != ((prev != null) ? prev.Value.GetSuit() : Suit.None))
+                    {
+                        sb.Append((suit == Suit.Bamboo)     ? "b" :
+                                  (suit == Suit.Characters) ? "m" :
+                                                              "p");
+                    }
+
+                    sb.Append(t.GetValue());
+                    if (t.IsRedDora())
+                    {
+                        sb.Append("r");
+                    }
+                }
             }
         }
     #endregion

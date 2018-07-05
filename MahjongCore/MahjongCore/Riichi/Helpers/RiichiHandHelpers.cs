@@ -7,9 +7,9 @@ namespace MahjongCore.Riichi.Helpers
 {
     public class RiichiHandHelpers
     {
-        public static List<CallOption> GetCalls(GameSettings settings, TileType calledTile, TileType[] sourceTiles, CalledDirection direction)
+        public static List<IMeld> GetCalls(IGameSettings settings, TileType calledTile, TileType[] sourceTiles, CalledDirection direction)
         {
-            List<CallOption> calls = null;
+            List<IMeld> calls = null;
 
             // Prepare the data for analysis.
             Array.Sort(sourceTiles);

@@ -33,7 +33,7 @@ namespace MahjongCore.Riichi.Evaluator
          * @param ignoreTileSlot  If you pass in -1 then this assumes that we don't have a full hand here, ie it's not our turn and we haven't picked up a tile.
          *                        If you pass in >= 0 then we will get our waits ignoring the given tile - getting our waits as if we discarded the given tile.
          */
-        public static List<TileType> GetWaits(Hand hand, int ignoreTileSlot, TileType[] approvedReachKanTiles)
+        public static List<TileType> GetWaits(IHand hand, int ignoreTileSlot, TileType[] approvedReachKanTiles)
         {
             // Get the sorted waiting hand without ignoreSlot.
             int activeTileCount = hand.ActiveTileCount;
@@ -49,7 +49,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
             else
             {
-                Global.Assert(hand.IsFullHand(), "We don't have a full hand?? ActiveTileCount: " + activeTileCount);
+                Global.Assert(hand.HasFullHand, "We don't have a full hand?? ActiveTileCount: " + activeTileCount);
                 sublist = new TileType[activeTileCount - 1];
                 {
                     int target = 0;
