@@ -240,7 +240,7 @@ namespace MahjongCore.Riichi
         None,
         Wall,
         Hand,
-        DiscardPile,
+        Discard,
         Call
     }
 

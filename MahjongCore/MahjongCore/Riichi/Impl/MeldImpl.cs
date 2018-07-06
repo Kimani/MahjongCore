@@ -79,16 +79,29 @@ namespace MahjongCore.Riichi.Impl
         // MeldImpl
         internal TileImpl[] TilesRaw { get; set; } = new TileImpl[] { new TileImpl(), new TileImpl(), new TileImpl(), new TileImpl() };
 
-        internal void Reset()
+        public MeldImpl()
         {
-            Owner = Player.None;
+            for (int i = 0; i < TilesRaw.Length; ++i)
+            {
+                TilesRaw[i].Slot = i;
+                TilesRaw[i].Location = Location.Call;
+            }
+        }
+
+        internal void Reset(bool skipConstantFields = false)
+        {
             Target = Player.None;
             State  = MeldState.None;
             Direction = CalledDirection.None;
-            TilesRaw[0].Reset();
-            TilesRaw[1].Reset();
-            TilesRaw[2].Reset();
-            TilesRaw[3].Reset();
+            TilesRaw[0].Reset(skipConstantFields);
+            TilesRaw[1].Reset(skipConstantFields);
+            TilesRaw[2].Reset(skipConstantFields);
+            TilesRaw[3].Reset(skipConstantFields);
+
+            if (!skipConstantFields)
+            {
+                Owner = Player.None;
+            }
         }
 
         internal void Set(MeldImpl meld)

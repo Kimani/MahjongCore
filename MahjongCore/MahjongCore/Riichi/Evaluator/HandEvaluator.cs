@@ -445,7 +445,7 @@ namespace MahjongCore.Riichi.Evaluator
          * In the case of ron, the tile should be temporarily added to the hand in order to determine if it's
          * a winner. Should call the
          */
-        public static CandidateHand GetWinningHand(Hand hand, bool fRon, bool fKokushiOnly)
+        public static CandidateHand GetWinningHand(IHand hand, bool fRon, bool fKokushiOnly)
         {
             Global.Assert(hand.IsFullHand());
 

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace MahjongCore.Riichi.Evaluator
 {
-    public class CandidateHand
+    public class CandidateHand : ICandidateHand
     {
         public int        Dora = 0;
         public int        UraDora = 0;

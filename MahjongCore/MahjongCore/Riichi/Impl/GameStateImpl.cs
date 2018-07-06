@@ -326,9 +326,10 @@ namespace MahjongCore.Riichi.Impl
 
         public void ExecutePostBreak_DecideMove()
         {
+            // Populate the discard info and then clear OverrideNoReach, which may get used during Populate.
             HandImpl hand = GetHand(Current);
             _DiscardInfoCache.Populate(hand);
-            hand.StartDiscardState();
+            hand.OverrideNoReachFlag = false;
 
             // Query the AI for the discard decision, or raise the event requesting for the discard decision. If we 
             // can query the AI or the discard decision is supplied immediately during the event, then _AdvanceAction
@@ -920,6 +921,14 @@ namespace MahjongCore.Riichi.Impl
                                            Player4HandRaw;
         }
 
+        internal void ReplaceTile(TileType tileRemove, TileType tileAdd, Player target)
+        {
+            // Replace an instance of tileRemove with tileAdd. The target player has tried to manually add tileRemove to it's hand,
+            // so we need to put the tile it's giving up back into the board somewhere. Look through the wall first (excluding flipped
+            // dora tiles), then other players' hands, then discards, and then the dora tile. Throw if we cannot find tileRemove anywhere.
+            // TODO: this
+        }
+
         private void Initialize(IGameSettings settings, IExtraSettings extra)
         {
             InitializeCommon(settings, extra);
@@ -1118,14 +1127,14 @@ namespace MahjongCore.Riichi.Impl
             AdvanceAction action = AdvanceAction.Advance;
             switch (decision.Decision)
             {
-                case DiscardDecisionType.Discard:           hand.PerformDiscard(decision.Tile);
+                case DiscardDecisionType.Discard:           hand.PerformDiscard(decision.Tile, ReachType.None);
                                                             PerformDiscardState(decision.Tile, GameAction.Discard);
                                                             HandDiscard?.Invoke(this, new HandDiscardArgsImpl(decision.Tile));
                                                             break;
 
                 case DiscardDecisionType.OpenRiichiDiscard:
                 case DiscardDecisionType.RiichiDiscard:     bool openReach = (decision.Decision == DiscardDecisionType.OpenRiichiDiscard);
-                                                            hand.PerformReach(decision.Tile, openReach);
+                                                            hand.PerformDiscard(decision.Tile, (openReach ? ReachType.OpenReach : ReachType.Reach));
                                                             PerformDiscardState(decision.Tile, (openReach ? GameAction.OpenRiichiDiscard : GameAction.RiichiDiscard));
                                                             hand.Score -= 1000;
                                                             hand.CouldIppatsu = true;
@@ -1137,7 +1146,7 @@ namespace MahjongCore.Riichi.Impl
                                                             action = AdvanceAction.HandEnd;
                                                             break;
 
-                case DiscardDecisionType.ClosedKan:         hand.PerformClosedKan(decision.Tile);
+                case DiscardDecisionType.ClosedKan:         hand.PerformClosedKan(decision.Tile.Type);
                                                             NextActionTile = decision.Tile.Type;
                                                             NextAction = GameAction.ClosedKan;
                                                             _NextActionSlot = decision.Tile.Slot;
@@ -1151,12 +1160,11 @@ namespace MahjongCore.Riichi.Impl
                                                             action = AdvanceAction.KanChosenTile;
                                                             break;
 
-                case DiscardDecisionType.AbortiveDraw:      hand.PerformAbortiveDraw(decision.Tile);
-                                                            NextActionPlayer = Current;
+                case DiscardDecisionType.AbortiveDraw:      NextActionPlayer = Current;
                                                             NextAction = GameAction.AbortiveDraw;
                                                             if (decision.Tile != null)
                                                             {
-                                                                hand.PerformDiscard(decision.Tile);
+                                                                hand.PerformDiscard(decision.Tile, ReachType.None);
                                                                 PerformDiscardState(decision.Tile, GameAction.AbortiveDraw);
                                                                 HandDiscard?.Invoke(this, new HandDiscardArgsImpl(decision.Tile));
                                                             }

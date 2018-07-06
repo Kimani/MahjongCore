@@ -33,6 +33,7 @@ namespace MahjongCore.Riichi
         bool            CouldKyuushuuKyuuhai { get; }
         bool            CouldSuufurendan     { get; }
 
+        bool            WouldMakeFuriten(int slot);
         int             GetTileSlot(TileType tile, bool matchRed);
         void            MoveTileToEnd(TileType targetTile);
         void            ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd);

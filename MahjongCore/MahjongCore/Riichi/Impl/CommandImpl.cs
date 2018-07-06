@@ -17,8 +17,9 @@ namespace MahjongCore.Riichi
         public object Clone() { return new CommandImpl(Command, Tile, TileB, TileC); }
 
         // CommandImpl
-        public CommandImpl(CommandType ct, ITile tile) : this(ct, tile, TileType.None, TileType.None) { }
-        public override String ToString() { return "(TileCommand: " + Command + " Tile " + Tile + ")"; }
+        public CommandImpl(CommandType ct, ITile tile)    : this(ct, tile, TileType.None, TileType.None)                      { }
+        public CommandImpl(CommandType ct, TileType tile) : this(ct, new TileImpl(tile), TileType.None, TileType.None, false) { }
+        public override String ToString()                 { return "(TileCommand: " + Command + " Tile " + Tile + ")"; }
 
         public CommandImpl(CommandType t)
         {
@@ -31,10 +32,10 @@ namespace MahjongCore.Riichi
             Tile = new TileImpl(TileType.None);
         }
 
-        public CommandImpl(CommandType t, ITile tilePrimary, TileType tileB, TileType tileC)
+        public CommandImpl(CommandType t, ITile tilePrimary, TileType tileB, TileType tileC, bool clonePrimary = true)
         {
             Command = t;
-            Tile = tilePrimary;
+            Tile = (clonePrimary ? (tilePrimary.Clone() as ITile) : tilePrimary);
             TileB = tileB;
             TileC = tileC;
         }

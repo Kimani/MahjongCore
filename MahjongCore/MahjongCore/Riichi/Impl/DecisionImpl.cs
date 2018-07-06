@@ -118,7 +118,7 @@ namespace MahjongCore.Riichi.Impl
             GameStateImpl state = hand.Parent as GameStateImpl;
 
             Reset();
-            CanRon = !hand.Furiten && hand.CheckRon(state.PrevAction == GameAction.ClosedKan);
+            CanRon = !hand.Furiten && hand.CheckRon();
             CanChankanRon = state.Settings.GetSetting<bool>(GameOption.Chankan) && CanRon && (state.PrevAction == GameAction.PromotedKan);
 
             List<IMeld> callList = ((state.TilesRemaining <= 0) ||

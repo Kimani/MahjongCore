@@ -38,16 +38,20 @@ namespace MahjongCore.Riichi.Impl
         public TileImpl()              { }
         public TileImpl(TileType type) { Type = type; }
 
-        internal void Reset()
+        internal void Reset(bool skipConstantFields = false)
         {
             Type = TileType.None;
-            Location  = Location.None;
             Ancillary = Player.None;
             Reach = ReachType.None;
             Ghost = false;
             Called = false;
             WinningTile  = false;
-            Slot = -1;
+
+            if (!skipConstantFields)
+            {
+                Location = Location.None;
+                Slot = -1;
+            }
         }
 
         internal void Set(ITile tile)
