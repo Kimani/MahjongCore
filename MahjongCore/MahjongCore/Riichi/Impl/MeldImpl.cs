@@ -104,16 +104,16 @@ namespace MahjongCore.Riichi.Impl
             }
         }
 
-        internal void Set(MeldImpl meld)
+        internal void Set(IMeld meld)
         {
             Owner = meld.Owner;
             Target = meld.Target;
             State = meld.State;
             Direction = meld.Direction;
-            TilesRaw[0].Set(meld.TilesRaw[0]);
-            TilesRaw[1].Set(meld.TilesRaw[1]);
-            TilesRaw[2].Set(meld.TilesRaw[2]);
-            TilesRaw[3].Set(meld.TilesRaw[3]);
+            TilesRaw[0].Set(meld.Tiles[0]);
+            TilesRaw[1].Set(meld.Tiles[1]);
+            TilesRaw[2].Set(meld.Tiles[2]);
+            TilesRaw[3].Set(meld.Tiles[3]);
         }
 
         internal void Set(MeldState state, TileImpl tileA, TileImpl tileB, TileImpl tileC, TileImpl tileD)

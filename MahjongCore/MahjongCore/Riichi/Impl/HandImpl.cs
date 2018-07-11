@@ -39,15 +39,15 @@ namespace MahjongCore.Riichi.Impl
         public bool            CouldKyuushuuKyuuhai  { get; internal set; } = false;
         public bool            CouldSuufurendan      { get; internal set; } = false;
 
+        public IList<TileType> GetWaitsForDiscard(int slot) { return _ActiveTileWaits[slot]; }
+
         public bool WouldMakeFuriten(int slot)
         {
             // Returns true if discarding the given tile would place the hand into furiten.
             CommonHelpers.Check(((slot > 0) && (slot < ActiveTileCount)), ("Specified slot out of range, found: " + slot + " ActiveTileCount: " + ActiveTileCount));
             List<TileType> waits = HandEvaluator.GetWaits(this, slot, null);
-            return (waits != null) && waits.Contains(ActiveHandRaw[slot].Type);
+            return (waits != null) && waits.Contains(ActiveHandRaw[slot].Type.GetNonRedDoraVersion());
         }
-
-        public IList<TileType> GetWaitsForDiscard(int slot) { return _ActiveTileWaits[slot]; }
 
         public int GetTileSlot(TileType tile, bool matchRed)
         {
@@ -123,7 +123,7 @@ namespace MahjongCore.Riichi.Impl
         internal bool           OverrideNoReachFlag                          { get; set; } = false; // Used for things like thirteen broken, which you can't reach for.
         internal bool           FourKans                                     { get { return KanCount == 4; } }
         internal List<TileType> GetTileWaits(int slot)                       { return _ActiveTileWaits[(slot == -1) ? (ActiveTileCount - 1) : slot]; }
-        internal List<IMeld>    GetCalls()                                   { return RiichiHandHelpers.GetCalls(Parent.Settings, this, Parent); }
+        internal List<IMeld>    GetCalls()                                   { return RiichiHandHelpers.GetCalls(this, Parent); }
         internal ICommand       PeekLastDrawKan()                            { return _DrawsAndKans.Peek(); }
         internal TileType       GetSuufurendanTile()                         { return CouldSuufurendan ? _Parent.GetHand(_Parent.Dealer).DiscardsRaw[0].Type : TileType.None; }
         internal ITile          AddTile(ITile wallTile, bool rewind = false) { return AddTile(wallTile.Type, rewind); }
@@ -204,7 +204,7 @@ namespace MahjongCore.Riichi.Impl
             // Gets called after loading from a save state and fields like score, streak, yakitori, hands, calls, draws/kans,
             // and discards have been set. This method should reconstruct everything else like furiten, waits, ippatsu flags, etc.
             _ActiveRiichiKanTiles = _RiichiKanTilesPerSlot[TileHelpers.HAND_SIZE - 1];
-            _WaitTiles = HandEvaluator.GetWaits(this, -1, _ActiveRiichiKanTiles);
+            _WaitTiles = HandEvaluator.GetWaits(this, -1, _ActiveRiichiKanTiles); // TODO: Redo to optionally take a list to fill vs. return.
 
             foreach (TileImpl tile in DiscardsRaw)
             {
@@ -491,29 +491,31 @@ namespace MahjongCore.Riichi.Impl
             return handTile;
         }
 
-        public void RewindDiscardTile(TileImpl discardedTile)
+        internal void RewindDiscardTile(TileImpl discardedTile)
         {
             // Add the tile at the end.
-            // %%%%%%%%%%%%%% turn discardedtile into a real tile... figure out what this means against AddTile and StartDiscardState...
             AddTile(discardedTile, true);
 
             // Determine what the next tile to be placed into the wall should be.
             // TODO: Do something different if the player previously called.
-            TileType prevDrawnTile = Parent.Wall[TileHelpers.ClampTile(Parent.Offset + (122 - (Parent.TilesRemaining + 1)))];
+            TileType prevDrawnTile = _Parent.WallRaw[_Parent.GetNextWallDrawSlot(-1)].Type;
 
             // If we have that tile in our hand, move it to the end.
-            for (int i = 0; i < (ActiveTileCount - 1); ++i) 
+            for (int i = 0; i < (ActiveTileCount - 1); ++i)
             {
-                if (ActiveHand[i].IsEqual(prevDrawnTile) && (ActiveHand[i].IsRedDora() == prevDrawnTile.IsRedDora()))
+                if (ActiveHandRaw[i].Type.IsEqual(prevDrawnTile, true))
                 {
-                    ActiveHand[i] = ActiveHand[ActiveTileCount - 1];
-                    ActiveHand[ActiveTileCount - 1] = prevDrawnTile;
+                    ActiveHandRaw[i].Type = ActiveHandRaw[ActiveTileCount - 1].Type;
+                    ActiveHandRaw[ActiveTileCount - 1].Type = TileType.None;
+                    ActiveHandRaw[ActiveTileCount - 1].Ghost = true;
+
+                    Sort();
+
+                    ActiveHandRaw[ActiveTileCount - 1].Type = prevDrawnTile;
+                    ActiveHandRaw[ActiveTileCount - 1].Ghost = false;
                     break;
                 }
             }
-
-            // Now sync our hand so it doesn't look like we picked up our discard, but rather we picked up our draw.
-            Sort();
         }
 
         public bool RewindAddTile(TileType targetTile)
@@ -557,8 +559,12 @@ namespace MahjongCore.Riichi.Impl
 
             WinningHandCache = null;
 
-            // Update our waits unless we're previously in reach.
-            if (!Reach.IsReach()) { UpdateWaitTiles(discardSlot); }
+            // Update our waits unless we're PREVIOUSLY in reach.
+            if (!Reach.IsReach())
+            {
+                _WaitTiles = _ActiveTileWaits[discardSlot];
+                UpdateFuritenWithDiscards();
+            }
 
             // Stash the available closed kan tiles if we're entering reach.
             if (reach.IsReach())
@@ -604,9 +610,9 @@ namespace MahjongCore.Riichi.Impl
 
             // Remove the tile from the hand.
             TileType discardType = tile.Type;
-            int discardSlot = tile.Slot;
-            ActiveHandRaw[discardSlot].Type = TileType.None;
-            ActiveHandRaw[discardSlot].Ghost = true;
+            int kanTileSlot = tile.Slot;
+            ActiveHandRaw[kanTileSlot].Type = TileType.None;
+            ActiveHandRaw[kanTileSlot].Ghost = true;
             --ActiveTileCount;
             Sort();
 
@@ -617,7 +623,8 @@ namespace MahjongCore.Riichi.Impl
             _DrawsAndKans.Push(new CommandImpl(CommandType.PromotedKan, discardType.GetNonRedDoraVersion()));
 
             // Update waits, as we should not be in reach.
-            UpdateWaitTiles(discardSlot);
+            _WaitTiles = _ActiveTileWaits[kanTileSlot];
+            UpdateFuritenWithDiscards();
         }
 
         internal IMeld PerformCachedCall()
@@ -626,158 +633,118 @@ namespace MahjongCore.Riichi.Impl
             CachedCall = null;
 
             // Remove tiles from ActiveHand by just setting tiles to no tile. We'll sort after.
-            for (int i = 0; i < ActiveTileCount; ++i)
+            foreach (ITile meldTile in cached.Tiles)
             {
-                if ((i == StoredCallOption.SlotA) || (i == StoredCallOption.SlotB) || (i == StoredCallOption.SlotC))
+                if (meldTile.Type.IsTile() && !meldTile.Ghost)
                 {
-                    ActiveHand[i] = TileType.None;
+                    ActiveHandRaw[meldTile.Slot].Type = TileType.None;
+                    ActiveHandRaw[meldTile.Slot].Ghost = true;
                 }
             }
-            ActiveTileCount -= (StoredCallOption.Type.GetTileCount() - 1);
+            ActiveTileCount -= (cached.State.GetTileCount() - 1);
             Sort();
 
-            // Create the meld.
-            
-
-            Meld meld = GetNextEmptyMeld();
-            meld.State = StoredCallOption.Type;
-            meld.Tiles[0].Tile = StoredCallOption.TileA;
-            meld.Tiles[1].Tile = StoredCallOption.TileB;
-            meld.Tiles[2].Tile = StoredCallOption.TileC;
-            meld.Tiles[3].Tile = (StoredCallOption.Type == MeldState.KanOpen) ? StoredCallOption.TileD : TileType.None;
-
-            CalledDirection direction = Player.GetTargetPlayerDirection(Parent.CurrentPlayer);
-            Global.Assert(direction != CalledDirection.None);
-            if (direction == CalledDirection.Left)        { meld.Tiles[0].Called = true; }
-            else if (direction == CalledDirection.Across) { meld.Tiles[1].Called = true; }
-            else if (direction == CalledDirection.Right)  { meld.Tiles[meld.State.GetTileCount() - 1].Called = true; }
-
-
+            // Set the meld.
+            GetNextEmptyMeld().Set(cached);
             return cached;
         }
 
         internal bool CanTsumo()
         {
-            bool fPrevCall = (Parent.PrevAction == GameAction.Chii) ||
-                             (Parent.PrevAction == GameAction.Pon) ||
-                             (Parent.PrevAction == GameAction.OpenKan) ||
-                             (Parent.PrevAction == GameAction.PromotedKan) ||
-                             (Parent.PrevAction == GameAction.ClosedKan);
-
-            TileType pickedTile = ActiveHand[ActiveTileCount - 1];
-            bool fTsumo = false;
-            bool waitFound = false;
-
-            if ((WaitTiles != null) && !fPrevCall)
+            if (!_Parent.PrevAction.IsOpenCall())
             {
-                foreach (TileType waitTile in WaitTiles)
+                TileType pickedTile = ActiveHandRaw[ActiveTileCount - 1].Type;
+                foreach (TileType waitTile in _WaitTiles)
                 {
+                    // Check if the picked tile is equal to any one of our waits. If so,
+                    // check if we have a winning hand (false if we don't have a yaku.)
                     if (pickedTile.IsEqual(waitTile))
                     {
-                        waitFound = true;
-                        break;
+                        WinningHandCache = HandEvaluator.GetWinningHand(this, false, false);
+                        return (WinningHandCache != null);
                     }
                 }
             }
-
-            // Make sure we have a yaku if we do this. Determine our winning hand if we were to tsumo at this juncture.
-            if (waitFound)
-            {
-                WinningHandCache = HandEvaluator.GetWinningHand(this, false, false);
-                fTsumo = WinningHandCache != null;
-            }
-            return fTsumo;
+            return false;
         }
 
         internal List<TileType> GetAvailablePromotedKans(List<TileType> existingArray)
         {
-                        bool fNoClosedKanPrevCall = (Parent.PrevAction == GameAction.Chii) ||
-                                        (Parent.PrevAction == GameAction.Pon) ||*
-                                        (Parent.PrevAction == GameAction.OpenKan);
+            List<TileType> promotedKanTiles = existingArray;
+            if (promotedKanTiles == null) { promotedKanTiles = new List<TileType>(); }
+            else                          { promotedKanTiles.Clear(); }
 
-
-            bool fPrevCall = (Parent.PrevAction == GameAction.Chii) ||
-                 (Parent.PrevAction == GameAction.Pon) ||
-                 (Parent.PrevAction == GameAction.OpenKan) ||
-                 (Parent.PrevAction == GameAction.PromotedKan) ||
-                 (Parent.PrevAction == GameAction.ClosedKan);
-
-           
-            else
+            // Check if we can do a promoted kan.
+            // see if we have any tiles we can add to a pon. Then check to see if we have four of a given tile in our active hand.
+            if (!_Parent.PrevAction.IsOpenCall())
             {
-                // Check if we can do a promoted kan.
-                // see if we have any tiles we can add to a pon. Then check to see if we have four of a given tile in our active hand.
-                if (!fPrevCall)
+                foreach (MeldImpl meld in MeldsRaw)
                 {
-                    foreach (Meld meld in OpenMeld)
+                    if (meld.State == MeldState.Pon)
                     {
-                        if (meld.State == MeldState.Pon)
+                        for (int i = 0; i < ActiveTileCount; ++i)
                         {
-                            for (int i = 0; (!options.Promoted && !options.Closed && (i < ActiveTileCount)); ++i)
+                            if (ActiveHandRaw[i].Type.IsEqual(meld.CalledTile.Type))
                             {
-                                if (ActiveHand[i].IsEqual(meld.Tiles[0].Tile))
-                                {
-                                    options.Promoted = true;
-                                }
+                                promotedKanTiles.Add(ActiveHandRaw[i].Type);
+                                break;
                             }
                         }
                     }
                 }
-
-
             }
-            return options;
+            return promotedKanTiles;
         }
 
         internal List<TileType> GetAvailableClosedKans(List<TileType> existingArray)
         {
-            bool fNoClosedKanPrevCall = (Parent.PrevAction == GameAction.Chii) ||
-                            (Parent.PrevAction == GameAction.Pon) || *
-                            (Parent.PrevAction == GameAction.OpenKan);
+            List<TileType> closedKanTiles = existingArray;
+            if (closedKanTiles == null) { closedKanTiles = new List<TileType>(); }
+            else                        { closedKanTiles.Clear(); }
 
-
-            if (IsInReach())
+            if (Reach.IsReach())
             {
-                // Check to see if we can make a concealed kan. This is can only be made if the kan will not change the shape of the hand.
-                // Lets only kan if the three tiles in your hand is being considered to make a concealed kan is a three of a kind.
-                // This is determined earlier so we only need to look in RiichiKanTiles to see if we can kan.
+                // Check to see if we can make a concealed kan. This is can only be made if the kan will not change
+                // the shape of the hand. Approved tiles have already been determined in _ActiveRiichiKanTiles.
+                TileType pickedTile = ActiveHandRaw[ActiveTileCount - 1].Type;
                 if (Parent.Settings.GetSetting<bool>(GameOption.KanAfterRiichi) &&
-                    (ActiveRiichiKanTiles[0].IsEqual(pickedTile) ||
-                     ActiveRiichiKanTiles[1].IsEqual(pickedTile) ||
-                     ActiveRiichiKanTiles[2].IsEqual(pickedTile) ||
-                     ActiveRiichiKanTiles[3].IsEqual(pickedTile)))
+                    ((_ActiveRiichiKanTiles[0].IsEqual(pickedTile)) || (_ActiveRiichiKanTiles[1].IsEqual(pickedTile)) ||
+                     (_ActiveRiichiKanTiles[2].IsEqual(pickedTile)) || (_ActiveRiichiKanTiles[3].IsEqual(pickedTile))))
                 {
-                    options.Closed = true;
+                    closedKanTiles.Add(pickedTile);
                 }
             }
-
-
-            // Check for a possible concealed kan. Now... the hand except for the last tile is sorted. So we can look for
-            // either four of the same tile in our sorted active hand or three of the same tile + the picked tile. We can
-            // also make sure we have enough tiles in our active hand. We can very well have just 2 (next highest should be 5.)
-            if (!fNoClosedKanPrevCall && (ActiveTileCount > 4))
+            else
             {
-                TileType searchTile = ActiveHand[0];
-                int tileCount = 1;
-                for (int i = 1; i < (ActiveTileCount - 1); ++i)
+                // Check for a possible concealed kan. Now... the hand except for the last tile is sorted. So we can look for
+                // either four of the same tile in our sorted active hand or three of the same tile + the picked tile. We can
+                // also make sure we have enough tiles in our active hand. We can very well have just 2 (next highest should be 5.)
+                if (!_Parent.PrevAction.IsOpenCall() && (ActiveTileCount > 4))
                 {
-                    TileType checkTile = ActiveHand[i];
-                    if (checkTile.IsEqual(searchTile))
+                    TileType pickedTile = ActiveHandRaw[ActiveTileCount - 1].Type;
+                    TileType searchTile = ActiveHandRaw[0].Type;
+                    int tileCount = 1;
+                    for (int i = 1; i < (ActiveTileCount - 1); ++i)
                     {
-                        tileCount++;
-                        if (((tileCount == 3) && pickedTile.IsEqual(searchTile)) || (tileCount == 4))
+                        TileType checkTile = ActiveHandRaw[i].Type;
+                        if (checkTile.IsEqual(searchTile))
                         {
-                            options.Closed = true;
-                            break;
+                            tileCount++;
+                            if (((tileCount == 3) && pickedTile.IsEqual(searchTile)) || (tileCount == 4))
+                            {
+                                closedKanTiles.Add(checkTile.GetNonRedDoraVersion());
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            searchTile = checkTile;
+                            tileCount = 1;
                         }
                     }
-                    else
-                    {
-                        searchTile = checkTile;
-                        tileCount = 1;
-                    }
                 }
             }
+            return closedKanTiles;
         }
 
         public bool CanReach()
@@ -879,103 +846,64 @@ namespace MahjongCore.Riichi.Impl
             return false;
         }
 
-        public void UpdateFuriten(TileType tile)
+        internal void UpdateTemporaryFuriten(TileType tile)
         {
-            if ((WaitTiles != null) && (WaitTiles.Count > 0))
-            {
-                Furiten = false;
-                for (int iWaitTile = 0; !Furiten && (iWaitTile < WaitTiles.Count); ++iWaitTile)
-                {
-                    Furiten = tile.IsEqual(WaitTiles[iWaitTile]);
-                }
-            }
+            Furiten = Furiten || _WaitTiles.Contains(tile.GetNonRedDoraVersion());
         }
 
-        private bool RebuildFuriten()
+        private void RebuildFuriten()
         {
-            // Get the list of waits.
-            bool anyCalls = (Players[0].Melds.Count + Players[1].Melds.Count + Players[2].Melds.Count + Players[3].Melds.Count) > 0;
-            bool overrideNoReachDummy;
-            List<TileType> waits = HandEvaluator.GetWaits(activeHand, null, discards, anyCalls, out overrideNoReachDummy);
+            // Set furiten if any wait matches any discard.
+            UpdateFuritenWithDiscards();
 
-            bool furiten = false;
-            if ((waits != null) && (waits.Count > 0))
+            if ((_WaitTiles.Count > 0) && !Furiten)
             {
-                // If any of our discards match one of the waits, then we're furiten!
-                foreach (ExtendedTile et in discards)
+                bool checkDiscards = false;
+                _Parent.IterateDiscards((Player player, TileImpl tile) =>
                 {
-                    foreach (TileType tv in waits)
+                    if (checkDiscards && _WaitTiles.Contains(tile.Type.GetNonRedDoraVersion()))
                     {
-                        if (tv == et.Tile)
-                        {
-                            furiten = true;
-                            break;
-                        }
-
-                        if (furiten == true)
-                        {
-                            break;
-                        }
+                        Furiten = true;
+                        return false;
                     }
-                }
 
-                // Check if we've passed up a wait since our last discard. Reset on our discard unless we've reached.
-                if (!furiten)
-                {
-                    // TODO: this
-                }
+                    // Check all discards after this one if this is our last discard or we've reached.
+                    checkDiscards |= ((player == Player) && ((tile.Slot == (DiscardsRaw.Count - 1)) || tile.Reach.IsReach()));
+                    return true;
+                });
             }
-            return furiten;
         }
 
-        private bool RebuildIppatsu()
+        private void RebuildIppatsu()
         {
-            int[] slots = new int[] { 0, 0, 0, 0 };
-            bool ippatsu = false;
-
-            Player currentPlayer = dealer;
-            for (int iTile = 0; iTile < tilesPicked; ++iTile)
+            _Parent.IterateDiscards((Player player, TileImpl tile) =>
             {
-                int currPlayerIndex = currentPlayer.GetZeroIndex();
-
-                ITile et = players[currPlayerIndex].Discards[slots[currPlayerIndex]];
-                slots[currPlayerIndex]++;
-
-                if (currentPlayer == p)
+                // If ippatsu is active and we make another discard or another player makes a call, cancel ippatsu.
+                // TODO: There's a bug here where closed/promoted kans wont cancel ippatsu.
+                if (CouldIppatsu && ((player == Player) || tile.Called))
                 {
-                    ippatsu = et.Reach || et.OpenReach;
+                    CouldIppatsu = false;
+                    return false;
                 }
 
-                if (et.Called)
-                {
-                    ippatsu = false;
-                    currentPlayer = et.Caller;
-
-                    // Roll back because the next discard wont count as a picked.
-                    iTile--;
-                }
-                else
-                {
-                    currentPlayer = currentPlayer.GetNext();
-                }
-            }
-            return ippatsu;
+                // Set ippatsu if we reached but don't clear it otherwise.
+                CouldIppatsu |= ((player == Player) && tile.Reach.IsReach());
+                return true;
+            });
         }
 
-        private void UpdateWaitTiles(int slot)
+        private void UpdateFuritenWithDiscards()
         {
-            WaitTiles = ActiveTileWaits[slot];
-
             // Set the furiten flag if any of our waits match one of our discards.
-            List<ExtendedTile> discards = Discards;
-            if ((WaitTiles != null) && (WaitTiles.Count > 0))
+            Furiten = false;
+            foreach (TileType waitTile in _WaitTiles)
             {
-                Furiten = false;
-                for (int iDiscardTile = 0; !Furiten && (iDiscardTile < discards.Count); ++iDiscardTile)
+                foreach (TileImpl discardTile in DiscardsRaw)
                 {
-                    for (int iWaitTile = 0; !Furiten && (iWaitTile < WaitTiles.Count); ++iWaitTile)
+                    if (discardTile.Type.IsEqual(waitTile))
                     {
-                        Furiten = discards[iDiscardTile].Tile.IsEqual(WaitTiles[iWaitTile]);
+                        Furiten = true;
+                        return;
                     }
                 }
             }
@@ -983,21 +911,9 @@ namespace MahjongCore.Riichi.Impl
 
         internal void OverrideTileWaits(List<TileType> waitTiles)
         {
-            WaitTiles = waitTiles;
-
-            // Update furiten.
-            List<ExtendedTile> discards = Parent.GetDiscards(Player);
-            if ((WaitTiles != null) && (WaitTiles.Count > 0))
-            {
-                Furiten = false;
-                for (int iDiscardTile = 0; !Furiten && (iDiscardTile < discards.Count); ++iDiscardTile)
-                {
-                    for (int iWaitTile = 0; !Furiten && (iWaitTile < WaitTiles.Count); ++iWaitTile)
-                    {
-                        Furiten = discards[iDiscardTile].Tile.IsEqual(WaitTiles[iWaitTile]);
-                    }
-                }
-            }
+            CommonHelpers.Check((waitTiles != null), "Tile collection supplied to OverrideTileWaits is null!");
+            _WaitTiles = waitTiles;
+            UpdateFuritenWithDiscards();
         }
 
         internal GameAction PeekLastDrawKanType()

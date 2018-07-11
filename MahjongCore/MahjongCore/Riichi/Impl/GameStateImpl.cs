@@ -38,6 +38,13 @@ namespace MahjongCore.Riichi.Impl
             public static bool    TryGetGameAction(string text, out GameAction ga) { return EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga); }
             public static bool    IsAgari(this GameAction ga)                      { return (ga == GameAction.Ron) || (ga == GameAction.Tsumo); }
 
+            public static bool IsOpenCall(this GameAction ga)
+            {
+                return (ga == GameAction.Chii) ||
+                       (ga == GameAction.Pon) ||
+                       (ga == GameAction.OpenKan);
+            }
+
             public static GameAction GetGameAction(string text)
             {
                 GameAction ga;
@@ -201,10 +208,10 @@ namespace MahjongCore.Riichi.Impl
         internal GameAction    PrevAction               { get; private set; } = GameAction.Nothing;
         internal GameAction    NextAction               { get; private set; } = GameAction.Nothing;
         internal Player        PlayerRecentOpenKan      { get; private set; } = Player.None;
-        internal Player        NextActionPlayer         { get; private set; } = Player.None;
-        internal TileType      NextActionTile           { get; private set; } = TileType.None;
+        internal Player        NextActionPlayer         { get; set; }         = Player.None;
+        internal TileType      NextActionTile           { get; set; }         = TileType.None;
         internal bool          PlayerDeadWallPick       { get; private set; } = false;
-        internal bool          FlipDoraAfterNextDiscard { get; private set; } = false;
+        internal bool          FlipDoraAfterNextDiscard { get; set; }         = false;
         internal bool          ChankanFlag              { get; private set; } = false;
         internal bool          KanburiFlag              { get; private set; } = false;
 
@@ -283,7 +290,7 @@ namespace MahjongCore.Riichi.Impl
         public void  ExecutePostBreak_PickTile()                           { PickIntoPlayerHand(Current, 1); }
         private void FlipDora()                                            { DoraIndicatorFlipped?.Invoke(this, new DoraIndicatorFlippedArgsImpl(DoraIndicators[DoraCount++])); }
         private void ApplyWinResultsToPlayerScores(WinResultsImpl win)     { foreach (Player p in PlayerHelpers.Players) { GetHand(p).Score += win.GetPlayerDelta(p) + win.GetPlayerPoolDelta(p); } }
-        private int  GetNextWallDrawSlot()                                 { return TileHelpers.ClampTile(Offset + (TileHelpers.MAIN_WALL_TILE_COUNT - TilesRemaining) - Math.Max(0, (DoraCount - 1))); } // TODO: Fix for if kan dora are disabled...
+        internal int GetNextWallDrawSlot(int offset = 0)                   { return TileHelpers.ClampTile(Offset + (TileHelpers.MAIN_WALL_TILE_COUNT - TilesRemaining) - Math.Max(0, (DoraCount - 1)) + offset); } // TODO: Fix for if kan dora are disabled...
 
         public void ExecutePreBreak_DeadWallMove()
         {
@@ -468,7 +475,7 @@ namespace MahjongCore.Riichi.Impl
             {
                 foreach (Player p in PlayerHelpers.Players)
                 {
-                    if (furitenDiscardingPlayer != p) { GetHand(p).UpdateFuriten(furitenDiscardedTile); }
+                    if (furitenDiscardingPlayer != p) { GetHand(p).UpdateTemporaryFuriten(furitenDiscardedTile); }
                 }
             }
         }
@@ -927,6 +934,29 @@ namespace MahjongCore.Riichi.Impl
             // so we need to put the tile it's giving up back into the board somewhere. Look through the wall first (excluding flipped
             // dora tiles), then other players' hands, then discards, and then the dora tile. Throw if we cannot find tileRemove anywhere.
             // TODO: this
+        }
+
+        internal void IterateDiscards(Func<Player, TileImpl, bool> callback)
+        {
+            // TODO: Turn this into IterateDiscardsAndCalls. Use TileCommands...
+            int[] discards = new int[] { 0, 0, 0, 0 };
+            int[] remainingDiscards = new int[] { Player1Hand.Discards.Count, Player2Hand.Discards.Count,
+                                                  Player3Hand.Discards.Count, Player4Hand.Discards.Count };
+
+            Player checkPlayer = Dealer;
+            while ((remainingDiscards[0] > 0) || (remainingDiscards[1] > 0) || (remainingDiscards[2] > 0) || (remainingDiscards[3] > 0))
+            {
+                int nextDiscardPlayer = checkPlayer.GetZeroIndex();
+                TileImpl nextDiscard = GetHand(checkPlayer).DiscardsRaw[discards[nextDiscardPlayer]];
+                if (!callback(checkPlayer, nextDiscard))
+                {
+                    break;
+                }
+
+                discards[nextDiscardPlayer]++;
+                remainingDiscards[nextDiscardPlayer]--;
+                checkPlayer = nextDiscard.Called ? nextDiscard.Ancillary : checkPlayer.GetNext();
+            }
         }
 
         private void Initialize(IGameSettings settings, IExtraSettings extra)

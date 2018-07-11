@@ -1,5 +1,6 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Riichi.Impl;
 using System;
 using System.Collections.Generic;
 
@@ -7,7 +8,7 @@ namespace MahjongCore.Riichi.Helpers
 {
     public class RiichiHandHelpers
     {
-        public static List<IMeld> GetCalls(IGameSettings settings, TileType calledTile, TileType[] sourceTiles, CalledDirection direction)
+        internal static List<IMeld> GetCalls(IGameSettings settings, TileType calledTile, TileType[] sourceTiles, CalledDirection direction)
         {
             List<IMeld> calls = null;
 
@@ -210,7 +211,7 @@ namespace MahjongCore.Riichi.Helpers
             return calls;
         }
 
-        internal static List<CallOption> GetCalls(Hand hand, GameStateImpl state)
+        internal static List<IMeld> GetCalls(IHand hand, IGameState state)
         {
             // If this is the 4th kan and noone is suukantsu tempai, then we cannot make any calls.
             if ((state.PrevAction == GameAction.ReplacementTilePick) &&
