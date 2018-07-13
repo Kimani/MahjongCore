@@ -143,7 +143,7 @@ namespace MahjongCore.Riichi.Helpers
             TileType t = TileType.None;
             foreach (TileType tt in System.Enum.GetValues(typeof(TileType)))
             {
-                if ((tt.GetSuit() == suit) && (tt.GetValue() == value))
+                if ((tt.GetSuit() == suit) && (tt.GetValue() == value) && (tt.IsRedDora() == redDora))
                 {
                     t = tt;
                     break;

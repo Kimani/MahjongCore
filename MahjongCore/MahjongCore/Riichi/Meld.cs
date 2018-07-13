@@ -114,20 +114,20 @@ namespace MahjongCore.Riichi
             meld.State = MeldState.Chii;
             meld.Direction = CalledDirection.Left;
 
-            TileImpl tile1 = meld._Tiles[0];
+            TileImpl tile1 = meld.TilesRaw[0];
             tile1.Type = tileCalled.Type;
             tile1.Location = Location.Call;
             tile1.Ancillary = target;
             tile1.Called = true;
             tile1.Slot = tileCalled.Slot;
 
-            TileImpl tile2 = meld._Tiles[1];
+            TileImpl tile2 = meld.TilesRaw[1];
             tile2.Type = tileLo;
             tile2.Location = Location.Call;
             tile2.Ancillary = meld.Owner;
             tile2.Slot = slotLo;
 
-            TileImpl tile3 = meld._Tiles[2];
+            TileImpl tile3 = meld.TilesRaw[2];
             tile3.Type = tileHi;
             tile3.Location = Location.Call;
             tile3.Ancillary = meld.Owner;
@@ -162,9 +162,9 @@ namespace MahjongCore.Riichi
             meld.Direction = caller.GetTargetPlayerDirection(target);
 
             TileImpl tileImplCalled, tileImplA, tileImplB;
-            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld._Tiles[0]; tileImplA = meld._Tiles[1]; tileImplB = meld._Tiles[2]; }
-            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld._Tiles[1]; tileImplA = meld._Tiles[0]; tileImplB = meld._Tiles[2]; }
-            else                                               { tileImplCalled = meld._Tiles[2]; tileImplA = meld._Tiles[0]; tileImplB = meld._Tiles[1]; }
+            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; }
+            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.TilesRaw[1]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[2]; }
+            else                                               { tileImplCalled = meld.TilesRaw[2]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; }
 
             tileImplCalled.Type = tileCalled.Type;
             tileImplCalled.Location = Location.Call;
@@ -215,9 +215,9 @@ namespace MahjongCore.Riichi
             meld.Direction = caller.GetTargetPlayerDirection(target);
 
             TileImpl tileImplCalled, tileImplA, tileImplB, tileImplC;
-            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld._Tiles[0]; tileImplA = meld._Tiles[1]; tileImplB = meld._Tiles[2]; tileImplC = meld._Tiles[3]; }
-            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld._Tiles[1]; tileImplA = meld._Tiles[0]; tileImplB = meld._Tiles[2]; tileImplC = meld._Tiles[3]; }
-            else                                               { tileImplCalled = meld._Tiles[3]; tileImplA = meld._Tiles[0]; tileImplB = meld._Tiles[1]; tileImplC = meld._Tiles[2]; }
+            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; tileImplC = meld.TilesRaw[3]; }
+            else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.TilesRaw[1]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[2]; tileImplC = meld.TilesRaw[3]; }
+            else                                               { tileImplCalled = meld.TilesRaw[3]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; tileImplC = meld.TilesRaw[2]; }
 
             tileImplCalled.Type = tileCalled.Type;
             tileImplCalled.Location = Location.Call;
@@ -268,25 +268,25 @@ namespace MahjongCore.Riichi
             meld.Owner = caller;
             meld.State = MeldState.KanConcealed;
 
-            TileImpl tileImplA = meld._Tiles[0];
+            TileImpl tileImplA = meld.TilesRaw[0];
             tileImplA.Type = tileA;
             tileImplA.Location = Location.Call;
             tileImplA.Ancillary = caller;
             tileImplA.Slot = slotA;
 
-            TileImpl tileImplB = meld._Tiles[1];
+            TileImpl tileImplB = meld.TilesRaw[1];
             tileImplB.Type = tileB;
             tileImplB.Location = Location.Call;
             tileImplB.Ancillary = caller;
             tileImplB.Slot = slotB;
 
-            TileImpl tileImplC = meld._Tiles[2];
+            TileImpl tileImplC = meld.TilesRaw[2];
             tileImplC.Type = tileC;
             tileImplC.Location = Location.Call;
             tileImplC.Ancillary = caller;
             tileImplC.Slot = slotC;
 
-            TileImpl tileImplD = meld._Tiles[3];
+            TileImpl tileImplD = meld.TilesRaw[3];
             tileImplD.Type = tileD;
             tileImplD.Location = Location.Call;
             tileImplD.Ancillary = caller;

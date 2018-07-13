@@ -123,7 +123,7 @@ namespace MahjongCore.Riichi.Impl
         internal bool           OverrideNoReachFlag                          { get; set; } = false; // Used for things like thirteen broken, which you can't reach for.
         internal bool           FourKans                                     { get { return KanCount == 4; } }
         internal List<TileType> GetTileWaits(int slot)                       { return _ActiveTileWaits[(slot == -1) ? (ActiveTileCount - 1) : slot]; }
-        internal List<IMeld>    GetCalls()                                   { return RiichiHandHelpers.GetCalls(this, Parent); }
+        internal List<IMeld>    GetCalls()                                   { return RiichiHandHelpers.GetCalls(this); }
         internal ICommand       PeekLastDrawKan()                            { return _DrawsAndKans.Peek(); }
         internal TileType       GetSuufurendanTile()                         { return CouldSuufurendan ? _Parent.GetHand(_Parent.Dealer).DiscardsRaw[0].Type : TileType.None; }
         internal ITile          AddTile(ITile wallTile, bool rewind = false) { return AddTile(wallTile.Type, rewind); }

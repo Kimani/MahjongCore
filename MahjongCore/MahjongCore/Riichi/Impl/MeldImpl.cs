@@ -81,7 +81,7 @@ namespace MahjongCore.Riichi.Impl
         // MeldImpl
         internal TileImpl[] TilesRaw { get; set; } = new TileImpl[] { new TileImpl(), new TileImpl(), new TileImpl(), new TileImpl() };
 
-        public MeldImpl()
+        internal MeldImpl()
         {
             for (int i = 0; i < TilesRaw.Length; ++i)
             {

@@ -121,7 +121,14 @@ namespace MahjongCore.Riichi.Impl
             CanRon = !hand.Furiten && hand.CheckRon();
             CanChankanRon = state.Settings.GetSetting<bool>(GameOption.Chankan) && CanRon && (state.PrevAction == GameAction.PromotedKan);
 
-            List<IMeld> callList = ((state.TilesRemaining <= 0) ||
+            bool fourKanAbortiveDrawIncoming = state.Settings.GetSetting<bool>(GameOption.FourKanDraw) &&
+                                               (state.PrevAction == GameAction.ReplacementTilePick) &&
+                                               (state.DoraCount >= 4) &&
+                                               !state.GetHand(Player.Player1).FourKans && !state.GetHand(Player.Player2).FourKans &&
+                                               !state.GetHand(Player.Player3).FourKans && !state.GetHand(Player.Player4).FourKans;
+
+            List<IMeld> callList = (fourKanAbortiveDrawIncoming ||
+                                    (state.TilesRemaining <= 0) ||
                                     (state.PrevAction == GameAction.PromotedKan) ||
                                     (state.PrevAction == GameAction.ClosedKan) ||
                                     hand.Reach.IsReach()) ? null : hand.GetCalls();
@@ -130,7 +137,7 @@ namespace MahjongCore.Riichi.Impl
                 CallsRaw.AddRange(callList);
             }
         }
-        }
+    }
 
     internal class DiscardDecisionImpl : IDiscardDecision
     {
