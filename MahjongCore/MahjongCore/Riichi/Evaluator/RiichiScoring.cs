@@ -6,94 +6,60 @@ using System;
 
 namespace MahjongCore.Riichi.Evaluator
 {
-    public class TsumoScore
-    {
-        public int ScoreHi = 0;
-        public int ScoreLo = 0;
-    }
-
     public class RiichiScoring
     {
-        /**
-         * Determine the winning score based solely on the provided parameters.
-         * Note that winStreak should be the winstreak we should look at. Add +1 to this beforehand to see if this would give you enough streak for paa renchan.
-         */
-        public static void GetWinningScore(Hand winningPlayerHand,
-                                           Player targetPlayer,
-                                           Player targetSekininBarai1,
-                                           Player targetSekininBarai2,
-                                           int han,
+        private static int RoundUpToNextHundred(int input) { return (int)(Math.Ceiling(((double)(input)) / 100.0) * 100); }
+
+        public static void GetWinningScore(IGameSettings settings,
+                                           Player winner,
+                                           Player dealer,
+                                           Player target,
+                                           Player pao1,
+                                           Player pao2,
+                                           Player wareme,
+                                           int finalHan,
                                            int fu,
+                                           int bonus,
                                            int pool,
-                                           WinResults scoreResults)
+                                           out int scoreHi,
+                                           out int scoreLo,
+                                           out int player1Delta,
+                                           out int player2Delta,
+                                           out int player3Delta,
+                                           out int player4Delta,
+                                           out int player1PoolDelta,
+                                           out int player2PoolDelta,
+                                           out int player3PoolDelta,
+                                           out int player4PoolDelta,
+                                           out bool limit)
         {
-            // Check for paa renchan. If we have a yakuman hand already, just add to the yakumans.
-            int paaRenchanValue = Yaku.PaaRenchan.Evaluate(winningPlayerHand, null, false);
-            int finalHan = (han > 0) ? han : (han + paaRenchanValue);
+            Global.Assert(winner.IsPlayer());
+            Global.Assert(dealer.IsPlayer());
 
-            // Get the raw values and get the winning score.
-            GameState state = winningPlayerHand.Parent;
-            GameSettings settings = state.Settings;
+            bool isWinnerWareme = (winner == wareme);
+            int[] delta = new int[4];
+            int[] poolDelta = new int[4];
 
-            GetWinningScoreRaw(state.Settings,
-                               winningPlayerHand.Player,
-                               state.CurrentDealer,
-                               targetPlayer,
-                               targetSekininBarai1,
-                               targetSekininBarai2,
-                               state.WaremePlayer,
-                               finalHan,
-                               fu,
-                               pool,
-                               state.Bonus,
-                               scoreResults);
-        }
-
-        public static void GetWinningScoreRaw(GameSettings settings,
-                                              Player winningPlayer,
-                                              Player currentDealer,
-                                              Player targetPlayer,
-                                              Player targetSekininBarai1,
-                                              Player targetSekininBarai2,
-                                              Player waremePlayer,
-                                              int finalHan,
-                                              int fu,
-                                              int poolPoints,
-                                              int bonusCount,
-                                              WinResults scoreResults)
-        {
-            bool isWinnerDealer = winningPlayer == currentDealer;
-            bool isWinnerWareme = winningPlayer == waremePlayer;
-            scoreResults.ResetScores();
-
-            // Process Tsumo or Ron. If there are sekinin barai players then determine the scoring like a Ron.
-            //GameState state = winningPlayerHand.Parent;
-            if ((targetPlayer == Player.Multiple) && (targetSekininBarai1 == Player.None) && (targetSekininBarai2 == Player.None))
+            // Process Tsumo or Ron for non-winners. If there are sekinin barai players then determine the scoring like a Ron.
+            if ((target == Player.Multiple) && (pao1 == Player.None) && (pao2 == Player.None))
             {
-                TsumoScore ts = new TsumoScore();
-                GetScoreTsumo(settings, finalHan, fu, isWinnerDealer, ts, out scoreResults.Limit);
+                GetScoreTsumo(settings, finalHan, fu, (winner == dealer), out limit, out scoreHi, out scoreLo);
 
-                foreach (Player p in PlayerExtensionMethods.Players)
+                foreach (Player p in PlayerHelpers.Players)
                 {
-                    int pScore = -((winningPlayer != p) ? ((p == currentDealer) ? ts.ScoreHi : ts.ScoreLo) : 0);
-                    pScore *= ((isWinnerWareme) || (p == waremePlayer)) ? 2 : 1;
-                    pScore -= (winningPlayer != p) ? (bonusCount * 100) : 0;
-
-                    // Make sure the winning player's score is zero at this juncture.
-                    Global.Assert((p != winningPlayer) || (pScore == 0));
-                    scoreResults.SetPlayerScore(p, pScore);
+                    int score = -((winner != p) ? ((p == dealer) ? scoreHi : scoreLo) : 0);
+                    score *= ((isWinnerWareme) || (p == wareme)) ? 2 : 1;
+                    score -= (winner != p) ? (bonus * 100) : 0;
+                    delta[p.GetZeroIndex()] = score;
                 }
 
-                // Get the display scores.
-                scoreResults.ScoreHi = ts.ScoreHi;
-                scoreResults.ScoreLo = ts.ScoreLo;
-                if (waremePlayer == winningPlayer)
+                if (isWinnerWareme)
                 {
-                    scoreResults.ScoreHi *= 2;
-                    scoreResults.ScoreLo *= 2;
+                    scoreHi *= 2;
+                    scoreLo *= 2;
                 }
-                scoreResults.ScoreHi += (bonusCount * 100);
-                scoreResults.ScoreLo += (bonusCount * 100);
+                scoreHi += (bonus * 100);
+                scoreLo += (bonus * 100);
             }
             else
             {
@@ -101,94 +67,62 @@ namespace MahjongCore.Riichi.Evaluator
                 // Note that only the person who paid in will need to pay the homba payments. The liable player will pay half
                 // of the non-homba score. Also take into account warame. If this is actually a tsumo, then we're doing
                 // sekinin barai, so don't count one extra person for the split.
-                int ronScore = GetScoreRon(settings, finalHan, fu, isWinnerDealer, out scoreResults.Limit);
-                int ronPaymentSplit = ((targetPlayer == Player.Multiple) ? 0 : 1) + ((targetSekininBarai1 != Player.None) ? 1 : 0) + ((targetSekininBarai2 != Player.None) ? 1 : 0);
-                int rawRonPayment = ronScore / ronPaymentSplit;
+                int ronScore = GetScoreRon(settings, finalHan, fu, (winner == dealer), out limit);
+                int paymentSplit = ((target == Player.Multiple) ? 0 : 1) + ((pao1 != Player.None) ? 1 : 0) + ((pao2 != Player.None) ? 1 : 0);
+                int rawPayment = ronScore / paymentSplit;
 
-                foreach (Player p in PlayerExtensionMethods.Players)
+                foreach (Player p in PlayerHelpers.Players)
                 {
-                    int pScore = -(((targetPlayer == p) ? rawRonPayment : 0) +
-                                 ((targetSekininBarai1 == p) ? rawRonPayment : 0) +
-                                 ((targetSekininBarai2 == p) ? rawRonPayment : 0));
-                    pScore = (pScore / 100) * 100;
-                    pScore *= ((isWinnerWareme) || (p == waremePlayer)) ? 2 : 1;
-                    pScore -= (targetPlayer == p) ? (bonusCount * 300) : 0;
-
-                    // Make sure the winning player's score is zero at this juncture.
-                    Global.Assert((p != winningPlayer) || (pScore == 0));
-                    scoreResults.SetPlayerScore(p, pScore);
+                    int score = (((target == p) ? rawPayment : 0) +
+                                 ((pao1 == p) ? rawPayment : 0) +
+                                 ((pao2 == p) ? rawPayment : 0));
+                    score = -RoundUpToNextHundred(score);
+                    score *= ((isWinnerWareme) || (p == wareme)) ? 2 : 1;
+                    score -= (target == p) ? (bonus * 300) : 0;
+                    delta[p.GetZeroIndex()] = score;
                 }
 
                 // Get the display scores.
-                scoreResults.ScoreHi = ronScore;
-                if (isWinnerWareme || (waremePlayer == targetPlayer))
+                scoreHi = ronScore;
+                if (isWinnerWareme || (wareme == target))
                 {
-                    scoreResults.ScoreHi *= 2;
+                    scoreHi *= 2;
                 }
-                scoreResults.ScoreHi += (bonusCount * 300);
+                scoreHi += (bonus * 300);
+                scoreLo = 0;
             }
 
+            // Make sure the winning player's score is zero at this juncture.
             // Tally up all the points and give them to the winning player.
-            scoreResults.SetPlayerScore(winningPlayer, -(scoreResults.Player1Delta +
-                                                         scoreResults.Player2Delta +
-                                                         scoreResults.Player3Delta +
-                                                         scoreResults.Player4Delta));
-            scoreResults.SetPlayerPool(winningPlayer, poolPoints);
+            delta[winner.GetZeroIndex()] = -(delta[0] + delta[1] + delta[2] + delta[3]);
+            poolDelta[winner.GetZeroIndex()] = pool;
+
+            player1Delta = delta[0];
+            player2Delta = delta[1];
+            player3Delta = delta[2];
+            player4Delta = delta[3];
+            player1PoolDelta = poolDelta[0];
+            player2PoolDelta = poolDelta[1];
+            player3PoolDelta = poolDelta[2];
+            player4PoolDelta = poolDelta[3];
         }
 
-        public static int GetScoreRon(GameSettings settings, int han, int fu, bool dealer, out bool limit)
+        public static int GetScoreRon(IGameSettings settings, int han, int fu, bool dealer, out bool limit)
         {
-            limit = false;
-
-            if (han < 0)
-            {
-                limit = true;
-                return Math.Abs((dealer ? 48000 : 32000) * han);
-            }
-
-            if (han >= 13)
-            {
-                limit = true;
-                return (dealer ? 48000 : 32000);              // Kazoe-Yakuman
-            }
-            if (han >= 11)
-            {
-                limit = true;
-                return (dealer ? 36000 : 24000);              // Sanbaiman
-            }
-            if (han >= 8)
-            {
-                limit = true;
-                return (dealer ? 24000 : 16000);              // Baiman
-            }
-            if (han >= 6)
-            {
-                limit = true;
-                return (dealer ? 18000 : 12000);              // Haneman
-            }
-            if (han >= 5)
-            {
-                limit = true;
-                return (dealer ? 12000 : 8000);               // Mangan
-            }
-
             int basicpoint = fu * (int)Math.Pow(2, (2 + han));
-            if (basicpoint >= 2000)
+            limit = (han >= 5) || (han < 0) || (basicpoint >= 2000);
+
+            if (limit)
             {
-                limit = true;
-                basicpoint = 2000;
+                return (han < 0)   ? Math.Abs((dealer ? 48000 : 32000) * han) : // Yakuman
+                       (han >= 13) ? (dealer ? 48000 : 32000) :                 // Kazoe-Yakuman
+                       (han >= 11) ? (dealer ? 36000 : 24000) :                 // Sanbaiman
+                       (han >= 8)  ? (dealer ? 24000 : 16000) :                 // Baiman
+                       (han >= 6)  ? (dealer ? 18000 : 12000) :                 // Haneman
+                                     (dealer ? 12000 : 8000);                   // Mangan
             }
 
-            int points = basicpoint * (dealer ? 6 : 4);
-
-            // Round up to the next hundred
-            int smallpoints = (points / 100) * 100;
-            if (points - smallpoints > 0)
-            {
-                points = smallpoints + 100;
-            }
-
-            // Process kiriage mangan.
+            int points = RoundUpToNextHundred(basicpoint * (dealer ? 6 : 4));
             if (settings.GetSetting<bool>(GameOption.KiriageMangan))
             {
                 if (((han == 3) && (fu >= 80)) || ((han == 4) && (fu >= 30)))
@@ -197,93 +131,34 @@ namespace MahjongCore.Riichi.Evaluator
                     points = (dealer ? 12000 : 8000);
                 }
             }
-
-            // Return the result!
             return points;
         }
 
-        public static void GetScoreTsumo(GameSettings settings, int han, int fu, bool dealer, TsumoScore ts, out bool limit)
+        public static void GetScoreTsumo(IGameSettings settings, int han, int fu, bool dealer, out bool limit, out int scoreHi, out int scoreLo)
         {
-            limit = false;
+            int basicpoint = fu * (int)Math.Pow(2, (2 + han));
+            limit = (han >= 5) || (han < 0) || (basicpoint >= 2000);
 
-            int basicpoint = 0;
-            if (han < 0)
+            if (limit)
             {
-                limit = true;
-                basicpoint = Math.Abs(8000 * han);
+                basicpoint = (han < 0) ? Math.Abs(8000 * han) : // Yakuman
+                             (han >= 13) ? 8000 :               // Kazoe-Yakuman
+                             (han >= 11) ? 6000 :               // Sanbaiman
+                             (han >= 8)  ? 4000 :               // Baiman
+                             (han >= 6)  ? 3000 :               // Haneman
+                                           2000;                // Mangan
             }
-            else if (han >= 13)
+            else if (settings.GetSetting<bool>(GameOption.KiriageMangan))
             {
-                limit = true;
-                basicpoint = 8000;
-            }
-            else if (han >= 11)
-            {
-                limit = true;
-                basicpoint = 6000;
-            }
-            else if (han >= 8)
-            {
-                limit = true;
-                basicpoint = 4000;
-            }
-            else if (han >= 6)
-            {
-                limit = true;
-                basicpoint = 3000;
-            }
-            else if (han >= 5)
-            {
-                limit = true;
-                basicpoint = 2000;
-            }
-            else
-            {
-                basicpoint = fu * (int)Math.Pow(2, (2 + han));
-                if (basicpoint >= 2000)
+                if (((han == 3) && (fu >= 80)) || ((han == 4) && (fu >= 30)))
                 {
                     limit = true;
                     basicpoint = 2000;
                 }
-
-                if (settings.GetSetting<bool>(GameOption.KiriageMangan))
-                {
-                    if (((han == 3) && (fu >= 80)) || ((han == 4) && (fu >= 30)))
-                    {
-                        limit = true;
-                        basicpoint = 2000;
-                    }
-                }
             }
 
-            // Determine final point score!
-            if (dealer)
-            {
-                ts.ScoreHi = 2 * basicpoint; // All 3 players pay this.
-                ts.ScoreLo = 2 * basicpoint;
-            }
-            else
-            {
-                ts.ScoreHi = 2 * basicpoint;
-                ts.ScoreLo = basicpoint;
-            }
-
-            // Round em!
-            {
-                int smallpoints = (ts.ScoreHi / 100) * 100;
-                if (ts.ScoreHi - smallpoints > 0)
-                {
-                    ts.ScoreHi = smallpoints + 100;
-                }
-            }
-
-            {
-                int smallpoints = (ts.ScoreLo / 100) * 100;
-                if (ts.ScoreLo - smallpoints > 0)
-                {
-                    ts.ScoreLo = smallpoints + 100;
-                }
-            }
+            scoreHi = RoundUpToNextHundred(2 * basicpoint);
+            scoreLo = RoundUpToNextHundred((dealer ? 2 : 1) * basicpoint);
         }
 
         public static void GetScores(IGameSettings settings, int points1st, int points2nd, int points3rd, int points4th, float[] scores)
@@ -302,8 +177,7 @@ namespace MahjongCore.Riichi.Evaluator
             Uma uma = settings.GetSetting<Uma>(GameOption.UmaOption);
             if ((uma != Uma.Uma_None) && (firstTieCount < 4))
             {
-                // If we want integer rounded scores, do the rounding now. We don't need to correct
-                // the rounding errors at this time though.
+                // If we want integer rounded scores, do the rounding now. We don't need to correct the rounding errors at this time though.
                 if (settings.GetSetting<bool>(GameOption.IntFinalScores))
                 {
                     rawScore1 = (float)Math.Round(rawScore1);
@@ -342,10 +216,8 @@ namespace MahjongCore.Riichi.Evaluator
                     // - 1/2/0/1
                     // - 1/3/0/0
                     // - 1/1/2/0
-                    float[] umaDeltas = new float[] { EnumAttributes.GetAttributeValue<Place1Value, int>(uma),
-                                                        EnumAttributes.GetAttributeValue<Place2Value, int>(uma),
-                                                        EnumAttributes.GetAttributeValue<Place3Value, int>(uma),
-                                                        EnumAttributes.GetAttributeValue<Place4Value, int>(uma) };
+                    float[] umaDeltas = new float[] { uma.GetScoreDelta(Placement.Place1), uma.GetScoreDelta(Placement.Place2),
+                                                      uma.GetScoreDelta(Placement.Place3), uma.GetScoreDelta(Placement.Place4) };
 
                     for (int iPlacementSlot = 0; iPlacementSlot < 4; ++iPlacementSlot)
                     {
