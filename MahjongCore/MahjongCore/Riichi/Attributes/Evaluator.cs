@@ -1,18 +1,14 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using System;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Evaluator;
+using System;
 
 namespace MahjongCore.Riichi.Attributes
 {
     public class Evaluator : Attribute, IAttribute<YakuEvaluator>
     {
-        public YakuEvaluator Value { get; set; }
-
-        public Evaluator(YakuEvaluator f)
-        {
-            Value = f;
-        }
+        public YakuEvaluator Value        { get; set; }
+        public Evaluator(YakuEvaluator v) { Value = v; }
     }
 }

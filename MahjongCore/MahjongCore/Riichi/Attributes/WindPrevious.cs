@@ -1,13 +1,13 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using System;
 using MahjongCore.Common.Attributes;
+using System;
 
 namespace MahjongCore.Riichi.Attributes
 {
     public class WindPrevious : Attribute, IAttribute<Wind>
     {
-        public Wind Value { set; get; }
+        public Wind Value               { get; set; }
         public WindPrevious(Wind value) { Value = value; }
     }
 }

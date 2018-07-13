@@ -1,18 +1,13 @@
 ﻿// [Ready Design Corps] - [Mahjong SKY Client] - Copyright 2017
 
-using System;
 using MahjongCore.Common.Attributes;
-using MahjongCore.Riichi;
+using System;
 
 namespace MahjongCore.Riichi.Attributes
 {
     public class CommandMeldState : Attribute, IAttribute<MeldState>
     {
-        public MeldState Value { set; get; }
-
-        public CommandMeldState(MeldState v)
-        {
-            Value = v;
-        }
+        public MeldState Value               { get; set; }
+        public CommandMeldState(MeldState v) { Value = v; }
     }
 }

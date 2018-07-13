@@ -1,17 +1,13 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using System;
 using MahjongCore.Common.Attributes;
+using System;
 
 namespace MahjongCore.Riichi.Attributes
 {
     public class MeldCalled : Attribute, IAttribute<bool>
     {
-        public bool Value { set; get; }
-
-        public MeldCalled(bool s)
-        {
-            Value = s;
-        }
+        public bool Value         { get; set; }
+        public MeldCalled(bool v) { Value = v; }
     }
 }

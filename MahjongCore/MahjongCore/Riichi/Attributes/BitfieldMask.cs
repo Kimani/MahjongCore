@@ -1,17 +1,13 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using System;
 using MahjongCore.Common.Attributes;
+using System;
 
 namespace MahjongCore.Riichi.Attributes
 {
     public class BitfieldMask : Attribute, IAttribute<uint>
     {
-        public uint Value { set; get; }
-
-        public BitfieldMask(uint s)
-        {
-            Value = s;
-        }
+        public uint Value           { get; set; }
+        public BitfieldMask(uint v) { Value = v; }
     }
 }

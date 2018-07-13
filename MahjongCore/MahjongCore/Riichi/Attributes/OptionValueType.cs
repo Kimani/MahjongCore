@@ -1,17 +1,13 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using System;
 using MahjongCore.Common.Attributes;
+using System;
 
 namespace MahjongCore.Riichi.Attributes
 {
     public class OptionValueType : Attribute, IAttribute<Type>
     {
-        public Type Value { set; get; }
-
-        public OptionValueType(Type t)
-        {
-            Value = t;
-        }
+        public Type Value              { get; set; }
+        public OptionValueType(Type v) { Value = v; }
     }
 }

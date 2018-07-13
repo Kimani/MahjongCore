@@ -1,17 +1,13 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using System;
 using MahjongCore.Common.Attributes;
+using System;
 
 namespace MahjongCore.Riichi.Attributes
 {
     public class TextValue : Attribute, IAttribute<string>
     {
-        public string Value { set; get; }
-
-        public TextValue(string s)
-        {
-            Value = s;
-        }
+        public string Value        { get; set; }
+        public TextValue(string v) { Value = v; }
     }
 }

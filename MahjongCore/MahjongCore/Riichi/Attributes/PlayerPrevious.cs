@@ -1,13 +1,13 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using System;
 using MahjongCore.Common.Attributes;
+using System;
 
 namespace MahjongCore.Riichi.Attributes
 {
     public class PlayerPrevious : Attribute, IAttribute<Player>
     {
-        public Player Value                 { set; get; }
-        public PlayerPrevious(Player value) { Value = value; }
+        public Player Value             { get; set; }
+        public PlayerPrevious(Player v) { Value = v; }
     }
 }
