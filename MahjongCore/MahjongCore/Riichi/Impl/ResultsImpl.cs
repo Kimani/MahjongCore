@@ -200,134 +200,161 @@ namespace MahjongCore.Riichi
     internal class WinResultsImpl : IWinResults
     {
         // IWinResults
-        public Player         WinningPlayer    { get; internal set; }
-        public ICandidateHand WinningHand      { get; internal set; }
-        public WinType        Action           { get; internal set; }
-        public int            ScoreHi          { get; internal set; }
-        public int            ScoreLo          { get; internal set; }
-        public int            Player1Delta     { get; internal set; }
-        public int            Player2Delta     { get; internal set; }
-        public int            Player3Delta     { get; internal set; }
-        public int            Player4Delta     { get; internal set; }
-        public int            Player1PoolDelta { get; internal set; }
-        public int            Player2PoolDelta { get; internal set; }
-        public int            Player3PoolDelta { get; internal set; }
-        public int            Player4PoolDelta { get; internal set; }
-        public bool           Limit            { get; internal set; }
+        public Player         WinningPlayer    { get { return _WinningPlayer; } }
+        public ICandidateHand WinningHand      { get { return _WinningHand; } }
+        public WinType        Action           { get { return _Action; } }
+        public int            ScoreHi          { get { return _ScoreHi; } }
+        public int            ScoreLo          { get { return _ScoreLo; } }
+        public int            Player1Delta     { get { return _Player1Delta; } }
+        public int            Player2Delta     { get { return _Player2Delta; } }
+        public int            Player3Delta     { get { return _Player3Delta; } }
+        public int            Player4Delta     { get { return _Player4Delta; } }
+        public int            Player1PoolDelta { get { return _Player1PoolDelta; } }
+        public int            Player2PoolDelta { get { return _Player2PoolDelta; } }
+        public int            Player3PoolDelta { get { return _Player3PoolDelta; } }
+        public int            Player4PoolDelta { get { return _Player4PoolDelta; } }
+        public bool           Limit            { get { return _Limit; } }
 
         // WinResultsImpl
+        private Player         _WinningPlayer;
+        private ICandidateHand _WinningHand;
+        private WinType        _Action;
+        private int            _ScoreHi;
+        private int            _ScoreLo;
+        private int            _Player1Delta;
+        private int            _Player2Delta;
+        private int            _Player3Delta;
+        private int            _Player4Delta;
+        private int            _Player1PoolDelta;
+        private int            _Player2PoolDelta;
+        private int            _Player3PoolDelta;
+        private int            _Player4PoolDelta;
+        private bool           _Limit;
+
         internal WinResultsImpl()                                                                    { }
         internal WinResultsImpl(IGameState s, Player w, Player t, Player r, WinType a, int b, int p) { Populate(s, w, t, r, a, b, p); }
 
         internal void Reset()
         {
-            WinningPlayer = Player.None;
-            WinningHand = null;
-            Action = WinType.None;
-            ResetScores();
-        }
-
-        internal void ResetScores()
-        {
-            ScoreHi = 0;
-            ScoreLo = 0;
-            Player1Delta = 0;
-            Player2Delta = 0;
-            Player3Delta = 0;
-            Player4Delta = 0;
-            Player1PoolDelta = 0;
-            Player2PoolDelta = 0;
-            Player3PoolDelta = 0;
-            Player4PoolDelta = 0;
-            Limit = false;
+            _WinningPlayer = Player.None;
+            _WinningHand = null;
+            _Action = WinType.None;
+            _ScoreHi = 0;
+            _ScoreLo = 0;
+            _Player1Delta = 0;
+            _Player2Delta = 0;
+            _Player3Delta = 0;
+            _Player4Delta = 0;
+            _Player1PoolDelta = 0;
+            _Player2PoolDelta = 0;
+            _Player3PoolDelta = 0;
+            _Player4PoolDelta = 0;
+            _Limit = false;
         }
 
         internal int GetPlayerDelta(Player p)
         {
-            return (p == Player.Player1) ? Player1Delta :
-                   (p == Player.Player2) ? Player2Delta :
-                   (p == Player.Player3) ? Player3Delta :
-                                           Player4Delta;
+            Global.Assert(p.IsPlayer());
+            return (p == Player.Player1) ? _Player1Delta :
+                   (p == Player.Player2) ? _Player2Delta :
+                   (p == Player.Player3) ? _Player3Delta :
+                                           _Player4Delta;
         }
 
         internal int GetPlayerPoolDelta(Player p)
         {
-            return (p == Player.Player1) ? Player1PoolDelta :
-                   (p == Player.Player2) ? Player2PoolDelta :
-                   (p == Player.Player3) ? Player3PoolDelta :
-                                           Player4PoolDelta;
+            Global.Assert(p.IsPlayer());
+            return (p == Player.Player1) ? _Player1PoolDelta :
+                   (p == Player.Player2) ? _Player2PoolDelta :
+                   (p == Player.Player3) ? _Player3PoolDelta :
+                                           _Player4PoolDelta;
         }
 
         internal void SetPlayerScore(Player p, int score)
         {
             Global.Assert(p.IsPlayer());
-            if      (p == Player.Player1) { Player1Delta = score; }
-            else if (p == Player.Player2) { Player2Delta = score; }
-            else if (p == Player.Player3) { Player3Delta = score; }
-            else if (p == Player.Player4) { Player4Delta = score; }
+            if      (p == Player.Player1) { _Player1Delta = score; }
+            else if (p == Player.Player2) { _Player2Delta = score; }
+            else if (p == Player.Player3) { _Player3Delta = score; }
+            else if (p == Player.Player4) { _Player4Delta = score; }
         }
 
         internal void SetPlayerPool(Player p, int pool)
         {
             Global.Assert(p.IsPlayer());
-            if      (p == Player.Player1) { Player1PoolDelta = pool; }
-            else if (p == Player.Player2) { Player2PoolDelta = pool; }
-            else if (p == Player.Player3) { Player3PoolDelta = pool; }
-            else if (p == Player.Player4) { Player4PoolDelta = pool; }
+            if      (p == Player.Player1) { _Player1PoolDelta = pool; }
+            else if (p == Player.Player2) { _Player2PoolDelta = pool; }
+            else if (p == Player.Player3) { _Player3PoolDelta = pool; }
+            else if (p == Player.Player4) { _Player4PoolDelta = pool; }
+        }
+
+        internal void PopulateDraw(bool player1Tempai, bool player2Tempai, bool player3Tempai, bool player4Tempai)
+        {
+            Reset();
+            _WinningPlayer = Player.Multiple;
+            _Action = WinType.Draw;
+
+            // Draw game! Determine score outputs. No warame in this situation because the math doesn't work.
+            int tempaiCount = (player1Tempai ? 1 : 0) + (player2Tempai ? 1 : 0) + (player3Tempai ? 1 : 0) + (player4Tempai ? 1 : 0);
+
+            if ((tempaiCount == 1) || (tempaiCount == 2) || (tempaiCount == 3))
+            {
+                int deltaGainPoints = 3000 / tempaiCount;
+                int deltaLosePoints = -(3000 / (4 - tempaiCount));
+
+                _Player1Delta = (player1Tempai ? deltaGainPoints : deltaLosePoints);
+                _Player2Delta = (player2Tempai ? deltaGainPoints : deltaLosePoints);
+                _Player3Delta = (player3Tempai ? deltaGainPoints : deltaLosePoints);
+                _Player4Delta = (player4Tempai ? deltaGainPoints : deltaLosePoints);
+            }
         }
 
         internal void Populate(IGameState state, Player winner, Player target, Player recentOpenKan, WinType action, int bonus, int pool)
         {
             Reset();
-            WinningPlayer = winner;
-            Action = action;
+            _WinningPlayer = winner;
+            _Action = action;
 
             GameStateImpl stateImpl = state as GameStateImpl;
             HandImpl hand = stateImpl.GetHand(winner) as HandImpl;
             if ((action == WinType.Ron) || (action == WinType.Tsumo))
             {
-                WinningHand = hand.WinningHandCache;
+                _WinningHand = hand.WinningHandCache;
 
                 // Can only have sekinin barai in multi-win scenarios if there's a ron. So don't calculate if this is a tsumo.
                 Player sekininBarai1 = Player.None;
                 Player sekininBarai2 = Player.None;
-                if (action != WinType.Tsumo)
+                if (action == WinType.Ron)
                 {
-                    CheckSekininBarai(state, (action == WinType.Ron), WinningHand, hand, recentOpenKan, out sekininBarai1, out sekininBarai2);
+                    CheckSekininBarai(state, true, _WinningHand, hand, recentOpenKan, out sekininBarai1, out sekininBarai2);
                 }
 
                 // Calculate the scores.
-                RiichiScoring.GetWinningScore(hand, target, sekininBarai1, sekininBarai2, WinningHand.Han, WinningHand.Fu, pool, this);
-
-                AdjustForPaaRenchan(hand, (action == WinType.Ron));
-            }
-            else
-            {
-                %%%%%%%%%  hand.Streak = 0;
-            }
-        }
-
-        private void AdjustForPaaRenchan(IHand hand, bool fRon)
-        {
-            int paaRenchanValue = Riichi.Yaku.PaaRenchan.Evaluate(hand, WinningHand, fRon);
-            if (paaRenchanValue != 0)
-            {
-                // Paa renchan is already built into the score of WinningHand. We just need to adjust dora and yaku.
-                WinningHand.Dora = 0;
-                WinningHand.UraDora = 0;
-                WinningHand.RedDora = 0;
-                WinningHand.CleanNonYakumanYaku();
-                WinningHand.Yaku.Add(Yaku.PaaRenchan);
+                RiichiScoring.GetWinningScore(state.Settings,
+                                              hand.Player,
+                                              state.Dealer,
+                                              target,
+                                              sekininBarai1,
+                                              sekininBarai2,
+                                              state.Wareme,
+                                              _WinningHand.Han,
+                                              _WinningHand.Fu,
+                                              bonus,
+                                              pool,
+                                              out _ScoreHi,          out _ScoreLo,
+                                              out _Player1Delta,     out _Player2Delta,     out _Player3Delta,     out _Player4Delta,
+                                              out _Player1PoolDelta, out _Player2PoolDelta, out _Player3PoolDelta, out _Player4PoolDelta,
+                                              out _Limit);
             }
         }
 
-        private void CheckSekininBarai(IGameState state, bool fRon, CandidateHand winningHand, Hand hand, Player recentOpenKan, out Player targetPlayer1, out Player targetPlayer2)
+        private void CheckSekininBarai(IGameState state, bool ron, ICandidateHand winningHand, IHand hand, Player recentOpenKan, out Player targetPlayer1, out Player targetPlayer2)
         {
             targetPlayer1 = Player.None;
             targetPlayer2 = Player.None;
 
             if (state.Settings.GetSetting<bool>(GameOption.SekininBaraiRinshan) &&
-                !fRon &&
+                !ron &&
                 (recentOpenKan != Player.None) &&
                 (winningHand != null) &&
                 (winningHand.Yaku.Contains(Yaku.RinshanKaihou) || winningHand.Yaku.Contains(Yaku.UupinKaihou)))
@@ -337,32 +364,28 @@ namespace MahjongCore.Riichi
 
             if (state.Settings.GetSetting<bool>(GameOption.SekininBaraiDaisangen) && winningHand.Yaku.Contains(Yaku.Daisangen))
             {
-                TileType om3t = hand.OpenMeld[2].Tiles[0].Tile;
-                ExtendedTile[] thirdMeld = om3t.IsDragon() ? hand.OpenMeld[2].Tiles : hand.OpenMeld[3].Tiles;
-                MeldState thirdMeldState = om3t.IsDragon() ? hand.OpenMeld[2].State : hand.OpenMeld[3].State;
-
-                if (thirdMeld[0].Tile.IsDragon() && (thirdMeldState != MeldState.KanConcealed) && (thirdMeldState != MeldState.None))
+                int dragonCallCount = 0;
+                foreach (IMeld meld in hand.Melds) { if ((meld.State != MeldState.None) && meld.Tiles[0].Type.IsDragon()) { dragonCallCount++; } }
+                if (dragonCallCount == 3)
                 {
-                    int playerOffset = thirdMeld[0].Called ? 3 :
-                                       thirdMeld[thirdMeldState.GetTileCount() - 1].Called ? 1 :
-                                                                                             2;
-
-                    Player newSekininBaraiPlayer = hand.Player.AddOffset(playerOffset);
-
-                    if (targetPlayer1 == Player.None)
+                    IMeld thirdDragonMeld = ((hand.Melds[4].State != MeldState.None) && hand.Melds[4].Tiles[0].Type.IsDragon()) ? hand.Melds[4] : hand.Melds[3];
+                    if (thirdDragonMeld.State != MeldState.KanConcealed)
                     {
-                        targetPlayer1 = newSekininBaraiPlayer;
-                    }
-                    else
-                    {
-                        targetPlayer2 = newSekininBaraiPlayer;
+                        if (targetPlayer1 == Player.None)
+                        {
+                            targetPlayer1 = thirdDragonMeld.Target;
+                        }
+                        else if (targetPlayer1 != thirdDragonMeld.Target)
+                        {
+                            targetPlayer2 = thirdDragonMeld.Target;
+                        }
                     }
                 }
             }
 
             if ((state.Settings.GetSetting<bool>(GameOption.SekininBaraiDaisuushii) && winningHand.Yaku.Contains(Yaku.Daisuushii)) ||
                 (state.Settings.GetSetting<bool>(GameOption.SekininBaraiTsuuiisou) && winningHand.Yaku.Contains(Yaku.Tsuuiisou)) ||
-                (state.Settings.GetSetting<bool>(GameOption.SekininBaraiSuukantsu) && winningHand.Yaku.Contains(Yaku.Suukantsu) && (hand.OpenMeld[3].State == MeldState.KanOpen)) ||
+                (state.Settings.GetSetting<bool>(GameOption.SekininBaraiSuukantsu) && winningHand.Yaku.Contains(Yaku.Suukantsu) && (hand.Melds[3].State == MeldState.KanOpen)) ||
                 (state.Settings.GetSetting<bool>(GameOption.SekininBaraiChinroutou) && winningHand.Yaku.Contains(Yaku.Chinroutou)) ||
                 (state.Settings.GetSetting<bool>(GameOption.SekininBaraiRyuuiisou) && winningHand.Yaku.Contains(Yaku.Ryuuiisou)) ||
                 (state.Settings.GetSetting<bool>(GameOption.SekininBaraiIisouSuushun) && winningHand.Yaku.Contains(Yaku.IisouSuushun)))
@@ -372,7 +395,7 @@ namespace MahjongCore.Riichi
                 {
                     targetPlayer1 = result;
                 }
-                else
+                else if (targetPlayer1 != result)
                 {
                     targetPlayer2 = result;
                 }
@@ -381,18 +404,11 @@ namespace MahjongCore.Riichi
 
         private Player GetFourthCallSekininBaraiPlayer(ICandidateHand winningHand, IHand hand)
         {
-            Player targetPlayer = Player.None;
-            if ((hand.GetCalledMeldCount() == 4) && 
-                ((hand.OpenMeld[3].State == MeldState.Pon) ||
-                 (hand.OpenMeld[3].State == MeldState.KanPromoted) ||
-                 (hand.OpenMeld[3].State == MeldState.KanOpen)))
-            {
-                int playerOffset = hand.OpenMeld[3].Tiles[0].Called                                         ? 3 :
-                                   hand.OpenMeld[3].Tiles[hand.OpenMeld[3].State.GetTileCount() - 1].Called ? 1 :
-                                                                                                              2;
-                targetPlayer = hand.Player.AddOffset(playerOffset);
-            }
-            return targetPlayer;
+            IMeld fourthMeld = hand.Melds[3];
+            return ((hand.MeldCount == 4) &&
+                    ((fourthMeld.State == MeldState.Pon) ||
+                     (fourthMeld.State == MeldState.KanPromoted) ||
+                     (fourthMeld.State == MeldState.KanOpen))) ? fourthMeld.Target : Player.None;
         }
     }
 }

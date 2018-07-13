@@ -4,17 +4,21 @@ using System.Collections.Generic;
 
 namespace MahjongCore.Riichi.Evaluator
 {
-    public class CandidateHand : ICandidateHand
+    internal class CandidateHand : ICandidateHand
     {
-        public int        Dora = 0;
-        public int        UraDora = 0;
-        public int        RedDora = 0;
-        public int        Han = 0;
-        public int        Fu = 0;
-        public int        YakumanCounter = 0; // The yakuman count we have (not counting kazoe yakuman), single, double etc. ex: only Suuankou Tanki Machi will make this 2.
-        public List<Yaku> Yaku = new List<Yaku>();
+        // ICandidateHand
+        public int        Dora    { get; internal set; } = 0;
+        public int        UraDora { get; internal set; } = 0;
+        public int        RedDora { get; internal set; } = 0;
+        public int        Han     { get; internal set; } = 0;
+        public int        Fu      { get; internal set; } = 0;
+        public int        Yakuman { get; internal set; } = 0;
+        public IList<Yaku> Yaku   { get { return YakuRaw; } }
 
-        public virtual CandidateHand Clone()
+        // CandidateHand
+        internal List<Yaku> YakuRaw = new List<Yaku>();
+
+        internal virtual CandidateHand Clone()
         {
             CandidateHand hand = new CandidateHand();
             hand.Dora = Dora;
@@ -22,7 +26,7 @@ namespace MahjongCore.Riichi.Evaluator
             hand.RedDora = RedDora;
             hand.Han = Han;
             hand.Fu = Fu;
-            hand.YakumanCounter = YakumanCounter;
+            hand.YakumanCount = YakumanCount;
             hand.Yaku.AddRange(Yaku);
             return hand;
         }
@@ -54,7 +58,7 @@ namespace MahjongCore.Riichi.Evaluator
          * it adds all permutations to the bucket. Also sets the winning tile flag on the appropriate tile.
          */
         public virtual void ExpandAndInsert(List<CandidateHand> chBucket, Hand hand) { /* Nothing */ }
-        public virtual bool Evaluate(Hand baseHand, bool fRon)                       { return false; }
+        public virtual bool Evaluate(IHand baseHand, bool fRon)                       { return false; }
 
         protected int EvaluateYakuList(Hand hand, bool fRon, Yaku[] yakuList)
         {

@@ -87,9 +87,9 @@ namespace MahjongCore.Riichi.Impl
             state.Lapped              = bool.Parse(lines.Dequeue());
             state.Bonus               = int.Parse(lines.Dequeue());
             state.Pool                = int.Parse(lines.Dequeue());
-            state.FirstDealer         = PlayerExtensionMethods.GetPlayer(lines.Dequeue());
-            state.Current             = PlayerExtensionMethods.GetPlayer(lines.Dequeue());
-            state.PlayerRecentOpenKan = PlayerExtensionMethods.GetPlayer(lines.Dequeue());
+            state.FirstDealer         = PlayerHelpers.GetPlayer(lines.Dequeue());
+            state.Current             = PlayerHelpers.GetPlayer(lines.Dequeue());
+            state.PlayerRecentOpenKan = PlayerHelpers.GetPlayer(lines.Dequeue());
             state.Roll                = int.Parse(lines.Dequeue());
             state.PlayerDeadWallPick  = bool.Parse(lines.Dequeue());
             lines.Dequeue();          // GameTypeFlags
@@ -107,7 +107,7 @@ namespace MahjongCore.Riichi.Impl
                 state.WallRaw[i].Ghost = false;
             }
 
-            foreach (Player p in PlayerExtensionMethods.Players)
+            foreach (Player p in PlayerHelpers.Players)
             {
                 HandImpl hand = state.GetHand(p);
 
@@ -145,7 +145,8 @@ namespace MahjongCore.Riichi.Impl
                 int openMeldCount = int.Parse(lines.Dequeue());
                 for (int i = 0; i < openMeldCount; ++i)
                 {
-                    hand.MeldsRaw[i].Set(MeldStateExtensionMethods.TryGetMeldState(lines.Dequeue()),
+                    hand.MeldsRaw[i].Set(p,
+                                         MeldStateExtensionMethods.TryGetMeldState(lines.Dequeue()),
                                          TileImpl.GetTile(lines.Dequeue()),
                                          TileImpl.GetTile(lines.Dequeue()),
                                          TileImpl.GetTile(lines.Dequeue()),
@@ -156,7 +157,7 @@ namespace MahjongCore.Riichi.Impl
                 int discardCount = int.Parse(lines.Dequeue());
                 for (int i = 0; i < discardCount; ++i)
                 {
-                    hand.DiscardsImpl.Add(TileImpl.GetTile(lines.Dequeue()));
+                    hand.DiscardsRaw.Add(TileImpl.GetTile(lines.Dequeue()));
                 }
             }
 
@@ -248,7 +249,7 @@ namespace MahjongCore.Riichi.Impl
             sb.Append(' ');
 
             // Save player values.
-            foreach (Player p in PlayerExtensionMethods.Players)
+            foreach (Player p in PlayerHelpers.Players)
             {
                 sb.AppendWithSpace("P" + p.GetPlayerValue()); // Name
 
@@ -269,7 +270,7 @@ namespace MahjongCore.Riichi.Impl
                 }
 
                 sb.AppendWithSpace(hand.Discards.Count.ToString());
-                foreach (TileImpl discard in hand.DiscardsImpl) { sb.AppendWithSpace(discard.GetHexString()); }
+                foreach (TileImpl discard in hand.DiscardsRaw) { sb.AppendWithSpace(discard.GetHexString()); }
             }
 
             // Save settings.

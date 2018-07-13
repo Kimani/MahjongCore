@@ -32,7 +32,7 @@ namespace MahjongCore.Riichi.Evaluator
             return new StandardCandidateHand(this);
         }
 
-        public override bool Evaluate(Hand hand, bool fRon)
+        public override bool Evaluate(IHand hand, bool fRon)
         {
             ResetValues();
 
@@ -145,7 +145,7 @@ namespace MahjongCore.Riichi.Evaluator
                     }
                 }
 
-                foreach (Meld meld in hand.OpenMeld)
+                foreach (IMeld meld in hand.OpenMeld)
                 {
                     for (int mTile = meld.State.GetTileCount() - 1; mTile >= 0; --mTile)
                     {

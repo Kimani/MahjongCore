@@ -1,5 +1,7 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
+
 namespace MahjongCore.Riichi.Impl
 {
     internal class MeldImpl : IMeld
@@ -116,19 +118,47 @@ namespace MahjongCore.Riichi.Impl
             TilesRaw[3].Set(meld.Tiles[3]);
         }
 
-        internal void Set(MeldState state, TileImpl tileA, TileImpl tileB, TileImpl tileC, TileImpl tileD)
+        internal void Set(Player owner, MeldState state, TileImpl tileA, TileImpl tileB, TileImpl tileC, TileImpl tileD)
         {
+            Owner = owner;
+            State = state;
 
+            TilesRaw[0].Set(tileA);
+            TilesRaw[1].Set(tileB);
+            TilesRaw[2].Set(tileC);
+            TilesRaw[3].Set(tileD);
+
+            if ((state == MeldState.Chii) || (tileA.Called))
+            {
+                Direction = CalledDirection.Left;
+                Target = owner.GetPrevious();
+            }
+            else if (state != MeldState.None)
+            {
+                Global.Assert(tileA.Type.IsTile() && tileB.Type.IsTile() && tileC.Type.IsTile());
+                Global.Assert((state.GetMeldType() != MeldType.Kan) || tileD.Type.IsTile());
+                
+                if (tileB.Called)
+                {
+                    Direction = CalledDirection.Across;
+                    Target = owner.AddOffset(2);
+                }
+                else
+                {
+                    Direction = CalledDirection.Right;
+                    Target = owner.GetNext();
+                }
+            }
         }
 
         internal void SortMeldTilesForClosedKan()
         {
-            Global.Assert(State == MeldState.KanConcealed);
+            CommonHelpers.Check((State == MeldState.KanConcealed), ("Sorting closed kan tiles for a meld that isn't a closed kan! Found: " + State));
 
             // If there are any red tiles here then make sure they aren't on the edges.
-            if (_Tiles[0].Type.IsRedDora())
+            if (TilesRaw[0].Type.IsRedDora())
             {
-                if (_Tiles[1].Type.IsRedDora())
+                if (TilesRaw[1].Type.IsRedDora())
                 {
                     // Swap the red dora into slot 2. Then we're done. Both 1 and 2 are red.
                     Swap(0, 2);
@@ -143,11 +173,11 @@ namespace MahjongCore.Riichi.Impl
             // Two possibilities now: (Red = R, Normal = O)
             // OR??
             // OO??
-            if (_Tiles[1].Type.IsRedDora())
+            if (TilesRaw[1].Type.IsRedDora())
             {
                 // If 2 and 3 are normal, we're done. If both are red, then we're done. If 2 is red and 3 is normal, we're done.
                 // Only if 2 is normal and 3 is red must we swap.
-                if (!_Tiles[2].Type.IsRedDora() && _Tiles[3].Type.IsRedDora())
+                if (!TilesRaw[2].Type.IsRedDora() && TilesRaw[3].Type.IsRedDora())
                 {
                     Swap(2, 3);
                 }
@@ -155,11 +185,11 @@ namespace MahjongCore.Riichi.Impl
             }
 
             // We're at OO??.
-            if (_Tiles[2].Type.IsRedDora())
+            if (TilesRaw[2].Type.IsRedDora())
             {
                 Swap(1, 2);
                 // We're at OROO or OROR. If 3 is red then swap it into 2 and we're done.
-                if (_Tiles[3].Type.IsRedDora())
+                if (TilesRaw[3].Type.IsRedDora())
                 {
                     Swap(2, 3);
                 }
@@ -167,7 +197,7 @@ namespace MahjongCore.Riichi.Impl
             }
 
             // We're at OOO?. If it's red swap it in.
-            if (_Tiles[3].Type.IsRedDora())
+            if (TilesRaw[3].Type.IsRedDora())
             {
                 Swap(1, 3);
             }
@@ -175,9 +205,9 @@ namespace MahjongCore.Riichi.Impl
 
         private void Swap(int a, int b)
         {
-            TileImpl temp = TilesRaw[a];
-            TilesRaw[a] = TilesRaw[b];
-            TilesRaw[b] = temp;
+            TileType temp = TilesRaw[a].Type;
+            TilesRaw[a].Type = TilesRaw[b].Type;
+            TilesRaw[b].Type = temp;
         }
     }
 }

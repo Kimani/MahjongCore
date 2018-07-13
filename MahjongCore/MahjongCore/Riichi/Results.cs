@@ -19,7 +19,7 @@ namespace MahjongCore.Riichi
         int RedDora      { get; }
         int Han          { get; }
         int Fu           { get; }
-        int YakumanCount { get; }
+        int Yakuman      { get; } // # of yakuman (not including kazoe yakuman): single, double etc. ex: Suuankou Tanki Machi will make this 2.
         IList<Yaku> Yaku { get; }
     }
 

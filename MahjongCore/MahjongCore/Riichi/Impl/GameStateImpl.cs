@@ -205,12 +205,12 @@ namespace MahjongCore.Riichi.Impl
         internal HandImpl      Player3HandRaw           { get; private set; }
         internal HandImpl      Player4HandRaw           { get; private set; }
         internal Stack<Player> DiscardPlayerList        { get; private set; } = new Stack<Player>();
-        internal GameAction    PrevAction               { get; private set; } = GameAction.Nothing;
-        internal GameAction    NextAction               { get; private set; } = GameAction.Nothing;
-        internal Player        PlayerRecentOpenKan      { get; private set; } = Player.None;
+        internal GameAction    PrevAction               { get; set; }         = GameAction.Nothing;
+        internal GameAction    NextAction               { get; set; }         = GameAction.Nothing;
+        internal Player        PlayerRecentOpenKan      { get; set; }         = Player.None;
         internal Player        NextActionPlayer         { get; set; }         = Player.None;
         internal TileType      NextActionTile           { get; set; }         = TileType.None;
-        internal bool          PlayerDeadWallPick       { get; private set; } = false;
+        internal bool          PlayerDeadWallPick       { get; set; }         = false;
         internal bool          FlipDoraAfterNextDiscard { get; set; }         = false;
         internal bool          ChankanFlag              { get; private set; } = false;
         internal bool          KanburiFlag              { get; private set; } = false;
@@ -550,6 +550,11 @@ namespace MahjongCore.Riichi.Impl
             }
             else if (NextAction.IsAgari())
             {
+                HandImpl winner = GetHand(NextActionPlayer);
+                winner.Streak++;
+                winner.Yakitori = false;
+                foreach (Player p in PlayerHelpers.Players) { if (p != NextActionPlayer) { GetHand(p).Streak = 0; } }
+
                 _WinResultCache.Populate(this,
                                          NextActionPlayer,
                                          ((NextAction == GameAction.Ron) ? _NextActionPlayerTarget : Player.Multiple),
@@ -557,37 +562,11 @@ namespace MahjongCore.Riichi.Impl
                                          NextAction.GetWinType(),
                                          bonus,
                                          (consumePool ? ConsumePool() : 0));
-
-                HandImpl winner = GetHand(NextActionPlayer);
-                winner.Streak++;
-                winner.Yakitori = false;
-                foreach (Player p in PlayerHelpers.Players) { if (p != NextActionPlayer) { GetHand(p).Streak = 0; } }
             }
             else if (NextAction == GameAction.Nothing)
             {
-                _WinResultCache.Reset();
-                _WinResultCache.WinningPlayer = Player.Multiple;
-                _WinResultCache.Action = WinType.Draw;
-
-                // Draw game! Determine score outputs. No warame in this situation because the math doesn't work.
-                bool p1Tempai = Player1Hand.Tempai;
-                bool p2Tempai = Player2Hand.Tempai;
-                bool p3Tempai = Player3Hand.Tempai;
-                bool p4Tempai = Player4Hand.Tempai;
-                int tempaiCount = (p1Tempai ? 1 : 0) + (p2Tempai ? 1 : 0) + (p3Tempai ? 1 : 0) + (p4Tempai ? 1 : 0);
-
-                if ((tempaiCount == 1) || (tempaiCount == 2) || (tempaiCount == 3))
-                {
-                    int deltaGainPoints = 3000 / tempaiCount;
-                    int deltaLosePoints = -(3000 / (4 - tempaiCount));
-
-                    _WinResultCache.Player1Delta = (p1Tempai ? deltaGainPoints : deltaLosePoints);
-                    _WinResultCache.Player2Delta = (p2Tempai ? deltaGainPoints : deltaLosePoints);
-                    _WinResultCache.Player3Delta = (p3Tempai ? deltaGainPoints : deltaLosePoints);
-                    _WinResultCache.Player4Delta = (p4Tempai ? deltaGainPoints : deltaLosePoints);
-                }
-
                 foreach (Player p in PlayerHelpers.Players) { GetHand(p).Streak = 0; }
+                _WinResultCache.PopulateDraw(Player1Hand.Tempai, Player2Hand.Tempai, Player3Hand.Tempai, Player4Hand.Tempai);
             }
 
             // Apply deltas to the game state.
