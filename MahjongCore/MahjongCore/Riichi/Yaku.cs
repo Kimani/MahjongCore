@@ -89,40 +89,28 @@ namespace MahjongCore.Riichi
 
     public static class YakuExtensionMethods
     {
-        public static bool IsYakuman(this Yaku s)
-        {
-            return EnumAttributes.GetAttributeValue<IsYakuman, bool>(s);
-        }
+        public static bool       IsYakuman(this Yaku yaku)                                                    { return EnumAttributes.GetAttributeValue<IsYakuman, bool>(yaku); }
+        public static GameOption GetSetting(this Yaku yaku)                                                   { return EnumAttributes.GetAttributeValue<GameOptionSetting, GameOption>(yaku); }
+        public static int        Evaluate(this Yaku yaku, IHand hand, ICandidateHand candidateHand, bool ron) { return hand.Parent.Settings.GetSetting<bool>(yaku.GetSetting()) ? YakuEvaluator.Evaluate(yaku, hand, candidateHand, ron) : 0; }
 
-        public static int GetHan(this Yaku y, bool fClosed, IGameSettings settings)
+        public static int GetHan(this Yaku y, bool closed, IGameSettings settings)
         {
             int han;
             if (y == Yaku.IisouSanjun)
             {
                 var hanOption = settings.GetSetting<IisouSanjunHan>(GameOption.IisouSanjunHanOption);
-                han = fClosed ? EnumAttributes.GetAttributeValue<DefaultClosedHan, int>(hanOption) :
-                                EnumAttributes.GetAttributeValue<DefaultOpenHan, int>(hanOption);
+                han = closed ? EnumAttributes.GetAttributeValue<DefaultClosedHan, int>(hanOption) :
+                               EnumAttributes.GetAttributeValue<DefaultOpenHan, int>(hanOption);
             }
             else
             {
-                han = fClosed ? EnumAttributes.GetAttributeValue<DefaultClosedHan, int>(y) :
-                                EnumAttributes.GetAttributeValue<DefaultOpenHan, int>(y);
+                han = closed ? EnumAttributes.GetAttributeValue<DefaultClosedHan, int>(y) :
+                               EnumAttributes.GetAttributeValue<DefaultOpenHan, int>(y);
 
                 if ((han == -2) && !settings.GetSetting<bool>(GameOption.DoubleYakuman))
                 {
                     han = -1;
                 }
-            }
-            return han;
-        }
-
-        public static int Evaluate(this Yaku y, IGameSettings settings, IHand hand, ICandidateHand cHand, bool fRon)
-        {
-            GameOption option = EnumAttributes.GetAttributeValue<GameOptionSetting, GameOption>(y);
-            int han = 0;
-            if (settings.GetSetting<bool>(option))
-            {
-                han = YakuEvaluator.Evaluate(y, hand, cHand, fRon);
             }
             return han;
         }

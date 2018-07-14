@@ -9,21 +9,21 @@ namespace MahjongCore.Riichi.Evaluator
 {
     public class YakuEvaluator
     {
-        private static Dictionary<Yaku, Func<Hand, CandidateHand, bool, int>> Evaluators = new Dictionary<Yaku, Func<Hand, CandidateHand, bool, int>>();
+        private static Dictionary<Yaku, Func<IHand, ICandidateHand, bool, int>> Evaluators = new Dictionary<Yaku, Func<IHand, ICandidateHand, bool, int>>();
 
-        public static int Evaluate(Yaku y, IHand hand, ICandidateHand cHand, bool fRon)
+        public static int Evaluate(Yaku yaku, IHand hand, ICandidateHand candidateHand, bool ron)
         {
             if (Evaluators.Count == 0)
             {
                 Initialize();
             }
 
-            var evaluator = Evaluators[y];
+            var evaluator = Evaluators[yaku];
             Global.Assert(evaluator != null);
             int han = 0;
             if (evaluator != null)
             {
-                han = evaluator.Invoke(hand, cHand, fRon);
+                han = evaluator.Invoke(hand, candidateHand, ron);
             }
             return han;
         }
@@ -34,14 +34,14 @@ namespace MahjongCore.Riichi.Evaluator
             {
                 // http://stackoverflow.com/questions/2933221/can-you-get-a-funct-or-similar-from-a-methodinfo-object
                 MethodInfo info = typeof(YakuEvaluator).GetMethod("Evaluate_" + y.ToString());
-                var func = Delegate.CreateDelegate(typeof(Func<Hand, CandidateHand, bool, int>), info);
-                Evaluators.Add(y, (Func<Hand, CandidateHand, bool, int>)func);
+                var func = Delegate.CreateDelegate(typeof(Func<IHand, ICandidateHand, bool, int>), info);
+                Evaluators.Add(y, (Func<IHand, ICandidateHand, bool, int>)func);
             }
         }
 
-        public static int Evaluate_Riichi(Hand hand, CandidateHand cHand, bool fRon)
+        public static int Evaluate_Riichi(IHand hand, ICandidateHand candidateHand, bool ron)
         {
-            return (hand.IsInReach() && !hand.IsInDoubleReach()) ? Yaku.Riichi.GetHan(true, hand.Parent.Settings) : 0;
+            return (hand.Reach.IsReach() && !hand.IsInDoubleReach()) ? Yaku.Riichi.GetHan(true, hand.Parent.Settings) : 0;
         }
 
         public static int Evaluate_DoubleRiichi(Hand hand, CandidateHand cHand, bool fRon)
@@ -51,14 +51,12 @@ namespace MahjongCore.Riichi.Evaluator
 
         public static int Evaluate_OpenRiichi(Hand hand, CandidateHand cHand, bool fRon)
         {
-            List<ExtendedTile> discards = hand.Discards;
-
             // Don't look at the first discard - that's for double riichi to do.
             int han = hand.IsInOpenReach() ? Yaku.OpenRiichi.GetHan(true, hand.Parent.Settings) : 0;
 
             // If we're in open reach... if we're also in double reach, give the normal reach value to the double
             // reach. That's complicated but we'll just minus one. That'll be fine for pretty much every scenario.
-            // We cooould just return the value of Yaku.Riichi.GetHan, but that might mess things up.... hrm.
+            // We could just return the value of Yaku.Riichi.GetHan, but that might mess things up.... hrm.
             if ((han > 0) && hand.IsInDoubleReach())
             {
                 --han;

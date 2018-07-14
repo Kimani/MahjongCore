@@ -1,24 +1,25 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
 using System.Collections.Generic;
 
 namespace MahjongCore.Riichi.Evaluator
 {
-    public class FourteenHand : CandidateHand
+    internal class FourteenHand : CandidateHand
     {
-        public override bool Evaluate(Hand baseHand, bool fRon)
+        protected override void ExpandAndInsert(List<CandidateHand> bucket, IHand hand) { bucket.Add(this); }
+
+        protected override bool Evaluate(IHand hand, bool ron)
         {
-            Global.Assert(!fRon);
+            CommonHelpers.Check(!ron, "ShiisuuPuuta expected to be tsumo, found ron!");
 
             ResetValues();
-            Han = -1;
+            Han = Riichi.Yaku.ShiisuuPuuta.GetHan(true, hand.Parent.Settings);
             Yaku.Add(Riichi.Yaku.ShiisuuPuuta);
-            return true;
-        }
 
-        public override void ExpandAndInsert(List<CandidateHand> chBucket, Hand baseHand)
-        {
-            chBucket.Add(this);
+            AdjustForPaaRenchan(hand, ron);
+            AdjustForDoubleYakumanSetting(hand);
+            return true;
         }
     }
 }

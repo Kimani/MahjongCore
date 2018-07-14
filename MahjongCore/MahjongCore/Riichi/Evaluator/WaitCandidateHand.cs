@@ -4,19 +4,17 @@ using System.Collections.Generic;
 
 namespace MahjongCore.Riichi.Evaluator
 {
-    /**
-     * This class represents a hand that could be made, with one wildcard having been used. This can be used to determine the waits of our current hand.
-     */
-    public class WaitCandidateHand : CandidateHand
+    // This class represents a hand that could be made, with one wildcard having been used. This can be used to determine the waits of our current hand.
+    internal class WaitCandidateHand : CandidateHand
     {
         // Members
-        public bool Wildcard;                  // If true, we still have a wildcard we can use.
-        public TileType WaitA = TileType.None; // The tile that this candidate hand has shown us to be waiting on.
-        public TileType WaitB = TileType.None; // The other tile this candidate hand has shown us to be waiting on. Can happen if we have, say, a 2-3 and we use the wildcard on that meld.
-        public int MeldCount;                  // Amount of melds that this candidate hand has already accounted for. The pair is implicitly counted for. Tiles[] should then be of length 14-meldCount*3-2 (the -2 is for the pair)
-        public TileType[] Tiles;               // List of tiles that have not been assigned yet.
-        public List<TileType> ThreeOfAKindTiles = new List<TileType>();
-        public List<TileType> ThreeInARowTiles  = new List<TileType>();
+        private bool           Wildcard;              // If true, we still have a wildcard we can use.
+        private TileType       WaitA = TileType.None; // The tile that this candidate hand has shown us to be waiting on.
+        private TileType       WaitB = TileType.None; // The other tile this candidate hand has shown us to be waiting on. Can happen if we have, say, a 2-3 and we use the wildcard on that meld.
+        private int            MeldCount;             // Amount of melds that this candidate hand has already accounted for. The pair is implicitly counted for. Tiles[] should then be of length 14-meldCount*3-2 (the -2 is for the pair)
+        private TileType[]     Tiles;                  // List of tiles that have not been assigned yet.
+        private List<TileType> ThreeOfAKindTiles = new List<TileType>();
+        private List<TileType> ThreeInARowTiles  = new List<TileType>();
 
         public WaitCandidateHand(TileType[] tiles, int meldCount, bool wildcard)
         {
