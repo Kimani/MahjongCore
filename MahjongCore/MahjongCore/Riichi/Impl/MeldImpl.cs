@@ -1,6 +1,7 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
 using MahjongCore.Common;
+using System;
 
 namespace MahjongCore.Riichi.Impl
 {
@@ -54,6 +55,20 @@ namespace MahjongCore.Riichi.Impl
             tileD.Location = Location.Call;
             tileD.Ancillary = Owner;
             tileD.Slot = kanTileSlot;
+        }
+
+        public bool Iterate(Func<TileType, bool> callback, bool noneResult = true)
+        {
+            bool result = noneResult;
+            for (int i = 0; i < State.GetTileCount(); ++i)
+            {
+                if (!callback(TilesRaw[i].Type))
+                {
+                    result = false;
+                    break;
+                }
+            }
+            return result;
         }
 
         // ICloneable

@@ -110,7 +110,7 @@ namespace MahjongCore.Riichi.Evaluator
             return true;
         }
 
-        protected override void ExpandAndInsert(List<CandidateHand> chBucket, IHand hand)
+        internal override void ExpandAndInsert(List<CandidateHand> chBucket, IHand hand)
         {
             ITile winningTile = hand.ActiveHand[TileHelpers.HAND_SIZE - 1];
             Global.Assert(winningTile.Type.IsTile());
@@ -124,6 +124,15 @@ namespace MahjongCore.Riichi.Evaluator
                 }
             }
             chBucket.Add(this);
+        }
+
+        internal bool IteratePairs(Func<TileType, bool> callback)
+        {
+            foreach (TileImpl pairTile in PairTiles)
+            {
+                if (!callback(pairTile.Type)) { return false; }
+            }
+            return true;
         }
     }
 }

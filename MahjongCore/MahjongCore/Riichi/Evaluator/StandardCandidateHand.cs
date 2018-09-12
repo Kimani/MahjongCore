@@ -26,6 +26,16 @@ namespace MahjongCore.Riichi.Evaluator
             }
         }
 
+        internal bool IterateMelds(Func<IMeld, bool> callback)
+        {
+            foreach (MeldImpl meld in Melds)
+            {
+                if (!meld.State.IsCalled()) { break; }
+                if (!callback(meld))        { return false; }
+            }
+            return true;
+        }
+
         internal override CandidateHand Clone()
         {
             return new StandardCandidateHand(this);
@@ -312,7 +322,7 @@ namespace MahjongCore.Riichi.Evaluator
          * it adds all permutations to the bucket. These permutations come from different possibilities of what was the winning tile.
          * Also sets the winning tile flag on the different tiles for the different permutations. (There is at least 1 permutation...)
          */
-        public override void ExpandAndInsert(List<CandidateHand> chBucket, IHand hand)
+        internal override void ExpandAndInsert(List<CandidateHand> chBucket, IHand hand)
         {
             // We'll do this the inefficient way that ends up wasting memory. We shall just
             // clone this guy before we insert for all the instances of the winning tile we find.

@@ -2,6 +2,7 @@
 
 using MahjongCore.Common;
 using MahjongCore.Riichi.Helpers;
+using MahjongCore.Riichi.Impl;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,51 +36,32 @@ namespace MahjongCore.Riichi.Evaluator
          */
         public static List<TileType> GetWaits(IHand hand, int ignoreTileSlot, TileType[] approvedReachKanTiles)
         {
-            // Get the sorted waiting hand without ignoreSlot.
-            int activeTileCount = hand.ActiveTileCount;
-            TileType[] activeHand = hand.ActiveHand;
-            TileType[] sublist;
-            if (ignoreTileSlot == -1)
-            {
-                sublist = new TileType[13];
-                for (int i = 0; i < 13; ++i)
-                {
-                    sublist[i] = activeHand[i];
-                }
-            }
-            else
-            {
-                Global.Assert(hand.HasFullHand, "We don't have a full hand?? ActiveTileCount: " + activeTileCount);
-                sublist = new TileType[activeTileCount - 1];
-                {
-                    int target = 0;
-                    for (int i = 0; i < activeTileCount; ++i)
-                    {
-                        if (i == ignoreTileSlot)
-                        {
-                            continue;
-                        }
-                        sublist[target++] = activeHand[i];
-                    }
-                    Array.Sort(sublist);
-                }
-            }
+            CommonHelpers.Check(((ignoreTileSlot >= -1) && (ignoreTileSlot < hand.ActiveTileCount)), ("Ignore slot needs to be valid index OR -1. ignoreTileSlot: " + ignoreTileSlot + " ActiveTileCount: " + hand.ActiveTileCount));
+            CommonHelpers.Check(((ignoreTileSlot == -1) || hand.HasFullHand), ("Expected full hand when ignoreTileSlot is not -1. ActiveTileCount: " + hand.ActiveTileCount));
 
-            GameState state = hand.Parent;
-            bool anyCalls = (state.Player1Hand.GetCalledMeldCount() > 0) ||
-                            (state.Player2Hand.GetCalledMeldCount() > 0) ||
-                            (state.Player3Hand.GetCalledMeldCount() > 0) ||
-                            (state.Player4Hand.GetCalledMeldCount() > 0);
+            TileType[] sublist = new TileType[(ignoreTileSlot == -1) ? 13 : (hand.ActiveTileCount - 1)];
+            int target = 0;
+            for (int i = 0; i < hand.ActiveTileCount; ++i)
+            {
+                if (i != ignoreTileSlot) { sublist[target++] = hand.ActiveHand[i].Type; }
+            }
+            Array.Sort(sublist);
 
-            // Get the waits and set the overrideNoReachFlag.
+            IGameState state = hand.Parent;
+            bool anyCalls = (state.Player1Hand.MeldCount > 0) || (state.Player2Hand.MeldCount > 0) ||
+                            (state.Player3Hand.MeldCount > 0) || (state.Player4Hand.MeldCount > 0);
             bool overrideNoReachFlag;
-            List<TileType> waits = GetWaits(sublist, approvedReachKanTiles, state.GetDiscards(hand.Player), anyCalls, out overrideNoReachFlag);
-            hand.OverrideNoReachFlag = overrideNoReachFlag;
+            List<TileType> waits = GetWaits(sublist, approvedReachKanTiles, hand.Discards, anyCalls, out overrideNoReachFlag);
+            HandImpl handImpl = hand as HandImpl;
+            if (handImpl != null)
+            {
+                handImpl.OverrideNoReachFlag = overrideNoReachFlag;
+            }
             return waits;
         }
 
         private static TileType[] g_stashedSortedWaitingHand;
-        public static List<TileType> GetWaits(TileType[] sortedWaitingHand, TileType[] approvedReachKanTiles, List<ExtendedTile> discards, bool anyCalls, out bool overrideNoReachFlag)
+        public static List<TileType> GetWaits(TileType[] sortedWaitingHand, TileType[] approvedReachKanTiles, IList<ITile> discards, bool anyCalls, out bool overrideNoReachFlag)
         {
             overrideNoReachFlag = false;
 
@@ -428,16 +410,12 @@ namespace MahjongCore.Riichi.Evaluator
             return waitList;
         }
 
-        /**
-         * Returns a complete hand regardless of ability to win on it or not. Just return the first result.
-         */
-        public static CandidateHand GetCompleteHand(Hand hand)
+        // Returns a complete hand regardless of ability to win on it or not. Just return the first result.
+        internal static CandidateHand GetCompleteHand(IHand hand)
         {
-            Global.Assert(hand.IsFullHand());
-
-            List<CandidateHand> chBucket = new List<CandidateHand>();
-            GetWinningHandCandidates(hand, chBucket, false);
-            return (chBucket.Count == 0) ? null : chBucket[0];
+            List<CandidateHand> bucket = new List<CandidateHand>();
+            GetWinningHandCandidates(hand, bucket, false);
+            return (bucket.Count == 0) ? null : bucket[0];
         }
 
         /**
@@ -447,10 +425,10 @@ namespace MahjongCore.Riichi.Evaluator
          */
         public static ICandidateHand GetWinningHand(IHand hand, bool fRon, bool fKokushiOnly)
         {
-            Global.Assert(hand.IsFullHand());
+            Global.Assert(hand.HasFullHand);
 
             // Make sure we're not in furiten.
-            if (fRon && hand.IsFuriten())
+            if (fRon && hand.Furiten)
             {
                 return null;
             }
@@ -644,7 +622,7 @@ namespace MahjongCore.Riichi.Evaluator
             return sb.ToString();
         }
 
-        private static void GetWinningHandCandidates_PairSubhand(Hand hand, List<CandidateHand> chBucket, TileType pairTile, TileType[] subHand)
+        private static void GetWinningHandCandidates_PairSubhand(IHand hand, List<CandidateHand> chBucket, TileType pairTile, TileType[] subHand)
         {
             // Check if the numbers for each suit are a multiple of three.
             bool fPass = true;
@@ -681,9 +659,10 @@ namespace MahjongCore.Riichi.Evaluator
          * We'll just return an array of all the candidate hands, but yeah.
          * Parameter is a bucket that will have all the candidate hands put into it.
          */
-        private static void GetWinningHandCandidates(Hand hand, List<CandidateHand> chBucket, bool fKokushiOnly)
+        private static void GetWinningHandCandidates(IHand hand, List<CandidateHand> chBucket, bool fKokushiOnly)
         {
-            Global.Assert(hand.IsFullHand());
+            CommonHelpers.Check(hand.HasFullHand, "Expected full hand.");
+            Global.Assert(hand.HasFullHand);
 
             // Get a copy of the active hand and sort it.
             int activeTileCount = hand.ActiveTileCount;
@@ -717,7 +696,7 @@ namespace MahjongCore.Riichi.Evaluator
 
             // First, determine if this hand can be a seven pairs hand.
             // If so, add a candidate hand for the seven pairs case.
-            if (!fKokushiOnly && (hand.GetCalledMeldCount() == 0))
+            if (!fKokushiOnly && (hand.MeldCount == 0))
             {
                 // Go through and make sure we have a bunch of pairs, and that we don't have the same pair twice.
                 bool validHand = true;
@@ -740,7 +719,7 @@ namespace MahjongCore.Riichi.Evaluator
                     SevenPairsCandidateHand chHand = new SevenPairsCandidateHand();
                     for (int i = 0; i < 7; ++i)
                     {
-                        chHand.PairTiles[i].Tile = handCopy[i * 2];
+                        chHand.PairTiles[i].Type = handCopy[i * 2];
                     }
                     chHand.ExpandAndInsert(chBucket, hand);
                 }
@@ -764,7 +743,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
         }
 
-        private static void GetWinningHandCandidates_ProcessCandidate(Hand hand, List<CandidateHand> chBucket, StandardCandidateHand chHand, TileType[] subHand, int startMeld)
+        private static void GetWinningHandCandidates_ProcessCandidate(IHand hand, List<CandidateHand> chBucket, StandardCandidateHand chHand, TileType[] subHand, int startMeld)
         {
             int tileCount = hand.ActiveTileCount - 2; // Discluding the pair.
             int meld = startMeld;
@@ -786,9 +765,9 @@ namespace MahjongCore.Riichi.Evaluator
                 {
                     StandardCandidateHand chHandDup = (StandardCandidateHand)chHand.Clone();
                     TileType[] dupHand = (TileType[])subHand.Clone();
-                    chHandDup.Melds[meld].Tiles[0].Tile = dupHand[slot];
-                    chHandDup.Melds[meld].Tiles[1].Tile = dupHand[slot];
-                    chHandDup.Melds[meld].Tiles[2].Tile = dupHand[slot];
+                    chHandDup.Melds[meld].TilesRaw[0].Type = dupHand[slot];
+                    chHandDup.Melds[meld].TilesRaw[1].Type = dupHand[slot];
+                    chHandDup.Melds[meld].TilesRaw[2].Type = dupHand[slot];
                     chHandDup.Melds[meld].State = MeldState.Pon;
                     dupHand[slot]     = TileType.None;
                     dupHand[slot + 1] = TileType.None;
@@ -797,18 +776,18 @@ namespace MahjongCore.Riichi.Evaluator
                 }
 
                 // Try to find a sequence. First we'll use the tile at "slot". Then we need to find the next non-empty tile, and check if it's the next one.
-                chHand.Melds[meld].Tiles[0].Tile = subHand[slot];
+                chHand.Melds[meld].TilesRaw[0].Type = subHand[slot];
                 subHand[slot] = TileType.None;
                 slot++;
 
                 // Get the next tile.
-                while ((slot < subHand.Length) && ((subHand[slot] == TileType.None) || subHand[slot].IsEqual(chHand.Melds[meld].Tiles[0].Tile)))
+                while ((slot < subHand.Length) && ((subHand[slot] == TileType.None) || subHand[slot].IsEqual(chHand.Melds[meld].TilesRaw[0].Type)))
                 {
                     ++slot;
                 }
-                if ((slot < subHand.Length) && chHand.Melds[meld].Tiles[0].Tile.IsNext(subHand[slot]))
+                if ((slot < subHand.Length) && chHand.Melds[meld].TilesRaw[0].Type.IsNext(subHand[slot]))
                 {
-                    chHand.Melds[meld].Tiles[1].Tile = subHand[slot];
+                    chHand.Melds[meld].TilesRaw[1].Type = subHand[slot];
                     subHand[slot] = TileType.None;
                     slot++;
                 }
@@ -820,13 +799,13 @@ namespace MahjongCore.Riichi.Evaluator
                 }
 
                 // Get the last tile.
-                while ((slot < subHand.Length) && ((subHand[slot] == TileType.None) || subHand[slot].IsEqual(chHand.Melds[meld].Tiles[1].Tile)))
+                while ((slot < subHand.Length) && ((subHand[slot] == TileType.None) || subHand[slot].IsEqual(chHand.Melds[meld].Tiles[1].Type)))
                 {
                     ++slot;
                 }
-                if ((slot < subHand.Length) && chHand.Melds[meld].Tiles[1].Tile.IsNext(subHand[slot]))
+                if ((slot < subHand.Length) && chHand.Melds[meld].Tiles[1].Type.IsNext(subHand[slot]))
                 {
-                    chHand.Melds[meld].Tiles[2].Tile = subHand[slot];
+                    chHand.Melds[meld].TilesRaw[2].Type = subHand[slot];
                     subHand[slot] = TileType.None;
                 }
                 else

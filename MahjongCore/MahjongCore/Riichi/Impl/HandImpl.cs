@@ -41,6 +41,22 @@ namespace MahjongCore.Riichi.Impl
 
         public IList<TileType> GetWaitsForDiscard(int slot) { return _ActiveTileWaits[slot]; }
 
+        public bool IterateActiveHand(Func<TileType, bool> callback)
+        {
+            for (int i = 0; i < ActiveTileCount; ++i) { if (!callback(ActiveHandRaw[i].Type)) { return false; } }
+            return true;
+        }
+
+        public bool IterateMelds(Func<IMeld, bool> callback)
+        {
+            foreach (IMeld meld in Melds)
+            {
+                if (!meld.State.IsCalled()) { break; }
+                if (!callback(meld))        { return false; }
+            }
+            return true;
+        }
+
         public bool WouldMakeFuriten(int slot)
         {
             // Returns true if discarding the given tile would place the hand into furiten.
@@ -807,7 +823,7 @@ namespace MahjongCore.Riichi.Impl
             {
                 // Check all of our wait tiles to check for atozuke. Make sure we have yaku.
                 AddTemporaryTile(waitTile);
-                CandidateHand winningHandCheck = HandEvaluator.GetWinningHand(this, true, (_Parent.PrevAction == GameAction.ClosedKan));
+                ICandidateHand winningHandCheck = HandEvaluator.GetWinningHand(this, true, (_Parent.PrevAction == GameAction.ClosedKan));
                 RemoveTemporaryTile();
 
                 if (winningHandCheck == null)
@@ -834,7 +850,7 @@ namespace MahjongCore.Riichi.Impl
         {
             Global.Assert(_Parent.TilesRemaining == 0);
 
-            int han = Yaku.NagashiMangan.Evaluate(Parent.Settings, this, null, false);
+            int han = Yaku.NagashiMangan.Evaluate(this, null, false);
             if (han != 0)
             {
                 var winningHand = new CandidateHand();
