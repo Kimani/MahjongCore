@@ -445,7 +445,6 @@ namespace MahjongCore.Riichi.Evaluator
             // Note that at this step, we aren't taking into account riichi sticks or homba in our score evaluation.
             CandidateHand bestHand = null;
             int bestScore = 0;
-            TsumoScore ts = fRon ? null : new TsumoScore();
 
             foreach (CandidateHand cHand in chBucket)
             {
@@ -459,12 +458,14 @@ namespace MahjongCore.Riichi.Evaluator
                 bool limitDummy;
                 if (fRon)
                 {
-                    score = RiichiScoring.GetScoreRon(hand.Parent.Settings, cHand.Han, cHand.Fu, hand.IsDealer(), out limitDummy);
+                    score = RiichiScoring.GetScoreRon(hand.Parent.Settings, cHand.Han, cHand.Fu, hand.Dealer, out limitDummy);
                 }
                 else
                 {
-                    RiichiScoring.GetScoreTsumo(hand.Parent.Settings, cHand.Han, cHand.Fu, hand.IsDealer(), ts, out limitDummy);
-                    score = ts.ScoreHi + (ts.ScoreLo * 2);
+                    int scoreHi;
+                    int scoreLo;
+                    RiichiScoring.GetScoreTsumo(hand.Parent.Settings, cHand.Han, cHand.Fu, hand.Dealer, out limitDummy, out scoreHi, out scoreLo);
+                    score = scoreHi + (scoreLo * 2);
                 }
 
                 if (score > bestScore)
@@ -666,11 +667,11 @@ namespace MahjongCore.Riichi.Evaluator
 
             // Get a copy of the active hand and sort it.
             int activeTileCount = hand.ActiveTileCount;
-            TileType[] sourceActiveHand = hand.ActiveHand;
+            ITile[] sourceActiveHand = hand.ActiveHand;
             TileType[] handCopy = new TileType[activeTileCount];
             for (int i = activeTileCount - 1; i >= 0; --i)
             {
-                handCopy[i] = sourceActiveHand[i];
+                handCopy[i] = sourceActiveHand[i].Type;
             }
             Array.Sort(handCopy);
 

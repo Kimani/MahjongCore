@@ -7,9 +7,9 @@ namespace MahjongCore.Riichi.Evaluator
 {
     internal class FourteenHand : CandidateHand
     {
-        protected override void ExpandAndInsert(List<CandidateHand> bucket, IHand hand) { bucket.Add(this); }
+        internal override void ExpandAndInsert(List<CandidateHand> bucket, IHand hand) { bucket.Add(this); }
 
-        protected override bool Evaluate(IHand hand, bool ron)
+        internal override bool Evaluate(IHand hand, bool ron)
         {
             CommonHelpers.Check(!ron, "ShiisuuPuuta expected to be tsumo, found ron!");
 
@@ -19,6 +19,7 @@ namespace MahjongCore.Riichi.Evaluator
 
             AdjustForPaaRenchan(hand, ron);
             AdjustForDoubleYakumanSetting(hand);
+            UpdateYakumanCount();
             return true;
         }
     }

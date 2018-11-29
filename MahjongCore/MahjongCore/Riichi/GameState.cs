@@ -84,7 +84,6 @@ namespace MahjongCore.Riichi
                                                                  public abstract TileSource       Source  { get; internal set; } }
     public abstract class HandDiscardArgs          : EventArgs { public abstract ITile            Tile    { get; internal set; } }
     public abstract class HandReachArgs            : EventArgs { public abstract ITile            Tile    { get; internal set; } }
-    public abstract class HandKanArgs              : EventArgs { public abstract IMeld            Meld    { get; internal set; } }
     public abstract class HandCallArgs             : EventArgs { public abstract IMeld            Meld    { get; internal set; } }
     public abstract class WallTilesPicked          : EventArgs { public abstract ITile[]          Tiles   { get; internal set; } }
     public abstract class DiscardRequestedArgs     : EventArgs { public abstract IDiscardInfo     Info    { get; internal set; } }
@@ -112,7 +111,6 @@ namespace MahjongCore.Riichi
         event EventHandler<HandTileAddedArgs>        HandTileAdded;
         event EventHandler<HandDiscardArgs>          HandDiscard;
         event EventHandler<HandReachArgs>            HandReach;
-        event EventHandler<HandKanArgs>              HandKan;
         event EventHandler<HandCallArgs>             HandCall;
         event EventHandler<HandRonArgs>              HandRon;
         event EventHandler<HandTsumoArgs>            HandTsumo;

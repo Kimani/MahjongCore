@@ -1,5 +1,6 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using System;
 using System.Collections.Generic;
 
 namespace MahjongCore.Riichi.Impl.AI
@@ -9,20 +10,19 @@ namespace MahjongCore.Riichi.Impl.AI
         DiscardDecisionImpl stashedDecision = new DiscardDecisionImpl();
         PostDiscardDecisionImpl stashedPostDecision = new PostDiscardDecisionImpl();
 
-        public void Initialize(Player player) { }
-        public void StartRound(Round round)   { }
+        public void RoundStarted(Round round) { }
 
         public IDiscardDecision GetDiscardDecision(IDiscardInfo info)
         {
+            stashedDecision.Reset();
+
             if (info.CanTsumo)
             {
                 stashedDecision.Decision = DiscardDecisionType.Tsumo;
-                stashedDecision.Tile = TileType.None;
             }
-            else if (info.CanKyuushuuKyuuhai)
+            else if (info.Hand.CouldKyuushuuKyuuhai)
             {
                 stashedDecision.Decision = DiscardDecisionType.AbortiveDraw;
-                stashedDecision.Tile = TileType.None;
             }
             else if (info.CanReach)
             {
@@ -41,64 +41,58 @@ namespace MahjongCore.Riichi.Impl.AI
 
                 stashedDecision.Decision = DiscardDecisionType.RiichiDiscard;
                 stashedDecision.Tile = activeHand[riichiSlot];
-                stashedDecision.Slot = riichiSlot;
             }
             else if (info.ClosedKanTiles.Count > 0)
             {
                 stashedDecision.Decision = DiscardDecisionType.ClosedKan;
-                stashedDecision.Tile = info.ClosedKanTiles[0];
-                stashedDecision.Slot = info.Hand.GetTileSlot(stashedDecision.Tile, false);
+                stashedDecision.Tile = info.Hand.ActiveHand[info.Hand.GetTileSlot(info.ClosedKanTiles[0], false)];
             }
             else if (info.PromotedKanTiles.Count > 0)
             {
                 stashedDecision.Decision = DiscardDecisionType.PromotedKan;
-                stashedDecision.Tile = info.PromotedKanTiles[0];
-                stashedDecision.Slot = info.Hand.GetTileSlot(stashedDecision.Tile, false);
+                stashedDecision.Tile = info.Hand.ActiveHand[info.Hand.GetTileSlot(info.PromotedKanTiles[0], false)];
             }
             else
             {
                 stashedDecision.Decision = DiscardDecisionType.Discard;
                 do
                 {
-                    stashedDecision.Slot = Global.RandomRange(0, info.Hand.ActiveTileCount);
-                    stashedDecision.Tile = info.Hand.ActiveHand[stashedDecision.Slot];
+                    stashedDecision.Tile = info.Hand.ActiveHand[Global.RandomRange(0, info.Hand.ActiveTileCount)];
                 }
-                while (info.RestrictedTiles.Contains(stashedDecision.Tile));
+                while (info.RestrictedTiles.Contains(stashedDecision.Tile.Type));
             }
             return stashedDecision;
         }
 
         public IPostDiscardDecision GetPostDiscardDecision(IPostDiscardInfo info)
         {
-            PostDiscardDecision decision = new PostDiscardDecision();
+            stashedPostDecision.Reset();
 
             // Ron if the option is available.
             if (info.CanRon)
             {
-                decision.Decision = PostDiscardDecisionType.Ron;
-                decision.Call = null;
+                stashedPostDecision.Decision = PostDiscardDecisionType.Ron;
             }
             else if (info.Calls.Count > 0)
             {
                 // Make a call if available. Prioritize open kan.
-                decision.Decision = PostDiscardDecisionType.Call;
-                decision.Call = info.Calls[0];
+                stashedPostDecision.Decision = PostDiscardDecisionType.Call;
+                stashedPostDecision.Call = info.Calls[0];
                 for (int i = 1; i < info.Calls.Count; ++i)
                 {
                     IMeld call = info.Calls[i];
                     if (call.State == MeldState.KanOpen)
                     {
-                        decision.Call = call;
+                        stashedPostDecision.Call = call;
                         break;
                     }
                 }
             }
             else
             {
-                decision.Decision = PostDiscardDecisionType.Nothing;
-                decision.Call = null;
+                stashedPostDecision.Decision = PostDiscardDecisionType.Nothing;
             }
-            return decision;
+            return stashedPostDecision;
         }
     }
 }

@@ -1,7 +1,5 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using MahjongCore.Common.Attributes;
-using MahjongCore.Riichi.Attributes;
 using System;
 
 namespace MahjongCore.Riichi.Evaluator

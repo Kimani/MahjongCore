@@ -87,7 +87,7 @@ namespace MahjongCore.Riichi.Evaluator
          * it adds all permutations to the bucket. Also sets the winning tile flag on the appropriate tile.
          */
         internal virtual void ExpandAndInsert(List<CandidateHand> bucket, IHand hand) { }
-        protected virtual bool Evaluate(IHand baseHand, bool ron)                     { return false; }
+        internal virtual bool Evaluate(IHand baseHand, bool ron)                      { return false; }
 
         protected int EvaluateYakuList(IHand hand, bool ron, Yaku[] yakuList)
         {
@@ -97,6 +97,18 @@ namespace MahjongCore.Riichi.Evaluator
                 han += EvaluateYaku(y.Evaluate(hand, this, ron), y);
             }
             return han;
+        }
+
+        protected void UpdateYakumanCount()
+        {
+            Yakuman = 0;
+            foreach (Yaku y in YakuRaw)
+            {
+                if (y.IsYakuman())
+                {
+                    Yakuman++;
+                }
+            }
         }
 
         private int EvaluateYaku(int HanDifference, Yaku yaku)

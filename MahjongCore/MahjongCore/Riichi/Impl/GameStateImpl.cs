@@ -79,7 +79,6 @@ namespace MahjongCore.Riichi.Impl
         public event EventHandler<HandTileAddedArgs>        HandTileAdded;
         public event EventHandler<HandDiscardArgs>          HandDiscard;
         public event EventHandler<HandReachArgs>            HandReach;
-        public event EventHandler<HandKanArgs>              HandKan;
         public event EventHandler<HandCallArgs>             HandCall;
         public event EventHandler<HandRonArgs>              HandRon;
         public event EventHandler<HandTsumoArgs>            HandTsumo;
@@ -89,7 +88,11 @@ namespace MahjongCore.Riichi.Impl
         public event EventHandler<ExhaustiveDrawArgs>       ExhaustiveDraw;
         public event EventHandler<AbortiveDrawArgs>         AbortiveDraw;
         public event EventHandler<GameCompleteArgs>         GameComplete;
+
+#pragma warning disable 67
         public event EventHandler<PlayerChomboArgs>         Chombo;
+#pragma warning restore 67
+
         public event EventHandler<PostDiscardRequstedArgs>  PostKanRequested;
         public event EventHandler<WallTilesPicked>          WallTilesPicked;
         public event EventHandler                           DiceRolled;
@@ -270,7 +273,7 @@ namespace MahjongCore.Riichi.Impl
         public void  ExecutePostBreak_PreTilePick14()                      { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 1)); }
         public void  ExecutePostBreak_PreTilePick15()                      { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 1)); }
         public void  ExecutePostBreak_PreTilePick16()                      { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 1)); }
-        public void  ExecutePostBreak_PrePickTile()                        { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 1)); } // Sink.PerformSave();
+        public void  ExecutePostBreak_PrePickTile()                        { HandPickingTile?.Invoke(this, new HandPickingTileArgsImpl(Current, 1)); }
         public void  ExecutePostBreak_TilePick1()                          { PickIntoPlayerHand(Current, 4); }
         public void  ExecutePostBreak_TilePick2()                          { PickIntoPlayerHand(Current, 4); }
         public void  ExecutePostBreak_TilePick3()                          { PickIntoPlayerHand(Current, 4); }
@@ -699,7 +702,7 @@ namespace MahjongCore.Riichi.Impl
                 // Reset ippatsu flag after kan, unless RinshanIppatsu is active and it was a closed kan for the current player.
                 foreach (Player p in PlayerHelpers.Players)
                 {
-                    GetHand(p).CouldIppatsu &= (Current == p) && (NextAction == GameAction.ClosedKan) && Settings.GetSetting<bool>(GameOption.RinshanIppatsu);
+                    GetHand(p).CouldIppatsu &= ((Current == p) && (NextAction == GameAction.ClosedKan) && Settings.GetSetting<bool>(GameOption.RinshanIppatsu));
                 }
 
                 // We will use this to see if we can ron on the chankan in the case of a promoted can or ron
@@ -1064,7 +1067,14 @@ namespace MahjongCore.Riichi.Impl
                     }
                     else
                     {
-                        PostDiscardRequested?.Invoke(this, new PostDiscardRequstedArgsImpl(_PostDiscardInfoCache));
+                        if ((PrevAction == GameAction.PromotedKan) || (PrevAction == GameAction.ClosedKan))
+                        {
+                            PostKanRequested?.Invoke(this, new PostDiscardRequstedArgsImpl(_PostDiscardInfoCache));
+                        }
+                        else
+                        {
+                            PostDiscardRequested?.Invoke(this, new PostDiscardRequstedArgsImpl(_PostDiscardInfoCache));
+                        }
                     }
                 }
                 else
@@ -1243,16 +1253,18 @@ namespace MahjongCore.Riichi.Impl
 
         private void PickIntoPlayerHand(Player p, int count)
         {
+            CommonHelpers.Check((count == 4 || count == 1), ("Expected 1 or 4 tiles, found: " + count));
+
             bool flipDora = false;
-            ITile[] tiles;
+            ITile[] tiles = new ITile[count];
+            ITile[] wallTiles = new ITile[count];
             TileSource source = TileSource.Wall;
 
             if (count == 4)
             {
-                tiles = new ITile[4];
                 for (int i = 0; i < 4; ++i)
                 {
-                    tiles[i] = PickIntoPlayerHand(p, TileSource.Wall);
+                    tiles[i] = PickIntoPlayerHand(p, TileSource.Wall, out wallTiles[i]);
                 }
             }
             else
@@ -1276,14 +1288,15 @@ namespace MahjongCore.Riichi.Impl
 
                 // Update PrevAction and determine our source.
                 PrevAction = (source == TileSource.DeadWall) ? GameAction.ReplacementTilePick : GameAction.PickedFromWall;
-                tiles = new ITile[] { PickIntoPlayerHand(p, source) };
+                tiles[0] = PickIntoPlayerHand(p, source, out wallTiles[0]);
             }
 
+            WallTilesPicked?.Invoke(this, new WallTilesPickedImpl(wallTiles));
             HandTileAdded?.Invoke(this, new HandTileAddedArgsImpl(tiles, source));
             if (flipDora) { FlipDora(); }
         }
 
-        private ITile PickIntoPlayerHand(Player p, TileSource source)
+        private ITile PickIntoPlayerHand(Player p, TileSource source, out ITile wallTile)
         {
             // Get the tile from the wall to pick from.
             CommonHelpers.Check((source != TileSource.Call), "Should not be picking from a call. Doesn't make sense.");
@@ -1300,13 +1313,15 @@ namespace MahjongCore.Riichi.Impl
                 tileNumber = GetNextWallDrawSlot();
             }
 
-            TileImpl wallTile = WallRaw[tileNumber];
-            ITile handTile = GetHand(p).AddTile(wallTile);
-            Global.Log("PickIntoPlayerHand! Player: " + p + " Slot: " + tileNumber + " Tile: " + wallTile.Type);
+            TileImpl wallTileRaw = WallRaw[tileNumber];
+            ITile handTile = GetHand(p).AddTile(wallTileRaw);
+            Global.Log("PickIntoPlayerHand! Player: " + p + " Slot: " + tileNumber + " Tile: " + wallTileRaw.Type);
 
-            wallTile.Ghost = true;
-            wallTile.Ancillary = p;
+            wallTileRaw.Ghost = true;
+            wallTileRaw.Ancillary = p;
             TilesRemaining--;
+
+            wallTile = wallTileRaw;
             return handTile;
         }
 

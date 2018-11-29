@@ -71,6 +71,19 @@ namespace MahjongCore.Riichi.Impl
             return result;
         }
 
+        public ITile GetLowestTile()
+        {
+            TileImpl tile = null;
+            foreach (TileImpl tileRaw in TilesRaw)
+            {
+                if (tileRaw.Type.IsTile() && ((tile == null) || (tileRaw.Type.GetValue() < tile.Type.GetValue())))
+                {
+                    tile = tileRaw;
+                }
+            }
+            return tile;
+        }
+
         // ICloneable
         public object Clone()
         {

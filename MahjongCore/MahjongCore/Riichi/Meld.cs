@@ -85,8 +85,9 @@ namespace MahjongCore.Riichi
         ITile           CalledTile   { get; }
         int             RedDoraCount { get; }
 
-        void Promote(TileType kanTile, int kanTileSlot);
-        bool Iterate(Func<TileType, bool> callback, bool noneResult = true);
+        void  Promote(TileType kanTile, int kanTileSlot);
+        bool  Iterate(Func<TileType, bool> callback, bool noneResult = true);
+        ITile GetLowestTile();
     }
 
     public static class MeldFactory

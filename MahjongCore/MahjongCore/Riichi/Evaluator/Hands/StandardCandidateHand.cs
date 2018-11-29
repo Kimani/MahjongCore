@@ -41,7 +41,7 @@ namespace MahjongCore.Riichi.Evaluator
             return new StandardCandidateHand(this);
         }
 
-        protected override bool Evaluate(IHand hand, bool ron)
+        internal override bool Evaluate(IHand hand, bool ron)
         {
             ResetValues();
 
@@ -215,6 +215,7 @@ namespace MahjongCore.Riichi.Evaluator
             Han += Dora + UraDora + RedDora;
             AdjustForPaaRenchan(hand, ron);
             AdjustForDoubleYakumanSetting(hand);
+            UpdateYakumanCount();
 
             // Don't need to process fu if we're mangan or better.
             if ((Han >= 5) || (Han < 0))

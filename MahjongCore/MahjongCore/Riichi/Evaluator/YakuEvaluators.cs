@@ -67,17 +67,17 @@ namespace MahjongCore.Riichi.Evaluator
         public static int Evaluate_Pei(           IHand hand, ICandidateHand candidateHand, bool ron) { return EvaluateWindYakuhai(hand, (candidateHand as StandardCandidateHand), TileType.North, false, GameOption.Pei, Yaku.Pei); }
         public static int Evaluate_DoublePei(     IHand hand, ICandidateHand candidateHand, bool ron) { return EvaluateWindYakuhai(hand, (candidateHand as StandardCandidateHand), TileType.North, true, GameOption.DoublePei, Yaku.DoublePei); }
         public static int Evaluate_MenzenTsumo(   IHand hand, ICandidateHand candidateHand, bool ron) { return (!ron && hand.Closed) ? Yaku.MenzenTsumo.GetHan(true, hand.Parent.Settings) : 0; }
-        public static int Evaluate_Ippatsu(       IHand hand, ICandidateHand candidateHand, bool ron) { return hand.IsIppatsu() ? Yaku.Ippatsu.GetHan(true, hand.Parent.Settings) : 0; }
+        public static int Evaluate_Ippatsu(       IHand hand, ICandidateHand candidateHand, bool ron) { return hand.CouldIppatsu ? Yaku.Ippatsu.GetHan(true, hand.Parent.Settings) : 0; }
         public static int Evaluate_HaiteiRaoyue(  IHand hand, ICandidateHand candidateHand, bool ron) { return ((hand.Parent.TilesRemaining == 0) && !ron) ? Yaku.HaiteiRaoyue.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
         public static int Evaluate_HouteiRaoyui(  IHand hand, ICandidateHand candidateHand, bool ron) { return ((hand.Parent.TilesRemaining == 0) && ron) ? Yaku.HouteiRaoyui.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
-        public static int Evaluate_RinshanKaihou( IHand hand, ICandidateHand candidateHand, bool ron) { return hand.Parent.PlayerDeadWallPick ? Yaku.RinshanKaihou.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
-        public static int Evaluate_Chankan(       IHand hand, ICandidateHand candidateHand, bool ron) { return (hand.Parent.ChankanFlag) ? Yaku.Chankan.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
+        public static int Evaluate_RinshanKaihou( IHand hand, ICandidateHand candidateHand, bool ron) { return ((GameStateImpl)hand.Parent).PlayerDeadWallPick ? Yaku.RinshanKaihou.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
+        public static int Evaluate_Chankan(       IHand hand, ICandidateHand candidateHand, bool ron) { return (((GameStateImpl)hand.Parent).ChankanFlag) ? Yaku.Chankan.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
         public static int Evaluate_Shousuushii(   IHand hand, ICandidateHand candidateHand, bool ron) { return Evaluate_Suushii(hand, candidateHand as StandardCandidateHand, true, GameOption.Shousuushii, Yaku.Shousuushii); }
         public static int Evaluate_Daisuushii(    IHand hand, ICandidateHand candidateHand, bool ron) { return Evaluate_Suushii(hand, candidateHand as StandardCandidateHand, true, GameOption.Daisuushii, Yaku.Daisuushii); }
         public static int Evaluate_Chiihou(       IHand hand, ICandidateHand candidateHand, bool ron) { return (!hand.Dealer && (hand.Discards.Count == 0)) ? Yaku.Chiihou.GetHan(true, hand.Parent.Settings) : 0; }
         public static int Evaluate_Tenhou(        IHand hand, ICandidateHand candidateHand, bool ron) { return (hand.Dealer && (hand.Discards.Count == 0)) ? Yaku.Tenhou.GetHan(true, hand.Parent.Settings) : 0; }
-        public static int Evaluate_RyansouChankan(IHand hand, ICandidateHand candidateHand, bool ron) { return (hand.Parent.ChankanFlag && hand.Parent.NextActionTile.IsEqual(TileType.Bamboo2)) ? Yaku.RyansouChankan.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
-        public static int Evaluate_Kanburi(       IHand hand, ICandidateHand candidateHand, bool ron) { return hand.Parent.KanburiFlag ? Yaku.Kanburi.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
+        public static int Evaluate_RyansouChankan(IHand hand, ICandidateHand candidateHand, bool ron) { return (((GameStateImpl)hand.Parent).ChankanFlag && ((GameStateImpl)hand.Parent).NextActionTile.IsEqual(TileType.Bamboo2)) ? Yaku.RyansouChankan.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
+        public static int Evaluate_Kanburi(       IHand hand, ICandidateHand candidateHand, bool ron) { return ((GameStateImpl)hand.Parent).KanburiFlag ? Yaku.Kanburi.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
         public static int Evaluate_PaaRenchan(    IHand hand, ICandidateHand candidateHand, bool ron) { return (hand.Streak >= 8) ? Yaku.PaaRenchan.GetHan(hand.Closed, hand.Parent.Settings) : 0; }
         public static int Evaluate_Daisharin(     IHand hand, ICandidateHand candidateHand, bool ron) { return CheckSevenPairsHandForTiles(candidateHand, DaisharinTiles)   ? Yaku.Daisharin.GetHan(true, hand.Parent.Settings) : 0; }
         public static int Evaluate_Daisuurin(     IHand hand, ICandidateHand candidateHand, bool ron) { return CheckSevenPairsHandForTiles(candidateHand, DaisuurinTiles)   ? Yaku.Daisuurin.GetHan(true, hand.Parent.Settings) : 0; }
@@ -205,8 +205,8 @@ namespace MahjongCore.Riichi.Evaluator
             foreach (IMeld m in hand.Melds)
             {
                 if (m.State == MeldState.Chii)
-                {%%%%%%%%% bbust
-                    sequences[sCount++] = m.Tiles[0].Type;
+                {
+                    sequences[sCount++] = m.GetLowestTile().Type;
                 }
             }
 
@@ -215,7 +215,7 @@ namespace MahjongCore.Riichi.Evaluator
             {
                 if (scHand.Melds[i].State == MeldState.Chii)
                 {
-                    sequences[sCount++] = scHand.Melds[i].Tiles[0].Type;
+                    sequences[sCount++] = scHand.Melds[i].GetLowestTile().Type;
                 }
             }
 
@@ -230,7 +230,7 @@ namespace MahjongCore.Riichi.Evaluator
                     Suit suit1 = sequences[1].GetSuit();
                     Suit suit2 = sequences[2].GetSuit();
 
-                    if (suit0 != suit1 && suit0 != suit2 && suit1 != suit2)
+                    if ((suit0 != suit1) && (suit0 != suit2) && (suit1 != suit2))
                     {
                         fSuccess = true;
                     }
@@ -808,7 +808,7 @@ namespace MahjongCore.Riichi.Evaluator
                 int han = Yaku.Suukantsu.GetHan(hand.Closed, hand.Parent.Settings);
                 if ((hand.Parent.Settings.GetSetting<bool>(GameOption.FourQuadRinshan) &&
                      hand.Parent.Settings.GetSetting<bool>(GameOption.DoubleYakuman) &&
-                     hand.Parent.PlayerDeadWallPick) ||
+                     ((GameStateImpl)hand.Parent).PlayerDeadWallPick) ||
                     (hand.Parent.Settings.GetSetting<bool>(GameOption.SuukantsuDoubleYakuman) &&
                      hand.Parent.Settings.GetSetting<bool>(GameOption.DoubleYakuman)))
                 {
@@ -1224,7 +1224,7 @@ namespace MahjongCore.Riichi.Evaluator
         public static int Evaluate_UupinKaihou(IHand hand, ICandidateHand candidateHand, bool ron)
         {
             StandardCandidateHand scHand = candidateHand as StandardCandidateHand;
-            if (hand.Parent.PlayerDeadWallPick)
+            if (((GameStateImpl)hand.Parent).PlayerDeadWallPick)
             {
                 bool found = false;
                 foreach (IMeld cMeld in scHand.Melds)
@@ -1272,7 +1272,7 @@ namespace MahjongCore.Riichi.Evaluator
                         {
                             for (int iTile = 0; iTile < 3; ++iTile)
                             {
-                                if (meld.Tiles[iTile].WinningTile && meld.Tiles[iTile].Tile.IsEqual(TileType.Circles1))
+                                if (meld.Tiles[iTile].WinningTile && meld.Tiles[iTile].Type.IsEqual(TileType.Circles1))
                                 {
                                     found = true;
                                     break;
@@ -1410,7 +1410,7 @@ namespace MahjongCore.Riichi.Evaluator
         {
             if (ron)
             {
-                Player playerTarget = hand.Parent.NextActionPlayer;
+                Player playerTarget = ((GameStateImpl)hand.Parent).NextActionPlayer;
                 if (playerTarget.IsPlayer())
                 {
                     IList<ITile> discards = hand.Discards;

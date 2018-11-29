@@ -8,8 +8,6 @@ namespace MahjongCore.Riichi.Impl
                                                                              internal HandDiscardArgsImpl(ITile t)                    { Tile = t; } }
     internal class HandReachArgsImpl            : HandReachArgs            { public override ITile            Tile                    { get; internal set; }
                                                                              internal HandReachArgsImpl(ITile t)                      { Tile = t; } }
-    internal class HandKanArgsImpl              : HandKanArgs              { public override IMeld            Meld                    { get; internal set; }
-                                                                             internal HandKanArgsImpl(IMeld m)                        { Meld = m; } }
     internal class HandCallArgsImpl             : HandCallArgs             { public override IMeld            Meld                    { get; internal set; }
                                                                              internal HandCallArgsImpl(IMeld m)                       { Meld = m; } }
     internal class WallTilesPickedImpl          : WallTilesPicked          { public override ITile[]          Tiles                   { get; internal set; }
