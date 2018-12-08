@@ -58,6 +58,7 @@
     <Compile Include="Riichi\Attributes\WinValue.cs" />
     <Compile Include="Riichi\Command.cs" />
     <Compile Include="Riichi\ExtraSettings.cs" />
+    <Compile Include="Riichi\Helpers\MeldHelpers.cs" />
     <Compile Include="Riichi\Impl\AI\AIRandom.cs" />
     <Compile Include="Riichi\Attributes\PlayerNext.cs" />
     <Compile Include="Riichi\Attributes\PlayerPrevious.cs" />
@@ -132,7 +133,7 @@
     <Compile Include="Riichi\Impl\GameStateImpl.cs" />
     <Compile Include="Riichi\Impl\HandImpl.cs" />
     <Compile Include="Riichi\Helpers\GameStateHelpers.cs" />
-    <Compile Include="Riichi\Helpers\RiichiHandHelpers.cs" />
+    <Compile Include="Riichi\Helpers\HandHelpers.cs" />
     <Compile Include="Riichi\Helpers\TileHelpers.cs" />
     <Compile Include="Riichi\Impl\MeldImpl.cs" />
     <Compile Include="Riichi\Global.cs" />

@@ -7,8 +7,49 @@ using System.Linq;
 
 namespace MahjongCore.Riichi.Helpers
 {
-    public class RiichiHandHelpers
+    public class HandHelpers
     {
+        public static void IterateActiveHand(IHand hand, Action<TileType> callback) { for (int i = 0; i < hand.ActiveTileCount; ++i) { callback(hand.ActiveHand[i].Type); } }
+        public static void IterateMelds(IHand hand, Action<IMeld> callback)         { foreach (IMeld meld in hand.Melds) { if (!meld.State.IsCalled()) { break; } callback(meld); } }
+
+        public static bool IterateActiveHandAND(IHand hand, Func<TileType, bool> callback)
+        {
+            for (int i = 0; i < hand.ActiveTileCount; ++i)
+            {
+                if (!callback(hand.ActiveHand[i].Type)) { return false; }
+            }
+            return true;
+        }
+
+        public static bool IterateActiveHandOR(IHand hand, Func<TileType, bool> callback)
+        {
+            for (int i = 0; i < hand.ActiveTileCount; ++i)
+            {
+                if (callback(hand.ActiveHand[i].Type)) { return true; }
+            }
+            return false;
+        }
+
+        public static bool IterateMeldsAND(IHand hand, Func<IMeld, bool> callback)
+        {
+            foreach (IMeld meld in hand.Melds)
+            {
+                if (!meld.State.IsCalled()) { break; }
+                if (!callback(meld))        { return false; }
+            }
+            return true;
+        }
+
+        public static bool IterateMeldsOR(IHand hand, Func<IMeld, bool> callback)
+        {
+            foreach (IMeld meld in hand.Melds)
+            {
+                if (!meld.State.IsCalled()) { break; }
+                if (callback(meld))         { return true; }
+            }
+            return false;
+        }
+
         internal static List<IMeld> GetCalls(HandImpl hand)
         {
             TileType[] activeHandCopy = new TileType[hand.ActiveTileCount];
@@ -70,12 +111,12 @@ namespace MahjongCore.Riichi.Helpers
                                     int redSlot = GetNextTileRedVersionSlot(sourceTiles, middleTileSlot);
                                     if (redSlot >= 0)
                                     {
-                                        calls = RiichiHandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[redSlot], i, redSlot));
+                                        calls = HandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[redSlot], i, redSlot));
                                     }
                                 }
 
                                 // Make the chii.
-                                calls = RiichiHandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[middleTileSlot], i, middleTileSlot));
+                                calls = HandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[middleTileSlot], i, middleTileSlot));
                             }
                         }
                         else if ((sourceTileValue + 1 == calledValue) && (calledValue <= 8))
@@ -105,7 +146,7 @@ namespace MahjongCore.Riichi.Helpers
                                 }
 
                                 // Make the chii.
-                                calls = RiichiHandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[lastTileSlot], i, lastTileSlot));
+                                calls = HandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[lastTileSlot], i, lastTileSlot));
                             }
                         }
                         else if ((sourceTileValue - 1 == calledValue) && (calledValue <= 7))
@@ -121,7 +162,7 @@ namespace MahjongCore.Riichi.Helpers
                                     int redSlot = GetNextTileRedVersionSlot(sourceTiles, i);
                                     if (redSlot >= 0)
                                     {
-                                        calls = RiichiHandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[redSlot], sourceTiles[lastTileSlot], redSlot, lastTileSlot));
+                                        calls = HandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[redSlot], sourceTiles[lastTileSlot], redSlot, lastTileSlot));
                                     }
                                 }
                                 else if ((sourceTileValue == 4) && !sourceTiles[lastTileSlot].IsRedDora())
@@ -129,12 +170,12 @@ namespace MahjongCore.Riichi.Helpers
                                     int redSlot = GetNextTileRedVersionSlot(sourceTiles, lastTileSlot);
                                     if (redSlot >= 0)
                                     {
-                                        calls = RiichiHandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[redSlot], i, redSlot));
+                                        calls = HandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[redSlot], i, redSlot));
                                     }
                                 }
 
                                 // Make the chii.
-                                calls = RiichiHandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[lastTileSlot], i, lastTileSlot));
+                                calls = HandHelpers.AddCallToListAndCheckValid(settings, sourceTiles, calls, MeldFactory.BuildChii(target, calledTile, sourceTiles[i], sourceTiles[lastTileSlot], i, lastTileSlot));
                             }
                         }
                     }

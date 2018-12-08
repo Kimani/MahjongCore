@@ -1,6 +1,5 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
-using System;
 using System.Collections.Generic;
 
 namespace MahjongCore.Riichi
@@ -34,8 +33,6 @@ namespace MahjongCore.Riichi
         bool            CouldKyuushuuKyuuhai { get; }
         bool            CouldSuufurendan     { get; }
 
-        bool            IterateActiveHand(Func<TileType, bool> callback);
-        bool            IterateMelds(Func<IMeld, bool> callback);
         bool            WouldMakeFuriten(int slot);
         int             GetTileSlot(TileType tile, bool matchRed);
         void            MoveTileToEnd(TileType targetTile);

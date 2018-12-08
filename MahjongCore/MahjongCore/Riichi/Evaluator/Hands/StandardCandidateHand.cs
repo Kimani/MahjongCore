@@ -11,6 +11,8 @@ namespace MahjongCore.Riichi.Evaluator
         internal TileImpl   PairTile = new TileImpl(); // If this has the winning tile flag, then one of them is the winning tile.
         internal MeldImpl[] Melds    = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
 
+        internal override CandidateHand Clone() { return new StandardCandidateHand(this); }
+
         internal StandardCandidateHand(TileType pairTile, bool winningTile)
         {
             PairTile.Type = pairTile;
@@ -26,7 +28,16 @@ namespace MahjongCore.Riichi.Evaluator
             }
         }
 
-        internal bool IterateMelds(Func<IMeld, bool> callback)
+        internal void IterateMelds(Action<IMeld> callback)
+        {
+            foreach (MeldImpl meld in Melds)
+            {
+                if (!meld.State.IsCalled()) { break; }
+                callback(meld);
+            }
+        }
+
+        internal bool IterateMeldsAND(Func<IMeld, bool> callback)
         {
             foreach (MeldImpl meld in Melds)
             {
@@ -34,11 +45,6 @@ namespace MahjongCore.Riichi.Evaluator
                 if (!callback(meld))        { return false; }
             }
             return true;
-        }
-
-        internal override CandidateHand Clone()
-        {
-            return new StandardCandidateHand(this);
         }
 
         internal override bool Evaluate(IHand hand, bool ron)

@@ -86,7 +86,6 @@ namespace MahjongCore.Riichi
         int             RedDoraCount { get; }
 
         void  Promote(TileType kanTile, int kanTileSlot);
-        bool  Iterate(Func<TileType, bool> callback, bool noneResult = true);
         ITile GetLowestTile();
     }
 

@@ -41,22 +41,6 @@ namespace MahjongCore.Riichi.Impl
 
         public IList<TileType> GetWaitsForDiscard(int slot) { return _ActiveTileWaits[slot]; }
 
-        public bool IterateActiveHand(Func<TileType, bool> callback)
-        {
-            for (int i = 0; i < ActiveTileCount; ++i) { if (!callback(ActiveHandRaw[i].Type)) { return false; } }
-            return true;
-        }
-
-        public bool IterateMelds(Func<IMeld, bool> callback)
-        {
-            foreach (IMeld meld in Melds)
-            {
-                if (!meld.State.IsCalled()) { break; }
-                if (!callback(meld))        { return false; }
-            }
-            return true;
-        }
-
         public bool WouldMakeFuriten(int slot)
         {
             // Returns true if discarding the given tile would place the hand into furiten.
@@ -139,7 +123,7 @@ namespace MahjongCore.Riichi.Impl
         internal bool           OverrideNoReachFlag                          { get; set; } = false; // Used for things like thirteen broken, which you can't reach for.
         internal bool           FourKans                                     { get { return KanCount == 4; } }
         internal List<TileType> GetTileWaits(int slot)                       { return _ActiveTileWaits[(slot == -1) ? (ActiveTileCount - 1) : slot]; }
-        internal List<IMeld>    GetCalls()                                   { return RiichiHandHelpers.GetCalls(this); }
+        internal List<IMeld>    GetCalls()                                   { return HandHelpers.GetCalls(this); }
         internal ICommand       PeekLastDrawKan()                            { return _DrawsAndKans.Peek(); }
         internal TileType       GetSuufurendanTile()                         { return CouldSuufurendan ? _Parent.GetHand(_Parent.Dealer).DiscardsRaw[0].Type : TileType.None; }
         internal ITile          AddTile(ITile wallTile, bool rewind = false) { return AddTile(wallTile.Type, rewind); }

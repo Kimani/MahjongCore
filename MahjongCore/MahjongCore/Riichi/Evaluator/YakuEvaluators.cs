@@ -86,7 +86,7 @@ namespace MahjongCore.Riichi.Evaluator
         public static int Evaluate_Shouchikurin(  IHand hand, ICandidateHand candidateHand, bool ron) { return (CheckSevenPairsHandForTiles(candidateHand, Shouchikurin1Tiles) || CheckSevenPairsHandForTiles(candidateHand, Shouchikurin2Tiles)) ? Yaku.Shouchikurin.GetHan(true, hand.Parent.Settings) : 0; }
         public static int Evaluate_Shousuurin(    IHand hand, ICandidateHand candidateHand, bool ron) { return (CheckSevenPairsHandForTiles(candidateHand, Shousuurin1Tiles)   || CheckSevenPairsHandForTiles(candidateHand, Shousuurin2Tiles))   ? Yaku.Shousuurin.GetHan(true, hand.Parent.Settings) : 0; }
 
-        private static bool IterateAllMelds(IHand hand, StandardCandidateHand candidateHand, Func<IMeld, bool> callback) { return hand.IterateMelds(callback) && candidateHand.IterateMelds(callback); }
+        private static void IterateAllMelds(IHand hand, StandardCandidateHand candidateHand, Action<IMeld> callback) { HandHelpers.IterateMelds(hand, callback); candidateHand.IterateMelds(callback); }
 
         public static int Evaluate_OpenRiichi(IHand hand, ICandidateHand candidateHand, bool ron)
         {
@@ -419,7 +419,6 @@ namespace MahjongCore.Riichi.Evaluator
                     if (sets == null) { sets = new TileType[4]; }
                     sets[count++] = meld.Tiles[0].Type;
                 }
-                return true;
             });
 
             bool found = false;
@@ -468,11 +467,14 @@ namespace MahjongCore.Riichi.Evaluator
         public static int Evaluate_Tanyao(IHand hand, ICandidateHand candidateHand, bool ron)
         {
             if (!hand.Parent.Settings.GetSetting<bool>(GameOption.Kuitan) && hand.Open) { return 0; }
-            foreach (IMeld meld in hand.Melds)
+            if (!HandHelpers.IterateMeldsAND(hand, (IMeld meld) => 
+                {
+                    return MeldHelpers.IterateTilesAND(meld, (TileType tile) => { return !tile.IsTerminalOrHonor(); });
+                }))
             {
-                if (!meld.Iterate((TileType tile) => { return !tile.IsTerminalOrHonor(); })) { return 0; }
+                return 0;
             }
-            return hand.IterateActiveHand((TileType tile) => { return !tile.IsTerminalOrHonor(); }) ? Yaku.Tanyao.GetHan(hand.Closed, hand.Parent.Settings) : 0;
+            return HandHelpers.IterateActiveHandAND(hand, (TileType tile) => { return !tile.IsTerminalOrHonor(); }) ? Yaku.Tanyao.GetHan(hand.Closed, hand.Parent.Settings) : 0;
         }
 
         private static int Evaluate_DragonYakuhai(IHand hand, StandardCandidateHand scHand, bool findChun, bool findHaku, bool findHatsu, int score, GameOption setting)
@@ -487,7 +489,6 @@ namespace MahjongCore.Riichi.Evaluator
                 if (meld.Tiles[0].Type == TileType.Chun)  { chun = true; }
                 if (meld.Tiles[0].Type == TileType.Haku)  { haku = true; }
                 if (meld.Tiles[0].Type == TileType.Hatsu) { hatsu = true; }
-                return true;
             });
 
             if (findChun  && scHand.PairTile.Type.IsEqual(TileType.Chun))  { chun = true; }
@@ -707,7 +708,7 @@ namespace MahjongCore.Riichi.Evaluator
             int nNorth = 0;
             int nSouth = 0;
 
-            if (!hand.IterateActiveHand((TileType tile) =>
+            if (!HandHelpers.IterateActiveHandAND(hand, (TileType tile) =>
             {
                 if      (!tile.IsTerminalOrHonor())    { return false; }
                 else if (tile == TileType.Bamboo1)     { nBamb1++; }
@@ -752,7 +753,7 @@ namespace MahjongCore.Riichi.Evaluator
         {
             Suit suit = hand.ActiveHand[0].Type.GetSuit();
             int han = Yaku.ChuurenPoutou.GetHan(true, hand.Parent.Settings);
-            if ((han == 0) || (hand.MeldCount > 0) || !hand.IterateActiveHand((TileType tile) => { return (tile.GetSuit() == suit); })) { return 0; }
+            if ((han == 0) || (hand.MeldCount > 0) || !HandHelpers.IterateActiveHandAND(hand, (TileType tile) => { return (tile.GetSuit() == suit); })) { return 0; }
 
             // Make sure we have the correct amount of each value.
             int[] values = new int[10]; // values[0] isn't used.
@@ -793,9 +794,9 @@ namespace MahjongCore.Riichi.Evaluator
         private static int Evaluate_Suushii(IHand hand, StandardCandidateHand candidateHand, bool checkPair, GameOption setting, Yaku yaku)
         {
             int windCount = 0;
-            if (checkPair && candidateHand.PairTile.Type.IsWind())                        { windCount++; }
-            hand.IterateMelds(         (IMeld meld) => { if (meld.Tiles[0].Type.IsWind()) { windCount++; } return true; });
-            candidateHand.IterateMelds((IMeld meld) => { if (meld.Tiles[0].Type.IsWind()) { windCount++; } return true; });
+            if (checkPair && candidateHand.PairTile.Type.IsWind())                            { windCount++; }
+            HandHelpers.IterateMelds(hand, (IMeld meld) => { if (meld.Tiles[0].Type.IsWind()) { windCount++; } });
+            candidateHand.IterateMelds(    (IMeld meld) => { if (meld.Tiles[0].Type.IsWind()) { windCount++; } });
             return (windCount == 4) ? yaku.GetHan(hand.Closed, hand.Parent.Settings) : 0;
         }
 
@@ -845,8 +846,8 @@ namespace MahjongCore.Riichi.Evaluator
         public static int Evaluate_Ryuuiisou(IHand hand, ICandidateHand candidateHand, bool ron)
         {
             StandardCandidateHand scHand = candidateHand as StandardCandidateHand;
-            if (!hand.IterateMelds(  (IMeld meld) => { return CheckRyuuiisouMeld(meld); }) ||
-                !scHand.IterateMelds((IMeld meld) => { return CheckRyuuiisouMeld(meld); }))
+            if (!HandHelpers.IterateMeldsAND(hand, (IMeld meld) => { return CheckRyuuiisouMeld(meld); }) ||
+                !scHand.IterateMeldsAND((IMeld meld) =>            { return CheckRyuuiisouMeld(meld); }))
             {
                 return 0;
             }
@@ -858,14 +859,14 @@ namespace MahjongCore.Riichi.Evaluator
 
         public static int Evaluate_Chinroutou(IHand hand, ICandidateHand candidateHand, bool ron)
         {
-            if   (!hand.IterateMelds(     (IMeld meld)    => { return (meld.State != MeldState.Chii) && meld.Tiles[0].Type.IsTerminal(); })) { return 0; }
-            return hand.IterateActiveHand((TileType tile) => { return tile.IsTerminal(); }) ? Yaku.Chinroutou.GetHan(hand.Closed, hand.Parent.Settings) : 0;
+            if   (!HandHelpers.IterateMeldsAND(hand,      (IMeld meld)    => { return (meld.State != MeldState.Chii) && meld.Tiles[0].Type.IsTerminal(); })) { return 0; }
+            return HandHelpers.IterateActiveHandAND(hand, (TileType tile) => { return tile.IsTerminal(); }) ? Yaku.Chinroutou.GetHan(hand.Closed, hand.Parent.Settings) : 0;
         }
 
         public static int Evaluate_Tsuuiisou(IHand hand, ICandidateHand candidateHand, bool ron)
         {
-            if   (!hand.IterateMelds(     (IMeld meld)    => { return (meld.State != MeldState.Chii) && meld.Tiles[0].Type.IsHonor(); })) { return 0; }
-            return hand.IterateActiveHand((TileType tile) => { return tile.IsHonor(); }) ? Yaku.Tsuuiisou.GetHan(hand.Closed, hand.Parent.Settings) : 0;
+            if   (!HandHelpers.IterateMeldsAND(hand,      (IMeld meld)    => { return (meld.State != MeldState.Chii) && meld.Tiles[0].Type.IsHonor(); })) { return 0; }
+            return HandHelpers.IterateActiveHandAND(hand, (TileType tile) => { return tile.IsHonor(); }) ? Yaku.Tsuuiisou.GetHan(hand.Closed, hand.Parent.Settings) : 0;
         }
 
         public static int Evaluate_ShiisanBudou(IHand hand, ICandidateHand candidateHand, bool ron)
@@ -1070,17 +1071,15 @@ namespace MahjongCore.Riichi.Evaluator
         public static int Evaluate_HyakumanGoku(IHand hand, ICandidateHand candidateHand, bool ron)
         {
             int manzuTotal = 0;
-            hand.IterateMelds((IMeld meld) => 
+            HandHelpers.IterateMelds(hand, (IMeld meld) =>
             {
-                meld.Iterate((TileType tile) => 
+                MeldHelpers.IterateTiles(meld, (TileType tile) =>
                 {
                     if (tile.IsSuit(Suit.Characters)) { manzuTotal += tile.GetValue(); }
-                    return true;
                 });
-                return true;
             });
 
-            hand.IterateActiveHand((TileType tile) => { if (tile.IsSuit(Suit.Characters)) { manzuTotal += tile.GetValue(); } return true; });
+            HandHelpers.IterateActiveHand(hand, (TileType tile) => { if (tile.IsSuit(Suit.Characters)) { manzuTotal += tile.GetValue(); } });
             return (manzuTotal >= 100) ? Yaku.HyakumanGoku.GetHan(hand.Closed, hand.Parent.Settings) : 0;
         }
 

@@ -31,8 +31,8 @@ namespace MahjongCore.Riichi.Helpers
         {
             CommonHelpers.Check(p.IsPlayer(), "Requested player is not a player.");
             return (p == Player.Player1) ? state.Player1Hand :
-                   (p == Player.Player2) ? state.Player2Hand :
-                   (p == Player.Player3) ? state.Player3Hand :
+                   (p == Player.Player1) ? state.Player2Hand :
+                   (p == Player.Player1) ? state.Player3Hand :
                                            state.Player4Hand;
         }
     }
