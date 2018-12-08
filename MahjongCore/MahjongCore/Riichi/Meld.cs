@@ -15,13 +15,6 @@ namespace MahjongCore.Riichi
         [MeldTileCount(4), MeldCalled(true)]  Kan
     }
 
-    public enum KanType
-    {
-        Open,
-        Concealed,
-        Promoted
-    }
-
     #region MeldState
         public enum MeldState
         {

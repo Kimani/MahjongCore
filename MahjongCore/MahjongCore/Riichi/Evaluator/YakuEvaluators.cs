@@ -474,7 +474,8 @@ namespace MahjongCore.Riichi.Evaluator
             {
                 return 0;
             }
-            return HandHelpers.IterateActiveHandAND(hand, (TileType tile) => { return !tile.IsTerminalOrHonor(); }) ? Yaku.Tanyao.GetHan(hand.Closed, hand.Parent.Settings) : 0;
+
+            return HandHelpers.IterateTilesAND(hand, (TileType tile) => { return !tile.IsTerminalOrHonor(); }) ? Yaku.Tanyao.GetHan(hand.Closed, hand.Parent.Settings) : 0;
         }
 
         private static int Evaluate_DragonYakuhai(IHand hand, StandardCandidateHand scHand, bool findChun, bool findHaku, bool findHatsu, int score, GameOption setting)
@@ -598,7 +599,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
 
             
-            foreach (ITile tile in hand.ActiveHand)
+            foreach (ITile tile in hand.Tiles)
             {
                 if (tile.Type != TileType.None)
                 {
@@ -654,7 +655,7 @@ namespace MahjongCore.Riichi.Evaluator
                 }
             }
 
-            foreach (ITile tile in hand.ActiveHand)
+            foreach (ITile tile in hand.Tiles)
             {
                 if (tile.Type.IsTile() && !tile.Type.IsTerminalOrHonor())
                 {
@@ -666,9 +667,9 @@ namespace MahjongCore.Riichi.Evaluator
 
         public static int Evaluate_Chinitsu(IHand hand, ICandidateHand candidateHand, bool ron)
         {
-            Suit suit = hand.ActiveHand[0].Type.GetSuit();
+            Suit suit = hand.Tiles[0].Type.GetSuit();
             foreach (IMeld meld in hand.Melds)      { if (meld.State.IsCalled() && (meld.Tiles[0].Type.GetSuit() != suit)) { return 0; } }
-            foreach (ITile tile in hand.ActiveHand) { if (tile.Type.IsTile() && (tile.Type.GetSuit() != suit))             { return 0; } }
+            foreach (ITile tile in hand.Tiles)      { if (tile.Type.IsTile() && (tile.Type.GetSuit() != suit))             { return 0; } }
             return Yaku.Chinitsu.GetHan(hand.Closed, hand.Parent.Settings);
         }
 
@@ -708,7 +709,7 @@ namespace MahjongCore.Riichi.Evaluator
             int nNorth = 0;
             int nSouth = 0;
 
-            if (!HandHelpers.IterateActiveHandAND(hand, (TileType tile) =>
+            if (!HandHelpers.IterateTilesAND(hand, (TileType tile) =>
             {
                 if      (!tile.IsTerminalOrHonor())    { return false; }
                 else if (tile == TileType.Bamboo1)     { nBamb1++; }
@@ -736,10 +737,10 @@ namespace MahjongCore.Riichi.Evaluator
             // Check to see if we have a 13 way wait. If the last tile in the active hand is the same as any other tile, then double yakuman!
             if (hand.Parent.Settings.GetSetting<bool>(GameOption.DoubleYakuman))
             {
-                TileType winTile = hand.ActiveHand[13].Type;
+                TileType winTile = hand.Tiles[13].Type;
                 for (int i = 0; i < 13; ++i)
                 {
-                    if (winTile.IsEqual(hand.ActiveHand[i].Type))
+                    if (winTile.IsEqual(hand.Tiles[i].Type))
                     {
                         --han;
                         break;
@@ -751,13 +752,13 @@ namespace MahjongCore.Riichi.Evaluator
 
         public static int Evaluate_ChuurenPoutou(IHand hand, ICandidateHand candidateHand, bool ron)
         {
-            Suit suit = hand.ActiveHand[0].Type.GetSuit();
+            Suit suit = hand.Tiles[0].Type.GetSuit();
             int han = Yaku.ChuurenPoutou.GetHan(true, hand.Parent.Settings);
-            if ((han == 0) || (hand.MeldCount > 0) || !HandHelpers.IterateActiveHandAND(hand, (TileType tile) => { return (tile.GetSuit() == suit); })) { return 0; }
+            if ((han == 0) || (hand.MeldCount > 0) || !HandHelpers.IterateTilesAND(hand, (TileType tile) => { return (tile.GetSuit() == suit); })) { return 0; }
 
             // Make sure we have the correct amount of each value.
             int[] values = new int[10]; // values[0] isn't used.
-            foreach (ITile tile in hand.ActiveHand)
+            foreach (ITile tile in hand.Tiles)
             {
                 values[tile.Type.GetValue()]++;
             }
@@ -770,7 +771,7 @@ namespace MahjongCore.Riichi.Evaluator
             }
 
             // Success! If the winning tile is the one that makes it go over 1 or 3, then we get a double yakuman.
-            int winValueCount = values[hand.ActiveHand[13].Type.GetValue()];
+            int winValueCount = values[hand.Tiles[13].Type.GetValue()];
             return (hand.Parent.Settings.GetSetting<bool>(GameOption.DoubleYakuman) && ((winValueCount == 2) || (winValueCount == 4))) ? (han - 1) : han;
         }
 
@@ -859,14 +860,14 @@ namespace MahjongCore.Riichi.Evaluator
 
         public static int Evaluate_Chinroutou(IHand hand, ICandidateHand candidateHand, bool ron)
         {
-            if   (!HandHelpers.IterateMeldsAND(hand,      (IMeld meld)    => { return (meld.State != MeldState.Chii) && meld.Tiles[0].Type.IsTerminal(); })) { return 0; }
-            return HandHelpers.IterateActiveHandAND(hand, (TileType tile) => { return tile.IsTerminal(); }) ? Yaku.Chinroutou.GetHan(hand.Closed, hand.Parent.Settings) : 0;
+            if   (!HandHelpers.IterateMeldsAND(hand, (IMeld meld)    => { return (meld.State != MeldState.Chii) && meld.Tiles[0].Type.IsTerminal(); })) { return 0; }
+            return HandHelpers.IterateTilesAND(hand, (TileType tile) => { return tile.IsTerminal(); }) ? Yaku.Chinroutou.GetHan(hand.Closed, hand.Parent.Settings) : 0;
         }
 
         public static int Evaluate_Tsuuiisou(IHand hand, ICandidateHand candidateHand, bool ron)
         {
-            if   (!HandHelpers.IterateMeldsAND(hand,      (IMeld meld)    => { return (meld.State != MeldState.Chii) && meld.Tiles[0].Type.IsHonor(); })) { return 0; }
-            return HandHelpers.IterateActiveHandAND(hand, (TileType tile) => { return tile.IsHonor(); }) ? Yaku.Tsuuiisou.GetHan(hand.Closed, hand.Parent.Settings) : 0;
+            if   (!HandHelpers.IterateMeldsAND(hand, (IMeld meld)    => { return (meld.State != MeldState.Chii) && meld.Tiles[0].Type.IsHonor(); })) { return 0; }
+            return HandHelpers.IterateTilesAND(hand, (TileType tile) => { return tile.IsHonor(); }) ? Yaku.Tsuuiisou.GetHan(hand.Closed, hand.Parent.Settings) : 0;
         }
 
         public static int Evaluate_ShiisanBudou(IHand hand, ICandidateHand candidateHand, bool ron)
@@ -886,7 +887,7 @@ namespace MahjongCore.Riichi.Evaluator
             TileType[] sortedList = new TileType[14];
             for (int i = 0; i < 14; ++i)
             {
-                sortedList[i] = hand.ActiveHand[i].Type;
+                sortedList[i] = hand.Tiles[i].Type;
             }
             Array.Sort(sortedList);
 
@@ -1079,7 +1080,7 @@ namespace MahjongCore.Riichi.Evaluator
                 });
             });
 
-            HandHelpers.IterateActiveHand(hand, (TileType tile) => { if (tile.IsSuit(Suit.Characters)) { manzuTotal += tile.GetValue(); } });
+            HandHelpers.IterateTiles(hand, (TileType tile) => { if (tile.IsSuit(Suit.Characters)) { manzuTotal += tile.GetValue(); } });
             return (manzuTotal >= 100) ? Yaku.HyakumanGoku.GetHan(hand.Closed, hand.Parent.Settings) : 0;
         }
 
@@ -1199,12 +1200,9 @@ namespace MahjongCore.Riichi.Evaluator
                 return 0;
             }
 
-            // Get the sorted list.
-            TileType[] sortedList = (TileType[])hand.ActiveHand.Clone();
-            Array.Sort(sortedList);
-
             // Check all tiles. We should get no pairs and no two tiles should be adjacent by 1 or 2.
-            for (int i = 0; i < 13; ++i)
+            TileType[] sortedList = HandHelpers.GetSortedTiles(hand);
+            for (int i = 0; i < 13; ++i) /// TODO: possible bug if small sortedList leaks through
             {
                 TileType tileA = sortedList[i];
                 TileType tileB = sortedList[i + 1];

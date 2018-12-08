@@ -6,13 +6,8 @@ namespace MahjongCore.Riichi.Helpers
 {
     public class MeldHelpers
     {
-        public static void IterateTiles(IMeld meld, Action<TileType> callback)
-        {
-            for (int i = 0; i < meld.State.GetTileCount(); ++i)
-            {
-                callback(meld.Tiles[i].Type);
-            }
-        }
+        public static void IterateTiles(IMeld meld, Action<TileType> callback) { for (int i = 0; i < meld.State.GetTileCount(); ++i) { callback(meld.Tiles[i].Type); } }
+        public static void IterateTiles(IMeld meld, Action<ITile> callback)    { for (int i = 0; i < meld.State.GetTileCount(); ++i) { callback(meld.Tiles[i]); } }
 
         public static bool IterateTilesAND(IMeld meld, Func<TileType, bool> callback, bool noneResult = true)
         {

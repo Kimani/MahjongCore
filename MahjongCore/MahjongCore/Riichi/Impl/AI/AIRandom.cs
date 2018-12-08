@@ -27,7 +27,7 @@ namespace MahjongCore.Riichi.Impl.AI
             else if (info.CanReach)
             {
                 int riichiSlot = -1;
-                ITile[] activeHand = info.Hand.ActiveHand;
+                ITile[] activeHand = info.Hand.Tiles;
 
                 for (int i = 0; i < activeHand.Length; ++i)
                 {
@@ -45,19 +45,19 @@ namespace MahjongCore.Riichi.Impl.AI
             else if (info.ClosedKanTiles.Count > 0)
             {
                 stashedDecision.Decision = DiscardDecisionType.ClosedKan;
-                stashedDecision.Tile = info.Hand.ActiveHand[info.Hand.GetTileSlot(info.ClosedKanTiles[0], false)];
+                stashedDecision.Tile = info.Hand.Tiles[info.Hand.GetTileSlot(info.ClosedKanTiles[0], false)];
             }
             else if (info.PromotedKanTiles.Count > 0)
             {
                 stashedDecision.Decision = DiscardDecisionType.PromotedKan;
-                stashedDecision.Tile = info.Hand.ActiveHand[info.Hand.GetTileSlot(info.PromotedKanTiles[0], false)];
+                stashedDecision.Tile = info.Hand.Tiles[info.Hand.GetTileSlot(info.PromotedKanTiles[0], false)];
             }
             else
             {
                 stashedDecision.Decision = DiscardDecisionType.Discard;
                 do
                 {
-                    stashedDecision.Tile = info.Hand.ActiveHand[Global.RandomRange(0, info.Hand.ActiveTileCount)];
+                    stashedDecision.Tile = info.Hand.Tiles[Global.RandomRange(0, info.Hand.TileCount)];
                 }
                 while (info.RestrictedTiles.Contains(stashedDecision.Tile.Type));
             }

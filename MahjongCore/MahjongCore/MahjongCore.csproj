@@ -65,7 +65,6 @@
     <Compile Include="Riichi\Decision.cs" />
     <Compile Include="Riichi\GameState.cs" />
     <Compile Include="Riichi\Hand.cs" />
-    <Compile Include="Riichi\Impl\ArgsImpl.cs" />
     <Compile Include="Riichi\Impl\DecisionImpl.cs" />
     <Compile Include="Riichi\Impl\GameSettingsImpl.cs" />
     <Compile Include="Riichi\Meld.cs" />
@@ -128,7 +127,7 @@
     <Compile Include="Riichi\Evaluator\Hands\ThirteenHand.cs" />
     <Compile Include="Riichi\Evaluator\Hands\WaitCandidateHand.cs" />
     <Compile Include="Riichi\Evaluator\YakuEvaluators.cs" />
-    <Compile Include="Riichi\Impl\ResultsImpl.cs" />
+    <Compile Include="Riichi\Impl\ResultImpl.cs" />
     <Compile Include="Riichi\GameSettings.cs" />
     <Compile Include="Riichi\Impl\GameStateImpl.cs" />
     <Compile Include="Riichi\Impl\HandImpl.cs" />
@@ -144,7 +143,7 @@
     <Compile Include="Riichi\Yaku.cs" />
     <Compile Include="Riichi\Tile.cs" />
     <Compile Include="Riichi\Types.cs" />
-    <Compile Include="Riichi\Results.cs" />
+    <Compile Include="Riichi\Result.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

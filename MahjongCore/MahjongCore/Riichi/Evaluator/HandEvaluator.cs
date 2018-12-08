@@ -36,14 +36,14 @@ namespace MahjongCore.Riichi.Evaluator
          */
         public static List<TileType> GetWaits(IHand hand, int ignoreTileSlot, TileType[] approvedReachKanTiles)
         {
-            CommonHelpers.Check(((ignoreTileSlot >= -1) && (ignoreTileSlot < hand.ActiveTileCount)), ("Ignore slot needs to be valid index OR -1. ignoreTileSlot: " + ignoreTileSlot + " ActiveTileCount: " + hand.ActiveTileCount));
-            CommonHelpers.Check(((ignoreTileSlot == -1) || hand.HasFullHand), ("Expected full hand when ignoreTileSlot is not -1. ActiveTileCount: " + hand.ActiveTileCount));
+            CommonHelpers.Check(((ignoreTileSlot >= -1) && (ignoreTileSlot < hand.TileCount)), ("Ignore slot needs to be valid index OR -1. ignoreTileSlot: " + ignoreTileSlot + " TileCount: " + hand.TileCount));
+            CommonHelpers.Check(((ignoreTileSlot == -1) || hand.HasFullHand), ("Expected full hand when ignoreTileSlot is not -1. TileCount: " + hand.TileCount));
 
-            TileType[] sublist = new TileType[(ignoreTileSlot == -1) ? 13 : (hand.ActiveTileCount - 1)];
+            TileType[] sublist = new TileType[(ignoreTileSlot == -1) ? 13 : (hand.TileCount - 1)];
             int target = 0;
-            for (int i = 0; i < hand.ActiveTileCount; ++i)
+            for (int i = 0; i < hand.TileCount; ++i)
             {
-                if (i != ignoreTileSlot) { sublist[target++] = hand.ActiveHand[i].Type; }
+                if (i != ignoreTileSlot) { sublist[target++] = hand.Tiles[i].Type; }
             }
             Array.Sort(sublist);
 
@@ -627,7 +627,7 @@ namespace MahjongCore.Riichi.Evaluator
         {
             // Check if the numbers for each suit are a multiple of three.
             bool fPass = true;
-            int tileCount = hand.ActiveTileCount - 2;
+            int tileCount = hand.TileCount - 2;
             foreach (Suit suit in Enum.GetValues(typeof(Suit)))
             {
                 if (suit.IsSuit())
@@ -666,8 +666,8 @@ namespace MahjongCore.Riichi.Evaluator
             Global.Assert(hand.HasFullHand);
 
             // Get a copy of the active hand and sort it.
-            int activeTileCount = hand.ActiveTileCount;
-            ITile[] sourceActiveHand = hand.ActiveHand;
+            int activeTileCount = hand.TileCount;
+            ITile[] sourceActiveHand = hand.Tiles;
             TileType[] handCopy = new TileType[activeTileCount];
             for (int i = activeTileCount - 1; i >= 0; --i)
             {
@@ -746,7 +746,7 @@ namespace MahjongCore.Riichi.Evaluator
 
         private static void GetWinningHandCandidates_ProcessCandidate(IHand hand, List<CandidateHand> chBucket, StandardCandidateHand chHand, TileType[] subHand, int startMeld)
         {
-            int tileCount = hand.ActiveTileCount - 2; // Discluding the pair.
+            int tileCount = hand.TileCount - 2; // Discluding the pair.
             int meld = startMeld;
             bool fSuccess = true;
 

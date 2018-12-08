@@ -1,22 +1,36 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using System;
 using System.Collections.Generic;
 
 namespace MahjongCore.Riichi
 {
+    public delegate void MeldEventHandler       (IMeld meld);
+    public delegate void TileTypeEventHandler   (TileType tileType);
+    public delegate void TileSourceEventHandler (ITile[] tiles, TileSource source);
+    public delegate void TileEventHandler       (ITile tile);
+    public delegate void ReachEventHandler      (ITile tile, ReachType reach);
+
     public interface IHand
     {
+        event EventHandler           Sorted;
+        event TileSourceEventHandler TilesAdded;
+        event MeldEventHandler       Called;
+        event ReachEventHandler      Reached;
+        event TileEventHandler       Discarded;
+        event TileTypeEventHandler   DiscardUndone;
+
         IGameState      Parent               { get; }
         Player          Player               { get; }
         Wind            Seat                 { get; }
-        ITile[]         ActiveHand           { get; }
+        ITile[]         Tiles                { get; }
         IMeld[]         Melds                { get; }
         IList<ITile>    Discards             { get; }
         IList<TileType> Waits                { get; }
         IList<ICommand> DrawsAndKans         { get; }
         ReachType       Reach                { get; }
         int             Score                { get; }
-        int             ActiveTileCount      { get; }
+        int             TileCount            { get; }
         int             Streak               { get; }
         int             MeldCount            { get; }
         int             MeldedTileCount      { get; }

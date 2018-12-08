@@ -48,9 +48,9 @@ namespace MahjongCore.Riichi.Impl
             CanNormalDiscard = !extraSettings.DisableAnyDiscard && !extraSettings.DisablePlainDiscard && !extraSettings.DisableNonReach;
             CanTsumo         = hand.CanTsumo();
             CanReach         = hand.CanReach() && (state.TilesRemaining >= 4);
-            Source           = (state.PrevAction == GameAction.PickedFromWall)      ? TileSource.Wall :
-                               (state.PrevAction == GameAction.ReplacementTilePick) ? TileSource.DeadWall :
-                                                                                      TileSource.Call;
+            Source           = (state.PreviousAction == GameAction.PickedFromWall)      ? TileSource.Wall :
+                               (state.PreviousAction == GameAction.ReplacementTilePick) ? TileSource.DeadWall :
+                                                                                          TileSource.Call;
 
             TileType kuikae = hand.GetKuikaeTile();
             if (kuikae != TileType.None)
@@ -74,7 +74,7 @@ namespace MahjongCore.Riichi.Impl
             }
             else if (disableNonReachTiles)
             {
-                for (int i = 0; i < hand.ActiveTileCount; ++i)
+                for (int i = 0; i < hand.TileCount; ++i)
                 {
                     IList<TileType> waits = hand.GetWaitsForDiscard(i);
                     if ((waits == null) || (waits.Count == 0))
@@ -119,18 +119,18 @@ namespace MahjongCore.Riichi.Impl
 
             Reset();
             CanRon = !hand.Furiten && hand.CheckRon();
-            CanChankanRon = state.Settings.GetSetting<bool>(GameOption.Chankan) && CanRon && (state.PrevAction == GameAction.PromotedKan);
+            CanChankanRon = state.Settings.GetSetting<bool>(GameOption.Chankan) && CanRon && (state.PreviousAction == GameAction.PromotedKan);
 
             bool fourKanAbortiveDrawIncoming = state.Settings.GetSetting<bool>(GameOption.FourKanDraw) &&
-                                               (state.PrevAction == GameAction.ReplacementTilePick) &&
+                                               (state.PreviousAction == GameAction.ReplacementTilePick) &&
                                                (state.DoraCount >= 4) &&
                                                !state.GetHand(Player.Player1).FourKans && !state.GetHand(Player.Player2).FourKans &&
                                                !state.GetHand(Player.Player3).FourKans && !state.GetHand(Player.Player4).FourKans;
 
             List<IMeld> callList = (fourKanAbortiveDrawIncoming ||
                                     (state.TilesRemaining <= 0) ||
-                                    (state.PrevAction == GameAction.PromotedKan) ||
-                                    (state.PrevAction == GameAction.ClosedKan) ||
+                                    (state.PreviousAction == GameAction.PromotedKan) ||
+                                    (state.PreviousAction == GameAction.ClosedKan) ||
                                     hand.Reach.IsReach()) ? null : hand.GetCalls();
             if (callList != null)
             {
@@ -176,16 +176,16 @@ namespace MahjongCore.Riichi.Impl
                 {
                     case DiscardDecisionType.PromotedKan:       // Make sure this wasn't proceeded by a chii or pon.
                                                                 valid = (Tile != null) && 
-                                                                        (stateImpl.PrevAction != GameAction.Chii) && 
-                                                                        (stateImpl.PrevAction != GameAction.Pon);
+                                                                        (stateImpl.PreviousAction != GameAction.Chii) && 
+                                                                        (stateImpl.PreviousAction != GameAction.Pon);
 
                                                                 // Ensure that we have the tile in hand.
                                                                 if (valid)
                                                                 {
                                                                     valid = false;
-                                                                    for (int i = 0; !valid && (i < hand.ActiveTileCount); ++i)
+                                                                    for (int i = 0; !valid && (i < hand.TileCount); ++i)
                                                                     {
-                                                                        valid = Tile.Type.IsEqual(hand.ActiveHand[i].Type, true);
+                                                                        valid = Tile.Type.IsEqual(hand.Tiles[i].Type, true);
                                                                     }
                                                                 }
 
@@ -207,7 +207,7 @@ namespace MahjongCore.Riichi.Impl
 
                     case DiscardDecisionType.Discard:           valid = (Tile != null) && 
                                                                         (Tile.Type != TileType.None) &&
-                                                                        (!hand.Reach.IsReach() || Tile.Type.IsEqual(hand.ActiveHand[hand.ActiveTileCount - 1].Type));
+                                                                        (!hand.Reach.IsReach() || Tile.Type.IsEqual(hand.Tiles[hand.TileCount - 1].Type));
                                                                 break;
 
                     case DiscardDecisionType.RiichiDiscard:     valid = hand.Parent.Settings.GetSetting<bool>(GameOption.Riichi) && hand.Tempai && hand.Closed;

@@ -35,9 +35,9 @@ namespace MahjongCore.Riichi
         }
     }
 
-    internal class GameResultsImpl : IGameResults
+    internal class GameResultImpl : IGameResult
     {
-        // IGameResults
+        // IGameResult
         public int       FinalPointsPlayer1    { get; internal set; }
         public int       FinalPointsPlayer2    { get; internal set; }
         public int       FinalPointsPlayer3    { get; internal set; }
@@ -97,18 +97,18 @@ namespace MahjongCore.Riichi
                                                   Player.Player4;
         }
 
-        // GameResultsImpl
-        public GameResultsImpl(IGameSettings settings,
-                               Player startingDealer,
-                               int pointsP1,
-                               int pointsP2,
-                               int pointsP3,
-                               int pointsP4,
-                               int extraWinnerPoints,
-                               bool yakitoriP1,
-                               bool yakitoriP2,
-                               bool yakitoriP3,
-                               bool yakitoriP4)
+        // GameResultImpl
+        public GameResultImpl(IGameSettings settings,
+                              Player startingDealer,
+                              int pointsP1,
+                              int pointsP2,
+                              int pointsP3,
+                              int pointsP4,
+                              int extraWinnerPoints,
+                              bool yakitoriP1,
+                              bool yakitoriP2,
+                              bool yakitoriP3,
+                              bool yakitoriP4)
         {
             int finalScoreP1 = pointsP1;
             int finalScoreP2 = pointsP2;
@@ -181,7 +181,7 @@ namespace MahjongCore.Riichi
             ranks[2].Score = scores[2];
             ranks[3].Score = scores[3];
 
-            // Generate a GameResults and submit it to GameComplete.
+            // Generate a GameResult and submit it to GameComplete.
             SetPlayerData(ranks[0], Placement.Place1);
             SetPlayerData(ranks[1], Placement.Place2);
             SetPlayerData(ranks[2], Placement.Place3);
@@ -197,9 +197,9 @@ namespace MahjongCore.Riichi
         }
     }
 
-    internal class WinResultsImpl : IWinResults
+    internal class WinResultImpl : IWinResult
     {
-        // IWinResults
+        // IWinResult
         public Player         WinningPlayer    { get { return _WinningPlayer; } }
         public ICandidateHand WinningHand      { get { return _WinningHand; } }
         public WinType        Action           { get { return _Action; } }
@@ -215,7 +215,7 @@ namespace MahjongCore.Riichi
         public int            Player4PoolDelta { get { return _Player4PoolDelta; } }
         public bool           Limit            { get { return _Limit; } }
 
-        // WinResultsImpl
+        // WinResultImpl
         private Player         _WinningPlayer;
         private ICandidateHand _WinningHand;
         private WinType        _Action;
@@ -231,8 +231,8 @@ namespace MahjongCore.Riichi
         private int            _Player4PoolDelta;
         private bool           _Limit;
 
-        internal WinResultsImpl()                                                                    { }
-        internal WinResultsImpl(IGameState s, Player w, Player t, Player r, WinType a, int b, int p) { Populate(s, w, t, r, a, b, p); }
+        internal WinResultImpl()                                                                    { }
+        internal WinResultImpl(IGameState s, Player w, Player t, Player r, WinType a, int b, int p) { Populate(s, w, t, r, a, b, p); }
 
         internal void Reset()
         {

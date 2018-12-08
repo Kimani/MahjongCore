@@ -23,7 +23,7 @@ namespace MahjongCore.Riichi
         IList<Yaku> Yaku { get; }
     }
 
-    public interface IWinResults
+    public interface IWinResult
     {
         Player         WinningPlayer    { get; }
         ICandidateHand WinningHand      { get; }
@@ -41,7 +41,7 @@ namespace MahjongCore.Riichi
         bool           Limit            { get; } // True if mangan or better.
     }
 
-    public interface IGameResults
+    public interface IGameResult
     {
         int       FinalPointsPlayer1    { get; } // Includes Yakitori
         int       FinalPointsPlayer2    { get; }
@@ -60,10 +60,10 @@ namespace MahjongCore.Riichi
         float     FinalScorePlayer3     { get; }
         float     FinalScorePlayer4     { get; }
 
-        int GetPoints(Player p);
-        int GetPoints(Placement p);
-        float GetScore(Player p);
-        float GetScore(Placement p);
+        int    GetPoints(Player p);
+        int    GetPoints(Placement p);
+        float  GetScore(Player p);
+        float  GetScore(Placement p);
         Player GetPlayer(Placement p);
     }
 }

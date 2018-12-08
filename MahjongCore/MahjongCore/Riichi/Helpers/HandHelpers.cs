@@ -9,25 +9,36 @@ namespace MahjongCore.Riichi.Helpers
 {
     public class HandHelpers
     {
-        public static void IterateActiveHand(IHand hand, Action<TileType> callback) { for (int i = 0; i < hand.ActiveTileCount; ++i) { callback(hand.ActiveHand[i].Type); } }
+        public static void IterateTiles(IHand hand, Action<TileType> callback)      { for (int i = 0; i < hand.TileCount; ++i) { callback(hand.Tiles[i].Type); } }
+        public static void IterateTiles(IHand hand, Action<TileType, int> callback) { for (int i = 0; i < hand.TileCount; ++i) { callback(hand.Tiles[i].Type, i); } }
         public static void IterateMelds(IHand hand, Action<IMeld> callback)         { foreach (IMeld meld in hand.Melds) { if (!meld.State.IsCalled()) { break; } callback(meld); } }
 
-        public static bool IterateActiveHandAND(IHand hand, Func<TileType, bool> callback)
+        public static bool IterateTilesAND(IHand hand, Func<TileType, bool> callback)
         {
-            for (int i = 0; i < hand.ActiveTileCount; ++i)
+            for (int i = 0; i < hand.TileCount; ++i)
             {
-                if (!callback(hand.ActiveHand[i].Type)) { return false; }
+                if (!callback(hand.Tiles[i].Type)) { return false; }
             }
             return true;
         }
 
-        public static bool IterateActiveHandOR(IHand hand, Func<TileType, bool> callback)
+        public static bool IterateTilesOR(IHand hand, Func<TileType, bool> callback)
         {
-            for (int i = 0; i < hand.ActiveTileCount; ++i)
+            for (int i = 0; i < hand.TileCount; ++i)
             {
-                if (callback(hand.ActiveHand[i].Type)) { return true; }
+                if (callback(hand.Tiles[i].Type)) { return true; }
             }
             return false;
+        }
+
+        public static void IterateMelds(IHand hand, Action<IMeld, int> callback)
+        {
+            int i = 0;
+            foreach (IMeld meld in hand.Melds)
+            {
+                if (!meld.State.IsCalled()) { break; }
+                callback(meld, i++);
+            }
         }
 
         public static bool IterateMeldsAND(IHand hand, Func<IMeld, bool> callback)
@@ -50,17 +61,18 @@ namespace MahjongCore.Riichi.Helpers
             return false;
         }
 
+        public static TileType[] GetSortedTiles(IHand hand)
+        {
+            TileType[] sortedTiles = new TileType[hand.TileCount];
+            IterateTiles(hand, (TileType tile, int i) => { sortedTiles[i] = tile; });
+            Array.Sort(sortedTiles);
+            return sortedTiles;
+        }
+
         internal static List<IMeld> GetCalls(HandImpl hand)
         {
-            TileType[] activeHandCopy = new TileType[hand.ActiveTileCount];
-            for (int i = 0; i < hand.ActiveTileCount; ++i)
-            {
-                activeHandCopy[i] = hand.ActiveHandRaw[i].Type;
-            }
-            Array.Sort(activeHandCopy);
-
             GameStateImpl state = hand.Parent as GameStateImpl;
-            return GetCalls(hand.Player, state.Current, state.Settings, state.GetHand(state.Current).Discards.Last(), activeHandCopy);
+            return GetCalls(hand.Player, state.Current, state.Settings, state.GetHand(state.Current).Discards.Last(), GetSortedTiles(hand));
         }
 
         private static List<IMeld> GetCalls(Player owner, Player target, IGameSettings settings, ITile calledTile, TileType[] sourceTiles)

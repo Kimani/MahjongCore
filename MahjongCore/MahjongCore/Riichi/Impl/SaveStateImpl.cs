@@ -95,7 +95,7 @@ namespace MahjongCore.Riichi.Impl
             lines.Dequeue();          // GameTypeFlags
 
             int pickedTileCount = int.Parse(lines.Dequeue());
-            state.PrevAction = GameActionExtentionMethods.GetGameAction(lines.Dequeue());
+            state.PreviousAction = GameActionExtentionMethods.GetGameAction(lines.Dequeue());
             state.NextAction = GameActionExtentionMethods.GetGameAction(lines.Dequeue());
 
             string tileWallString = lines.Dequeue();
@@ -181,7 +181,7 @@ namespace MahjongCore.Riichi.Impl
             // TODO: Populate tags with remaining lines.
 
             // Extrapolate other data.
-            if (state.PrevAction == GameAction.ReplacementTilePick)
+            if (state.PreviousAction == GameAction.ReplacementTilePick)
             {
                 MeldImpl latestMeld = state.GetHand(state.Current).GetLatestMeld();
                 state.FlipDoraAfterNextDiscard = (latestMeld != null) && ((latestMeld.State == MeldState.KanOpen) || (latestMeld.State == MeldState.KanPromoted));
@@ -242,7 +242,7 @@ namespace MahjongCore.Riichi.Impl
             sb.AppendWithSpace(state.PlayerDeadWallPick.ToString());
             sb.AppendWithSpace(NEUTRAL_FLAGS_STR); // GameTypeFlags
             sb.AppendWithSpace((122 - (13 * 4) - state.TilesRemaining).ToString()); // PickedTileCount
-            sb.AppendWithSpace(state.PrevAction.GetSkyValue().ToString());
+            sb.AppendWithSpace(state.PreviousAction.GetSkyValue().ToString());
             sb.AppendWithSpace(state.NextAction.GetSkyValue().ToString());
 
             for (int i = 0; i < 136; ++i) { sb.Append(state.Wall[i].Type.GetHexString()); }

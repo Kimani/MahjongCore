@@ -77,62 +77,81 @@ namespace MahjongCore.Riichi
         }
     #endregion
 
-    public abstract class HandSortedEventArgs      : EventArgs { public abstract Player           Player  { get; internal set; } }
-    public abstract class HandPickingTileArgs      : EventArgs { public abstract Player           Player  { get; internal set; }
-                                                                 public abstract int              Count   { get; internal set; } }
-    public abstract class HandTileAddedArgs        : EventArgs { public abstract ITile[]          Tiles   { get; internal set; }
-                                                                 public abstract TileSource       Source  { get; internal set; } }
-    public abstract class HandDiscardArgs          : EventArgs { public abstract ITile            Tile    { get; internal set; } }
-    public abstract class HandReachArgs            : EventArgs { public abstract ITile            Tile    { get; internal set; } }
-    public abstract class HandCallArgs             : EventArgs { public abstract IMeld            Meld    { get; internal set; } }
-    public abstract class WallTilesPicked          : EventArgs { public abstract ITile[]          Tiles   { get; internal set; } }
-    public abstract class DiscardRequestedArgs     : EventArgs { public abstract IDiscardInfo     Info    { get; internal set; } }
-    public abstract class PostDiscardRequstedArgs  : EventArgs { public abstract IPostDiscardInfo Info    { get; internal set; } }
-    public abstract class HandRonArgs              : EventArgs { public abstract IWinResults      Results { get; internal set; } }
-    public abstract class HandTsumoArgs            : EventArgs { public abstract IWinResults      Results { get; internal set; } }
-    public abstract class MultiWinArgs             : EventArgs { public abstract IWinResults[]    Results { get; internal set; } }
-    public abstract class ExhaustiveDrawArgs       : EventArgs { public abstract IWinResults      Results { get; internal set; } }
-    public abstract class AbortiveDrawArgs         : EventArgs { public abstract AbortiveDrawType Type    { get; internal set; } }
-    public abstract class GameCompleteArgs         : EventArgs { public abstract IGameResults     Results { get; internal set; } }
-    public abstract class DiscardUndoneArgs        : EventArgs { public abstract Player           Player  { get; internal set; }
-                                                                 public abstract TileType         Tile    { get; internal set; } }
-    public abstract class WinUndoneArgs            : EventArgs { public abstract Player           Player  { get; internal set; } }
-    public abstract class TilePickUndoneArgs       : EventArgs { public abstract Player           Player  { get; internal set; }
-                                                                 public abstract ITile            Tile    { get; internal set; } } // Will be the wall tile.
-    public abstract class PlayerChomboArgs         : EventArgs { public abstract Player           Player  { get; internal set; } }
-    public abstract class DoraIndicatorFlippedArgs : EventArgs { public abstract ITile            Tile    { get; internal set; } }
-    public abstract class DecisionCancelledArgs    : EventArgs { public abstract Player           Player  { get; internal set; } 
-                                                                 public abstract IMeld            Meld    { get; internal set; } } // If null, it was a ron that was head bumped.
+    #region GameAction
+        public enum GameAction
+        {
+            [SkyValue(0),  WinValue(WinType.None)]  Nothing,
+            [SkyValue(1),  WinValue(WinType.None)]  Discard,
+            [SkyValue(2),  WinValue(WinType.None)]  Chii,                // Sorting Chii, Pon, OpenKan and Ron
+            [SkyValue(3),  WinValue(WinType.None)]  Pon,                 // in ascending order on purpose so
+            [SkyValue(4),  WinValue(WinType.None)]  OpenKan,             // you can just sort in order to
+            [SkyValue(5),  WinValue(WinType.Ron)]   Ron,                 // determine what should be done.
+            [SkyValue(6),  WinValue(WinType.Tsumo)] Tsumo,
+            [SkyValue(7),  WinValue(WinType.None)]  ClosedKan,
+            [SkyValue(8),  WinValue(WinType.None)]  PromotedKan,
+            [SkyValue(9),  WinValue(WinType.None)]  RiichiDiscard,
+            [SkyValue(10), WinValue(WinType.None)]  DecisionPending,
+            [SkyValue(11), WinValue(WinType.None)]  PickedFromWall,
+            [SkyValue(12), WinValue(WinType.None)]  ReplacementTilePick, // If set, we want to pick our tile from the dead wall instead of the regular wall.
+            [SkyValue(13), WinValue(WinType.None)]  AbortiveDraw,        // If Kyuushuukyuuhai or too many kans.
+            [SkyValue(14), WinValue(WinType.None)]  OpenRiichiDiscard,   // Will need to update marshalling if this goes over 0xf
+        }
+
+        public static class GameActionExtentionMethods
+        {
+            public static WinType GetWinType(this GameAction ga)                   { return EnumAttributes.GetAttributeValue<WinValue, WinType>(ga); }
+            public static int     GetSkyValue(this GameAction ga)                  { return EnumAttributes.GetAttributeValue<SkyValue, int>(ga); }
+            public static bool    TryGetGameAction(string text, out GameAction ga) { return EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga); }
+            public static bool    IsAgari(this GameAction ga)                      { return (ga == GameAction.Ron) || (ga == GameAction.Tsumo); }
+            public static bool    IsOpenCall(this GameAction ga)                   { return (ga == GameAction.Chii) || (ga == GameAction.Pon) || (ga == GameAction.OpenKan); }
+
+            public static GameAction GetGameAction(string text)
+            {
+                GameAction ga;
+                if (!EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga))
+                {
+                    throw new Exception("Failed to parse GameAction: " + text);
+                }
+                return ga;
+            }
+        }
+    #endregion
+
+    public delegate void PlayerEventHandler             (Player player);
+    public delegate void PlayerIndexEventHandler        (Player player, int i);
+    public delegate void PlayerMeldEventHandler         (Player player, IMeld meld);
+    public delegate void PlayerTileEventHandler         (Player player, ITile tile);
+    public delegate void PlayerAbortiveDrawEventHandler (Player player, AbortiveDrawType type);
+    public delegate void TileCollectionEventHandler     (ITile[] tile);
+    public delegate void WinResultEventHandler          (IWinResult result);
+    public delegate void WinCollectionEventHandler      (IWinResult[] results);
+    public delegate void DiscardInfoEventHandler        (IDiscardInfo player);
+    public delegate void PostDiscardInfoEventHandler    (IPostDiscardInfo player);
+    public delegate void GameResultEventHandler         (IGameResult player);
 
     public interface IGameState
     {
-        event EventHandler<HandSortedEventArgs>      HandSorted;
-        event EventHandler<HandPickingTileArgs>      HandPickingTile;
-        event EventHandler<HandTileAddedArgs>        HandTileAdded;
-        event EventHandler<HandDiscardArgs>          HandDiscard;
-        event EventHandler<HandReachArgs>            HandReach;
-        event EventHandler<HandCallArgs>             HandCall;
-        event EventHandler<HandRonArgs>              HandRon;
-        event EventHandler<HandTsumoArgs>            HandTsumo;
-        event EventHandler<DiscardRequestedArgs>     DiscardRequested;
-        event EventHandler<PostDiscardRequstedArgs>  PostDiscardRequested;
-        event EventHandler<MultiWinArgs>             MultiWin;
-        event EventHandler<ExhaustiveDrawArgs>       ExhaustiveDraw;
-        event EventHandler<AbortiveDrawArgs>         AbortiveDraw;
-        event EventHandler<GameCompleteArgs>         GameComplete;
-        event EventHandler<PlayerChomboArgs>         Chombo;
-        event EventHandler<PostDiscardRequstedArgs>  PostKanRequested;
-        event EventHandler<WallTilesPicked>          WallTilesPicked;
-        event EventHandler                           DiceRolled;
-        event EventHandler                           DeadWallMoved;
-        event EventHandler<DoraIndicatorFlippedArgs> DoraIndicatorFlipped;
-        event EventHandler                           PreCheckAdvance;
-        event EventHandler                           TableCleared;
-        event EventHandler                           PreCheckRewind;
-        event EventHandler<DiscardUndoneArgs>        DiscardUndone;
-        event EventHandler<WinUndoneArgs>            WinUndone;
-        event EventHandler<TilePickUndoneArgs>       TilePickUndone;
-        event EventHandler<DecisionCancelledArgs>    DecisionCancelled;
+        event PlayerIndexEventHandler        WallPicking;
+        event TileCollectionEventHandler     WallPicked;
+        event PlayerTileEventHandler         WallPickUndone;
+        event WinResultEventHandler          Ron;
+        event WinResultEventHandler          Tsumo;
+        event PlayerEventHandler             WinUndone;
+        event DiscardInfoEventHandler        DiscardRequested;
+        event PostDiscardInfoEventHandler    PostDiscardRequested;
+        event PostDiscardInfoEventHandler    PostKanRequested;
+        event WinCollectionEventHandler      MultiWin;
+        event WinResultEventHandler          ExhaustiveDraw;
+        event PlayerAbortiveDrawEventHandler AbortiveDraw;
+        event GameResultEventHandler         GameComplete;
+        event PlayerEventHandler             Chombo;
+        event EventHandler                   DiceRolled;
+        event EventHandler                   DeadWallMoved;
+        event TileEventHandler               DoraIndicatorFlipped;
+        event EventHandler                   PreCheckAdvance;
+        event EventHandler                   TableCleared;
+        event EventHandler                   PreCheckRewind;
+        event PlayerMeldEventHandler         DecisionCancelled; // If Meld is null, it was a ron that was head bumped.
 
         ITile[]        Wall               { get; }
         ITile[]        DoraIndicators     { get; }
@@ -153,6 +172,7 @@ namespace MahjongCore.Riichi
         Player         Current            { get; }
         Player         Wareme             { get; }
         PlayState      State              { get; }
+        GameAction     PreviousAction     { get; }
         bool           Lapped             { get; }
         int            Offset             { get; }
         int            TilesRemaining     { get; }

@@ -157,9 +157,9 @@ namespace MahjongCore.Riichi.Evaluator
             for (int iDora = 0; iDora < doraCount; ++iDora)
             {
                 TileType doraTile = doraIndicators[iDora].Type.GetDoraTile();
-                for (int iClosed = 0; iClosed < hand.ActiveTileCount; ++iClosed)
+                for (int iClosed = 0; iClosed < hand.TileCount; ++iClosed)
                 {
-                    if (hand.ActiveHand[iClosed].Type.IsEqual(doraTile))
+                    if (hand.Tiles[iClosed].Type.IsEqual(doraTile))
                     {
                         Dora++;
                     }
@@ -188,9 +188,9 @@ namespace MahjongCore.Riichi.Evaluator
                 for (int iDora = 0; iDora < doraCount; ++iDora)
                 {
                     TileType doraTile = uraDoraIndicators[iDora].Type.GetDoraTile();
-                    for (int iClosed = 0; iClosed < hand.ActiveTileCount; ++iClosed)
+                    for (int iClosed = 0; iClosed < hand.TileCount; ++iClosed)
                     {
-                        if (hand.ActiveHand[iClosed].Type.IsEqual(doraTile))
+                        if (hand.Tiles[iClosed].Type.IsEqual(doraTile))
                         {
                             UraDora++;
                         }
@@ -199,9 +199,9 @@ namespace MahjongCore.Riichi.Evaluator
             }
 
             // Add red dora.
-            for (int iClosed = 0; iClosed < hand.ActiveTileCount; ++iClosed)
+            for (int iClosed = 0; iClosed < hand.TileCount; ++iClosed)
             {
-                if (hand.ActiveHand[iClosed].Type.IsRedDora())
+                if (hand.Tiles[iClosed].Type.IsRedDora())
                 {
                     RedDora++;
                 }
@@ -335,7 +335,7 @@ namespace MahjongCore.Riichi.Evaluator
             // clone this guy before we insert for all the instances of the winning tile we find.
             // Do it for all the melds and then do it for the pair.
             int calledMeldCount = hand.MeldCount;
-            TileType winningTile = hand.ActiveHand[hand.ActiveTileCount - 1].Type;
+            TileType winningTile = hand.Tiles[hand.TileCount - 1].Type;
             for (int iMeld = 0; iMeld < (4 - calledMeldCount); ++iMeld)
             {
                 // Note that if we have a pon, we only need to look at one of them. Don't need to
