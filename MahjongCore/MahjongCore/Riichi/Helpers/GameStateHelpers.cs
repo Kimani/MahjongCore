@@ -1,6 +1,7 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
 using MahjongCore.Common;
+using System;
 
 namespace MahjongCore.Riichi.Helpers
 {
@@ -34,6 +35,14 @@ namespace MahjongCore.Riichi.Helpers
                    (p == Player.Player2) ? state.Player2Hand :
                    (p == Player.Player3) ? state.Player3Hand :
                                            state.Player4Hand;
+        }
+
+        public static void IterateHands(IGameState state, Action<IHand> callback)
+        {
+            callback(state.Player1Hand);
+            callback(state.Player2Hand);
+            callback(state.Player3Hand);
+            callback(state.Player4Hand);
         }
     }
 }

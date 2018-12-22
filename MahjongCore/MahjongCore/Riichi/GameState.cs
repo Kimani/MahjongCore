@@ -117,17 +117,19 @@ namespace MahjongCore.Riichi
         }
     #endregion
 
+    public delegate void BasicEventHandler              ();
     public delegate void PlayerEventHandler             (Player player);
     public delegate void PlayerIndexEventHandler        (Player player, int i);
-    public delegate void PlayerMeldEventHandler         (Player player, IMeld meld);
     public delegate void PlayerTileEventHandler         (Player player, ITile tile);
+    public delegate void PlayerMeldEventHandler         (Player player, IMeld meld);
     public delegate void PlayerAbortiveDrawEventHandler (Player player, AbortiveDrawType type);
-    public delegate void TileCollectionEventHandler     (ITile[] tile);
+    public delegate void TileEventHandler               (ITile tile);
+    public delegate void TileCollectionEventHandler     (ITile[] tile, TileSource source);
+    public delegate void DiscardInfoEventHandler        (IDiscardInfo info);
+    public delegate void PostDiscardInfoEventHandler    (IPostDiscardInfo info);
     public delegate void WinResultEventHandler          (IWinResult result);
     public delegate void WinCollectionEventHandler      (IWinResult[] results);
-    public delegate void DiscardInfoEventHandler        (IDiscardInfo player);
-    public delegate void PostDiscardInfoEventHandler    (IPostDiscardInfo player);
-    public delegate void GameResultEventHandler         (IGameResult player);
+    public delegate void GameResultEventHandler         (IGameResult result);
 
     public interface IGameState
     {
@@ -145,12 +147,12 @@ namespace MahjongCore.Riichi
         event PlayerAbortiveDrawEventHandler AbortiveDraw;
         event GameResultEventHandler         GameComplete;
         event PlayerEventHandler             Chombo;
-        event EventHandler                   DiceRolled;
-        event EventHandler                   DeadWallMoved;
+        event BasicEventHandler              DiceRolled;
+        event BasicEventHandler              DeadWallMoved;
         event TileEventHandler               DoraIndicatorFlipped;
-        event EventHandler                   PreCheckAdvance;
-        event EventHandler                   TableCleared;
-        event EventHandler                   PreCheckRewind;
+        event BasicEventHandler              PreCheckAdvance;
+        event BasicEventHandler              TableCleared;
+        event BasicEventHandler              PreCheckRewind;
         event PlayerMeldEventHandler         DecisionCancelled; // If Meld is null, it was a ron that was head bumped.
 
         ITile[]        Wall               { get; }
@@ -172,6 +174,7 @@ namespace MahjongCore.Riichi
         Player         Current            { get; }
         Player         Wareme             { get; }
         PlayState      State              { get; }
+        GameAction     NextAction         { get; }
         GameAction     PreviousAction     { get; }
         bool           Lapped             { get; }
         int            Offset             { get; }

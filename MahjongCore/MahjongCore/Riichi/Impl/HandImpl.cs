@@ -12,12 +12,12 @@ namespace MahjongCore.Riichi.Impl
     public class HandImpl : IHand
     {
         // IHand
-        public event EventHandler           Sorted;
-        public event TileSourceEventHandler TilesAdded;
-        public event MeldEventHandler       Called;
-        public event ReachEventHandler      Reached;
-        public event TileEventHandler       Discarded;
-        public event TileTypeEventHandler   DiscardUndone;
+        public event BasicEventHandler                Sorted;
+        public event PlayerTileCollectionEventHandler TilesAdded;
+        public event MeldEventHandler                 Called;
+        public event ReachEventHandler                Reached;
+        public event PlayerTileEventHandler           Discarded;
+        public event PlayerTileTypeEventHandler       DiscardUndone;
 
         public IGameState      Parent                { get { return _Parent; } }
         public Player          Player                { get; private set; }
@@ -134,7 +134,7 @@ namespace MahjongCore.Riichi.Impl
         internal ICommand       PeekLastDrawKan()                            { return _DrawsAndKans.Peek(); }
         internal TileType       GetSuufurendanTile()                         { return CouldSuufurendan ? _Parent.GetHand(_Parent.Dealer).DiscardsRaw[0].Type : TileType.None; }
         internal ITile          AddTile(ITile wallTile, bool rewind = false) { return AddTile(wallTile.Type, rewind); }
-        internal void           AddTileCompleted(ITile[] ts, TileSource s)   { TilesAdded?.Invoke(ts, s); }
+        internal void           AddTileCompleted(ITile[] ts)                 { TilesAdded?.Invoke(Player, ts); }
 
         private GameStateImpl      _Parent;
         private List<TileType>[]   _ActiveTileWaits       = new List<TileType>[TileHelpers.HAND_SIZE];
@@ -466,7 +466,7 @@ namespace MahjongCore.Riichi.Impl
 
             if (fireEvent)
             {
-                Sorted?.Invoke(this, null);
+                Sorted?.Invoke();
             }
         }
 
@@ -530,8 +530,8 @@ namespace MahjongCore.Riichi.Impl
                 }
             }
 
-            DiscardUndone?.Invoke(discardedTile.Type);
-            Sorted?.Invoke(this, null);
+            DiscardUndone?.Invoke(Player, discardedTile.Type);
+            Sorted?.Invoke();
         }
 
         public bool RewindAddTile(TileType targetTile)
@@ -589,8 +589,8 @@ namespace MahjongCore.Riichi.Impl
                 _ActiveRiichiKanTiles = _RiichiKanTilesPerSlot[discardSlot];
             }
 
-            if (reach.IsReach()) { Reached?.Invoke(discardTile, reach); }
-            else                 { Discarded?.Invoke(discardTile); }
+            if (reach.IsReach()) { Reached?.Invoke(Player, discardTile, reach); }
+            else                 { Discarded?.Invoke(Player, discardTile); }
         }
 
         internal void PerformClosedKan(TileType tile)
@@ -621,7 +621,7 @@ namespace MahjongCore.Riichi.Impl
                 _WaitTiles = HandEvaluator.GetWaits(this, -1, null);
             }
 
-            Called?.Invoke(meld);
+            Called?.Invoke(Player, meld);
         }
 
         internal void PerformPromotedKan(ITile tile)
@@ -647,7 +647,7 @@ namespace MahjongCore.Riichi.Impl
             _WaitTiles = _ActiveTileWaits[kanTileSlot];
             UpdateFuritenWithDiscards();
 
-            Called?.Invoke(meld);
+            Called?.Invoke(Player, meld);
         }
 
         internal void PerformCachedCall()
@@ -672,8 +672,8 @@ namespace MahjongCore.Riichi.Impl
             MeldImpl nextMeld = GetNextEmptyMeld();
             nextMeld.Set(cached);
 
-            Called?.Invoke(nextMeld);
-            Sorted?.Invoke(this, null);
+            Called?.Invoke(Player, nextMeld);
+            Sorted?.Invoke();
         }
 
         internal bool CanTsumo()

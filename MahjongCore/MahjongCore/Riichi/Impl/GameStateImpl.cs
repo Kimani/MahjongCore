@@ -41,12 +41,12 @@ namespace MahjongCore.Riichi.Impl
         public event WinResultEventHandler          ExhaustiveDraw;
         public event PlayerAbortiveDrawEventHandler AbortiveDraw;
         public event GameResultEventHandler         GameComplete;
-        public event EventHandler                   DiceRolled;
-        public event EventHandler                   DeadWallMoved;
+        public event BasicEventHandler              DiceRolled;
+        public event BasicEventHandler              DeadWallMoved;
         public event TileEventHandler               DoraIndicatorFlipped;
-        public event EventHandler                   PreCheckAdvance;
-        public event EventHandler                   TableCleared;
-        public event EventHandler                   PreCheckRewind;
+        public event BasicEventHandler              PreCheckAdvance;
+        public event BasicEventHandler              TableCleared;
+        public event BasicEventHandler              PreCheckRewind;
         public event PlayerMeldEventHandler         DecisionCancelled;
 
 #pragma warning disable 67
@@ -62,6 +62,7 @@ namespace MahjongCore.Riichi.Impl
         public Player           Current            { get; internal set; } = Player.None;
         public Player           Wareme             { get; internal set; } = Player.None;
         public PlayState        State              { get; internal set; } = PlayState.PreGame;
+        public GameAction       NextAction         { get; internal set; } = GameAction.Nothing;
         public GameAction       PreviousAction     { get; internal set; } = GameAction.Nothing;
         public IGameSettings    Settings           { get; internal set; }
         public IExtraSettings   ExtraSettings      { get; internal set; }
@@ -156,8 +157,6 @@ namespace MahjongCore.Riichi.Impl
         internal HandImpl      Player3HandRaw           { get; private set; }
         internal HandImpl      Player4HandRaw           { get; private set; }
         internal Stack<Player> DiscardPlayerList        { get; private set; } = new Stack<Player>();
-        
-        internal GameAction    NextAction               { get; set; }         = GameAction.Nothing;
         internal Player        PlayerRecentOpenKan      { get; set; }         = Player.None;
         internal Player        NextActionPlayer         { get; set; }         = Player.None;
         internal TileType      NextActionTile           { get; set; }         = TileType.None;
@@ -267,14 +266,14 @@ namespace MahjongCore.Riichi.Impl
                 TileHelpers.GetRandomBoard(WallRaw, Settings.GetSetting<RedDora>(GameOption.RedDoraOption));
             }
 
-            DiceRolled?.Invoke(this, null);
+            DiceRolled?.Invoke();
             PopulateDoraIndicators();
         }
 
         public void ExecutePostBreak_DeadWallMove()
         {
             FlipDora();
-            DeadWallMoved?.Invoke(this, null);
+            DeadWallMoved?.Invoke();
         }
 
         public void ExecutePostBreak_DecideMove()
@@ -619,7 +618,7 @@ namespace MahjongCore.Riichi.Impl
                 _NextActionPlayerTarget = Player.None;
                 PlayerDeadWallPick = false;
 
-                TableCleared?.Invoke(this, null);
+                TableCleared?.Invoke();
 
                 // Start the next state.
                 _AdvanceAction = AdvanceAction.RandomizingBreak;
@@ -783,9 +782,9 @@ namespace MahjongCore.Riichi.Impl
             _PostDiscardInfoCache.Reset();
             _CachedPostDiscardPass.Reset();
 
-            foreach (TileImpl tile in WallRaw)                       { tile.Reset(); }
-            for (int i = 0; i < DoraIndicatorsRaw.Length; ++i)       { DoraIndicatorsRaw[i] = null; }
-            for (int i = 0; i < UraDoraIndicatorsRaw.Length; ++i)    { UraDoraIndicatorsRaw[i] = null; }
+            foreach (TileImpl tile in WallRaw)                    { tile.Reset(); }
+            for (int i = 0; i < DoraIndicatorsRaw.Length; ++i)    { DoraIndicatorsRaw[i] = null; }
+            for (int i = 0; i < UraDoraIndicatorsRaw.Length; ++i) { UraDoraIndicatorsRaw[i] = null; }
 
             Round = Round.East1;
             FirstDealer = Player.None;
@@ -892,6 +891,7 @@ namespace MahjongCore.Riichi.Impl
         private void InitializeFromState(ISaveState state, IExtraSettings extra)
         {
             InitializeCommon(state.Settings, extra);
+            _CanResume = true;
 
             CommonHelpers.Check((state is SaveStateImpl), "SaveState not from MahjongCore, external save states not supported at this time.");
             (state as SaveStateImpl).PopulateState(this, null);
@@ -1144,7 +1144,7 @@ namespace MahjongCore.Riichi.Impl
             }
         }
 
-        private bool CheckForPause(EventHandler handler)
+        private bool CheckForPause(BasicEventHandler handler)
         {
             Exception stashedException = null;
             bool pause = false;
@@ -1152,7 +1152,7 @@ namespace MahjongCore.Riichi.Impl
             {
                 _ExpectingPause = true;
                 _ShouldPause = false;
-                handler?.Invoke(this, null);
+                handler?.Invoke();
                 pause = _ShouldPause;
             }
             catch (Exception e)
@@ -1227,8 +1227,8 @@ namespace MahjongCore.Riichi.Impl
                 tiles[0] = PickIntoPlayerHand(p, source, out wallTiles[0]);
             }
 
-            WallPicked?.Invoke(wallTiles);
-            GetHand(p).AddTileCompleted(tiles, source);
+            WallPicked?.Invoke(wallTiles, source);
+            GetHand(p).AddTileCompleted(tiles);
             if (flipDora) { FlipDora(); }
         }
 

@@ -61,6 +61,15 @@ namespace MahjongCore.Riichi.Helpers
             return false;
         }
 
+        public static ITile GetFirstTile(IHand hand, TileType type)
+        {
+            foreach (ITile tile in hand.Tiles)
+            {
+                if (tile.Type.IsEqual(type, true)) { return tile; }
+            }
+            return null;
+        }
+
         public static TileType[] GetSortedTiles(IHand hand)
         {
             TileType[] sortedTiles = new TileType[hand.TileCount];
@@ -273,7 +282,6 @@ namespace MahjongCore.Riichi.Helpers
             }
             return calls;
         }
-
 
         private static List<IMeld> AddCallToListAndCheckValid(IGameSettings settings, TileType[] sourceTiles, List<IMeld> calls, IMeld meld)
         {

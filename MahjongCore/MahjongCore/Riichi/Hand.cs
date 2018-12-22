@@ -5,20 +5,19 @@ using System.Collections.Generic;
 
 namespace MahjongCore.Riichi
 {
-    public delegate void MeldEventHandler       (IMeld meld);
-    public delegate void TileTypeEventHandler   (TileType tileType);
-    public delegate void TileSourceEventHandler (ITile[] tiles, TileSource source);
-    public delegate void TileEventHandler       (ITile tile);
-    public delegate void ReachEventHandler      (ITile tile, ReachType reach);
+    public delegate void MeldEventHandler                 (Player p, IMeld meld);
+    public delegate void PlayerTileTypeEventHandler       (Player p, TileType tileType);
+    public delegate void PlayerTileCollectionEventHandler (Player p, ITile[] tiles);
+    public delegate void ReachEventHandler                (Player p, ITile tile, ReachType reach);
 
     public interface IHand
     {
-        event EventHandler           Sorted;
-        event TileSourceEventHandler TilesAdded;
-        event MeldEventHandler       Called;
-        event ReachEventHandler      Reached;
-        event TileEventHandler       Discarded;
-        event TileTypeEventHandler   DiscardUndone;
+        event BasicEventHandler                Sorted;
+        event PlayerTileCollectionEventHandler TilesAdded;
+        event MeldEventHandler                 Called;
+        event ReachEventHandler                Reached;
+        event PlayerTileEventHandler           Discarded;
+        event PlayerTileTypeEventHandler       DiscardUndone;
 
         IGameState      Parent               { get; }
         Player          Player               { get; }

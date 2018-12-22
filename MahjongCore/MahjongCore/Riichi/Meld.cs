@@ -285,6 +285,8 @@ namespace MahjongCore.Riichi
             tileImplD.Location = Location.Call;
             tileImplD.Ancillary = caller;
             tileImplD.Slot = slotD;
+
+            meld.SortMeldTilesForClosedKan();
             return meld;
         }
     }
