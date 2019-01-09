@@ -34,4 +34,12 @@ namespace MahjongCore.Riichi
         TileType    TileB   { get; }
         TileType    TileC   { get; }
     }
+
+    public static class CommandFactory
+    {
+        public static ICommand BuildCommand(CommandType command, ITile tile = null, TileType tileB = TileType.None, TileType tileC = TileType.None)
+        {
+            return new CommandImpl(command, tile) { TileB = tileB, TileC = tileC };
+        }
+    }
 }

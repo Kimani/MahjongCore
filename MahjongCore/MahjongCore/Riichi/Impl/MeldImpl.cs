@@ -1,7 +1,7 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
 using MahjongCore.Common;
-using System;
+using MahjongCore.Riichi.Helpers;
 
 namespace MahjongCore.Riichi.Impl
 {
@@ -57,20 +57,6 @@ namespace MahjongCore.Riichi.Impl
             tileD.Slot = kanTileSlot;
         }
 
-        public bool Iterate(Func<TileType, bool> callback, bool noneResult = true)
-        {
-            bool result = noneResult;
-            for (int i = 0; i < State.GetTileCount(); ++i)
-            {
-                if (!callback(TilesRaw[i].Type))
-                {
-                    result = false;
-                    break;
-                }
-            }
-            return result;
-        }
-
         public ITile GetLowestTile()
         {
             TileImpl tile = null;
@@ -82,6 +68,15 @@ namespace MahjongCore.Riichi.Impl
                 }
             }
             return tile;
+        }
+
+        public bool ContainsSourceTile(int slot, Player source)
+        {
+            if ((source != Owner) && (source != Target))
+            {
+                return false;
+            }
+            return MeldHelpers.IterateTilesOR(this, (ITile tile) => { return (tile.Slot == slot) && (source == (tile.Called ? Target : Owner)); });
         }
 
         // ICloneable

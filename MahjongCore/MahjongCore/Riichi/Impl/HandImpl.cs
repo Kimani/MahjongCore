@@ -12,12 +12,12 @@ namespace MahjongCore.Riichi.Impl
     public class HandImpl : IHand
     {
         // IHand
-        public event BasicEventHandler                Sorted;
-        public event PlayerTileCollectionEventHandler TilesAdded;
-        public event MeldEventHandler                 Called;
-        public event ReachEventHandler                Reached;
-        public event PlayerTileEventHandler           Discarded;
-        public event PlayerTileTypeEventHandler       DiscardUndone;
+        public event Action                           Sorted;
+        public event Action<Player, ITile[]>          TilesAdded;
+        public event Action<Player, IMeld>            Called;
+        public event Action<Player, ITile, ReachType> Reached;
+        public event Action<Player, ITile>            Discarded;
+        public event Action<Player, TileType>         DiscardUndone;
 
         public IGameState      Parent                { get { return _Parent; } }
         public Player          Player                { get; private set; }
@@ -136,16 +136,14 @@ namespace MahjongCore.Riichi.Impl
         internal ITile          AddTile(ITile wallTile, bool rewind = false) { return AddTile(wallTile.Type, rewind); }
         internal void           AddTileCompleted(ITile[] ts)                 { TilesAdded?.Invoke(Player, ts); }
 
-        private GameStateImpl      _Parent;
-        private List<TileType>[]   _ActiveTileWaits       = new List<TileType>[TileHelpers.HAND_SIZE];
-        private Stack<CommandImpl> _DrawsAndKans          = new Stack<CommandImpl>();
-        private bool               _HasTemporaryTile      = false;
-        private List<TileType>     _WaitTiles             = new List<TileType>();
-        private TileType[]         _ActiveRiichiKanTiles;
-        private TileType[][]       _RiichiKanTilesPerSlot = new TileType[][] { new TileType[4], new TileType[4], new TileType[4], new TileType[4],
-                                                                               new TileType[4], new TileType[4], new TileType[4], new TileType[4],
-                                                                               new TileType[4], new TileType[4], new TileType[4], new TileType[4],
-                                                                               new TileType[4], new TileType[4] };
+        private GameStateImpl             _Parent;
+        private readonly List<TileType>[] _ActiveTileWaits       = new List<TileType>[TileHelpers.HAND_SIZE];
+        private Stack<CommandImpl>        _DrawsAndKans          = new Stack<CommandImpl>();
+        private bool                      _HasTemporaryTile      = false;
+        private List<TileType>            _WaitTiles             = new List<TileType>();
+        private TileType[]                _ActiveRiichiKanTiles;
+        private readonly TileType[][]     _RiichiKanTilesPerSlot = new TileType[][] { new TileType[4], new TileType[4], new TileType[4], new TileType[4], new TileType[4], new TileType[4], new TileType[4],
+                                                                                      new TileType[4], new TileType[4], new TileType[4], new TileType[4], new TileType[4], new TileType[4], new TileType[4] };
 
         internal HandImpl(GameStateImpl parent, Player p, int score)
         {
@@ -156,10 +154,7 @@ namespace MahjongCore.Riichi.Impl
 
             for (int i = 0; i < TileHelpers.HAND_SIZE; ++i)
             {
-                TileImpl tile = new TileImpl(TileType.None);
-                tile.Location = Location.Hand;
-                tile.Ghost = true;
-                tile.Slot = i;
+                TileImpl tile = new TileImpl(TileType.None) { Location = Location.Hand, Ghost = true, Slot = i };
                 ActiveHandRaw[i] = tile;
                 _ActiveTileWaits[i] = new List<TileType>();
             }
@@ -568,10 +563,7 @@ namespace MahjongCore.Riichi.Impl
             TileCount--;
             Sort(false);
 
-            TileImpl discardTile = new TileImpl(discardType);
-            discardTile.Reach = reach;
-            discardTile.Slot = DiscardsRaw.Count;
-            discardTile.Location = Location.Discard;
+            TileImpl discardTile = new TileImpl(discardType) { Reach = reach, Slot = DiscardsRaw.Count, Location = Location.Discard };
 
             WinningHandCache = null;
 

@@ -3,6 +3,7 @@
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Helpers;
+using MahjongCore.Riichi.Impl;
 using System;
 using System.Text;
 
@@ -128,8 +129,7 @@ namespace MahjongCore.Riichi
                 TileType tt = TileType.None;
                 if ((hexString != null) && (hexString.Length == 2))
                 {
-                    int skyValue;
-                    if (int.TryParse(hexString, System.Globalization.NumberStyles.HexNumber, null, out skyValue))
+                    if (int.TryParse(hexString, System.Globalization.NumberStyles.HexNumber, null, out int skyValue))
                     {
                         tt = GetTile(skyValue);
                     }
@@ -254,5 +254,11 @@ namespace MahjongCore.Riichi
         bool      Called      { get; } // Ex: Called tile either from a discard pile or the called tile from a meld.
         bool      WinningTile { get; } // Ex: Tile in a candidate hand that is the winning tile Tsumo or Ron is called upon.
         int       Slot        { get; } // Ex: Slot index from source hand or discard pile. Could also refer to wall index. When part of a meld, may ref slot from hand.
+    }
+
+    public static class TileFactory
+    {
+        public static ITile BuildTile(TileType type, int slot = 0, bool called = false) { return new TileImpl(type) { Slot = slot, Called = called }; }
+        public static ITile BuildTile(string value)                                     { return TileImpl.GetTile(value); }
     }
 }

@@ -9,9 +9,9 @@ namespace MahjongCore.Riichi.Helpers
 {
     public class HandHelpers
     {
-        public static void IterateTiles(IHand hand, Action<TileType> callback)      { for (int i = 0; i < hand.TileCount; ++i) { callback(hand.Tiles[i].Type); } }
-        public static void IterateTiles(IHand hand, Action<TileType, int> callback) { for (int i = 0; i < hand.TileCount; ++i) { callback(hand.Tiles[i].Type, i); } }
-        public static void IterateMelds(IHand hand, Action<IMeld> callback)         { foreach (IMeld meld in hand.Melds) { if (!meld.State.IsCalled()) { break; } callback(meld); } }
+        public static void IterateTiles(IHand hand, Action<TileType> callback) { for (int i = 0; i < hand.TileCount; ++i) { callback(hand.Tiles[i].Type); } }
+        public static void IterateTiles(IHand hand, Action<ITile> callback)    { for (int i = 0; i < hand.TileCount; ++i) { callback(hand.Tiles[i]); } }
+        public static void IterateMelds(IHand hand, Action<IMeld> callback)    { foreach (IMeld meld in hand.Melds) { if (!meld.State.IsCalled()) { break; } callback(meld); } }
 
         public static bool IterateTilesAND(IHand hand, Func<TileType, bool> callback)
         {
@@ -22,11 +22,29 @@ namespace MahjongCore.Riichi.Helpers
             return true;
         }
 
+        public static bool IterateTilesAND(IHand hand, Func<ITile, bool> callback)
+        {
+            for (int i = 0; i < hand.TileCount; ++i)
+            {
+                if (!callback(hand.Tiles[i])) { return false; }
+            }
+            return true;
+        }
+
         public static bool IterateTilesOR(IHand hand, Func<TileType, bool> callback)
         {
             for (int i = 0; i < hand.TileCount; ++i)
             {
                 if (callback(hand.Tiles[i].Type)) { return true; }
+            }
+            return false;
+        }
+
+        public static bool IterateTilesOR(IHand hand, Func<ITile, bool> callback)
+        {
+            for (int i = 0; i < hand.TileCount; ++i)
+            {
+                if (callback(hand.Tiles[i])) { return true; }
             }
             return false;
         }
@@ -73,7 +91,8 @@ namespace MahjongCore.Riichi.Helpers
         public static TileType[] GetSortedTiles(IHand hand)
         {
             TileType[] sortedTiles = new TileType[hand.TileCount];
-            IterateTiles(hand, (TileType tile, int i) => { sortedTiles[i] = tile; });
+            int iterSlot = 0;
+            IterateTiles(hand, (TileType tile) => { sortedTiles[iterSlot++] = tile; });
             Array.Sort(sortedTiles);
             return sortedTiles;
         }

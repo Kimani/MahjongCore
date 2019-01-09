@@ -26,14 +26,14 @@ namespace MahjongCore.Riichi.Impl
         }
 
         // TileImpl
-        private static uint REACH_FLAG      = 0x0040;
-        private static uint CALLED_FLAG     = 0x0080;
-        private static uint OPEN_REACH_FLAG = 0x0100;
-        private static uint CALLER_P1_FLAG  = 0x0200;
-        private static uint CALLER_P2_FLAG  = 0x0400;
-        private static uint CALLER_P3_FLAG  = 0x0800;
-        private static uint CALLER_P4_FLAG  = 0x1000;
-        private static uint TILE_MASK       = 0x003F;
+        private static readonly uint REACH_FLAG      = 0x0040;
+        private static readonly uint CALLED_FLAG     = 0x0080;
+        private static readonly uint OPEN_REACH_FLAG = 0x0100;
+        private static readonly uint CALLER_P1_FLAG  = 0x0200;
+        private static readonly uint CALLER_P2_FLAG  = 0x0400;
+        private static readonly uint CALLER_P3_FLAG  = 0x0800;
+        private static readonly uint CALLER_P4_FLAG  = 0x1000;
+        private static readonly uint TILE_MASK       = 0x003F;
 
         public TileImpl()              { }
         public TileImpl(TileType type) { Type = type; }
@@ -107,11 +107,7 @@ namespace MahjongCore.Riichi.Impl
 
         internal static TileImpl GetTile(string value)
         {
-            TileImpl tile;
-            if (!TryGetTile(value, out tile))
-            {
-                throw new Exception("Failed to parse TileImpl: " + value);
-            }
+            CommonHelpers.Check(TryGetTile(value, out TileImpl tile), ("Failed to parse TileImpl: " + value));
             return tile;
         }
     }

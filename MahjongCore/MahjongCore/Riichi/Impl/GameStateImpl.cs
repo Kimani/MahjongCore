@@ -28,29 +28,29 @@ namespace MahjongCore.Riichi.Impl
     internal class GameStateImpl : IGameState
     {
         // IGameState
-        public event PlayerIndexEventHandler        WallPicking;
-        public event TileCollectionEventHandler     WallPicked;
-        public event PlayerTileEventHandler         WallPickUndone;
-        public event WinResultEventHandler          Ron;
-        public event WinResultEventHandler          Tsumo;
-        public event PlayerEventHandler             WinUndone;
-        public event DiscardInfoEventHandler        DiscardRequested;
-        public event PostDiscardInfoEventHandler    PostDiscardRequested;
-        public event PostDiscardInfoEventHandler    PostKanRequested;
-        public event WinCollectionEventHandler      MultiWin;
-        public event WinResultEventHandler          ExhaustiveDraw;
-        public event PlayerAbortiveDrawEventHandler AbortiveDraw;
-        public event GameResultEventHandler         GameComplete;
-        public event BasicEventHandler              DiceRolled;
-        public event BasicEventHandler              DeadWallMoved;
-        public event TileEventHandler               DoraIndicatorFlipped;
-        public event BasicEventHandler              PreCheckAdvance;
-        public event BasicEventHandler              TableCleared;
-        public event BasicEventHandler              PreCheckRewind;
-        public event PlayerMeldEventHandler         DecisionCancelled;
+        public event Action<Player,int>               WallPicking;
+        public event Action<ITile[], TileSource>      WallPicked;
+        public event Action<Player, ITile>            WallPickUndone;
+        public event Action<IWinResult>               Ron;
+        public event Action<IWinResult>               Tsumo;
+        public event Action<Player>                   WinUndone;
+        public event Action<IDiscardInfo>             DiscardRequested;
+        public event Action<IPostDiscardInfo>         PostDiscardRequested;
+        public event Action<IPostDiscardInfo>         PostKanRequested;
+        public event Action<IWinResult[]>             MultiWin;
+        public event Action<IWinResult>               ExhaustiveDraw;
+        public event Action<Player, AbortiveDrawType> AbortiveDraw;
+        public event Action<IGameResult>              GameComplete;
+        public event Action                           DiceRolled;
+        public event Action                           DeadWallMoved;
+        public event Action<ITile>                    DoraIndicatorFlipped;
+        public event Action                           PreCheckAdvance;
+        public event Action                           TableCleared;
+        public event Action                           PreCheckRewind;
+        public event Action<Player, IMeld>            DecisionCancelled;
 
 #pragma warning disable 67
-        public event PlayerEventHandler             Chombo;
+        public event Action<Player>                 Chombo;
 #pragma warning restore 67
 
         public ITile[]          Wall               { get { return WallRaw; } }
@@ -127,9 +127,7 @@ namespace MahjongCore.Riichi.Impl
             _AdvanceAction = ProcessDiscardDecision(decision);
             if (_CanAdvance)
             {
-                PlayState state;
-                bool advancePlayer;
-                DetermineAdvanceState(_AdvanceAction, out state, out advancePlayer);
+                DetermineAdvanceState(_AdvanceAction, out PlayState state, out bool advancePlayer);
                 Advance(state, advancePlayer, false);
             }
         }
@@ -165,31 +163,31 @@ namespace MahjongCore.Riichi.Impl
         internal bool          ChankanFlag              { get; private set; } = false;
         internal bool          KanburiFlag              { get; private set; } = false;
 
-        private Dictionary<PlayState, Action> _PreBreakStateHandlers  = new Dictionary<PlayState, Action>();
-        private Dictionary<PlayState, Action> _PostBreakStateHandlers = new Dictionary<PlayState, Action>();
-        private Dictionary<PlayState, Action> _RewindPreHandlers      = new Dictionary<PlayState, Action>();
-        private Dictionary<PlayState, Action> _RewindPostHandlers     = new Dictionary<PlayState, Action>();
-        private WinResultImpl                 _WinResultCache         = new WinResultImpl();
-        private DiscardInfoImpl               _DiscardInfoCache       = new DiscardInfoImpl();
-        private PostDiscardInfoImpl           _PostDiscardInfoCache   = new PostDiscardInfoImpl();
-        private PostDiscardDecisionImpl       _CachedPostDiscardPass  = new PostDiscardDecisionImpl();
-        private Player                        _NextActionPlayerTarget = Player.None;
-        private GameAction                    _NextAction1            = GameAction.Nothing;
-        private GameAction                    _NextAction2            = GameAction.Nothing;
-        private GameAction                    _NextAction3            = GameAction.Nothing;
-        private GameAction                    _NextAction4            = GameAction.Nothing;
-        private GameAction                    _RewindAction           = GameAction.Nothing;
-        private AdvanceAction                 _AdvanceAction          = AdvanceAction.Done;
-        private AbortiveDrawType              _NextAbortiveDrawType   = AbortiveDrawType.Other;
-        private bool                          _SkipAdvancePlayer      = false;
-        private bool                          _HasExtraSettings       = false;
-        private int                           _NextActionSlot         = -1;
-        private bool                          _ExpectingPause         = false;
-        private bool                          _ShouldPause            = false;
-        private bool                          _CanAdvance             = true;
-        private bool                          _CanResume              = false;
-        private bool                          _ExpectingDiscard       = false;
-        private bool                          _NagashiWin             = false;
+        private readonly Dictionary<PlayState, Action> _PreBreakStateHandlers  = new Dictionary<PlayState, Action>();
+        private readonly Dictionary<PlayState, Action> _PostBreakStateHandlers = new Dictionary<PlayState, Action>();
+        private readonly Dictionary<PlayState, Action> _RewindPreHandlers      = new Dictionary<PlayState, Action>();
+        private readonly Dictionary<PlayState, Action> _RewindPostHandlers     = new Dictionary<PlayState, Action>();
+        private WinResultImpl                          _WinResultCache         = new WinResultImpl();
+        private DiscardInfoImpl                        _DiscardInfoCache       = new DiscardInfoImpl();
+        private PostDiscardInfoImpl                    _PostDiscardInfoCache   = new PostDiscardInfoImpl();
+        private PostDiscardDecisionImpl                _CachedPostDiscardPass  = new PostDiscardDecisionImpl();
+        private Player                                 _NextActionPlayerTarget = Player.None;
+        private GameAction                             _NextAction1            = GameAction.Nothing;
+        private GameAction                             _NextAction2            = GameAction.Nothing;
+        private GameAction                             _NextAction3            = GameAction.Nothing;
+        private GameAction                             _NextAction4            = GameAction.Nothing;
+        private GameAction                             _RewindAction           = GameAction.Nothing;
+        private AdvanceAction                          _AdvanceAction          = AdvanceAction.Done;
+        private AbortiveDrawType                       _NextAbortiveDrawType   = AbortiveDrawType.Other;
+        private bool                                   _SkipAdvancePlayer      = false;
+        private bool                                   _HasExtraSettings       = false;
+        private int                                    _NextActionSlot         = -1;
+        private bool                                   _ExpectingPause         = false;
+        private bool                                   _ShouldPause            = false;
+        private bool                                   _CanAdvance             = true;
+        private bool                                   _CanResume              = false;
+        private bool                                   _ExpectingDiscard       = false;
+        private bool                                   _NagashiWin             = false;
 
         internal     GameStateImpl()                                       { InitializeCommon(null, null, true); }
         internal     GameStateImpl(IGameSettings settings)                 { Initialize(settings, null); }
@@ -901,15 +899,13 @@ namespace MahjongCore.Riichi.Impl
         {
             for (int i = 0; i < WallRaw.Length; ++i)
             {
-                WallRaw[i] = new TileImpl();
-                WallRaw[i].Slot = i;
-                WallRaw[i].Location = Location.Wall;
+                WallRaw[i] = new TileImpl { Slot = i, Location = Location.Wall };
             }
 
             // Set settings and determine if we're in tutorial mode if ts is null or not.
-            Settings          = (settings != null) ? settings : new GameSettingsImpl();
-            _HasExtraSettings = (extra != null);
-            ExtraSettings     = (extra != null) ? extra : new ExtraSettingsImpl();
+            Settings          = settings ?? new GameSettingsImpl();
+            ExtraSettings     = extra ?? new ExtraSettingsImpl();
+            _HasExtraSettings = (extra != null);            
 
             int score = Settings.GetSetting<int>(GameOption.StartingPoints);
             Player1HandRaw = new HandImpl(this, Player.Player1, score);
@@ -1144,7 +1140,7 @@ namespace MahjongCore.Riichi.Impl
             }
         }
 
-        private bool CheckForPause(BasicEventHandler handler)
+        private bool CheckForPause(Action handler)
         {
             Exception stashedException = null;
             bool pause = false;

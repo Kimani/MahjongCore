@@ -7,18 +7,8 @@ namespace MahjongCore.Common
 {
     public static class CommonHelpers
     {
-        public static bool IsFlagSet(this uint value, uint flag)
-        {
-            return (flag != 0) && ((value & flag) == flag);
-        }
-
-        public static void Check(bool condition, string message)
-        {
-            if (!condition)
-            {
-                throw new Exception(message);
-            }
-        }
+        public static bool IsFlagSet(this uint value, uint flag) { return (flag != 0) && ((value & flag) == flag); }
+        public static void Check(bool condition, string message) { if (!condition) { throw new Exception(message); } }
 
         public static void SafeCopyIntoValueList<T>(ICollection<T> targetList, ICollection<T> sourceList) where T : struct
         {

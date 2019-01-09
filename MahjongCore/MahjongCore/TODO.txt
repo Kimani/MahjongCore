@@ -1,0 +1,10 @@
+﻿- Refactor yaku evaluators to use iterators
+- create new XML based save state, compatible with board editor.
+    - Remove TileColor from MahjongCore but would need to add a custom field 
+    - Make LoadBoard just use load from save...
+- Fix nagashi... dealer still stays dealer if they're tempai... MAYBE
+- Might be some bugs with promoted kans. which tile in the list of 4 is the called one?
+- MAY NEED TO ENSURE RESUME IS TO BE CALLED AFTER LOADING...
+- Go through all TODOs
+- Unit tests
+- Implement MeldFactory::BuildMeld when it's time to test loading the board in SKY...

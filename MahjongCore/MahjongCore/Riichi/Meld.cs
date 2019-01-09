@@ -1,5 +1,6 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Impl;
@@ -50,11 +51,7 @@ namespace MahjongCore.Riichi
 
             public static MeldState TryGetMeldState(string value)
             {
-                MeldState state;
-                if (!EnumHelper.TryGetEnumByCode<MeldState, MeldCode>(value, out state))
-                {
-                    throw new Exception("Failed to parse MeldState: " + value);
-                }
+                CommonHelpers.Check(EnumHelper.TryGetEnumByCode<MeldState, MeldCode>(value, out MeldState state), ("Failed to parse MeldState: " + value));
                 return state;
             }
         }
@@ -80,6 +77,7 @@ namespace MahjongCore.Riichi
 
         void  Promote(TileType kanTile, int kanTileSlot);
         ITile GetLowestTile();
+        bool  ContainsSourceTile(int slot, Player source);
     }
 
     public static class MeldFactory
@@ -98,15 +96,17 @@ namespace MahjongCore.Riichi
                 int calledValue = tileCalled.Type.GetValue();
                 Global.Assert(loValue < hiValue);
                 Global.Assert(((loValue + 1) == hiValue) || ((loValue + 2) == hiValue));
-                Global.Assert(((loValue + 2) == hiValue) ? (calledValue == (loValue + 1)) : 
+                Global.Assert(((loValue + 2) == hiValue) ? (calledValue == (loValue + 1)) :
                                                            ((calledValue == (loValue - 1)) || calledValue == (hiValue + 1)));
             }
 
-            MeldImpl meld = new MeldImpl();
-            meld.Owner = target.GetNext();
-            meld.Target = target;
-            meld.State = MeldState.Chii;
-            meld.Direction = CalledDirection.Left;
+            MeldImpl meld = new MeldImpl
+            {
+                Owner = target.GetNext(),
+                Target = target,
+                State = MeldState.Chii,
+                Direction = CalledDirection.Left
+            };
 
             TileImpl tile1 = meld.TilesRaw[0];
             tile1.Type = tileCalled.Type;
@@ -149,16 +149,18 @@ namespace MahjongCore.Riichi
                 Global.Assert(tileCalled.Type.GetSuit() == tileB.GetSuit());
             }
 
-            MeldImpl meld = new MeldImpl();
-            meld.Owner = caller;
-            meld.Target = target;
-            meld.State = MeldState.Pon;
-            meld.Direction = caller.GetTargetPlayerDirection(target);
+            MeldImpl meld = new MeldImpl
+            {
+                Owner = caller,
+                Target = target,
+                State = MeldState.Pon,
+                Direction = caller.GetTargetPlayerDirection(target)
+            };
 
             TileImpl tileImplCalled, tileImplA, tileImplB;
-            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; }
+            if (meld.Direction == CalledDirection.Left) { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; }
             else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.TilesRaw[1]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[2]; }
-            else                                               { tileImplCalled = meld.TilesRaw[2]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; }
+            else { tileImplCalled = meld.TilesRaw[2]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; }
 
             tileImplCalled.Type = tileCalled.Type;
             tileImplCalled.Location = Location.Call;
@@ -202,16 +204,18 @@ namespace MahjongCore.Riichi
                 Global.Assert(tileCalled.Type.GetSuit() == tileC.GetSuit());
             }
 
-            MeldImpl meld = new MeldImpl();
-            meld.Owner = caller;
-            meld.Target = target;
-            meld.State = MeldState.KanOpen;
-            meld.Direction = caller.GetTargetPlayerDirection(target);
+            MeldImpl meld = new MeldImpl
+            {
+                Owner = caller,
+                Target = target,
+                State = MeldState.KanOpen,
+                Direction = caller.GetTargetPlayerDirection(target)
+            };
 
             TileImpl tileImplCalled, tileImplA, tileImplB, tileImplC;
-            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; tileImplC = meld.TilesRaw[3]; }
+            if (meld.Direction == CalledDirection.Left) { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; tileImplC = meld.TilesRaw[3]; }
             else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.TilesRaw[1]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[2]; tileImplC = meld.TilesRaw[3]; }
-            else                                               { tileImplCalled = meld.TilesRaw[3]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; tileImplC = meld.TilesRaw[2]; }
+            else { tileImplCalled = meld.TilesRaw[3]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; tileImplC = meld.TilesRaw[2]; }
 
             tileImplCalled.Type = tileCalled.Type;
             tileImplCalled.Location = Location.Call;
@@ -258,9 +262,7 @@ namespace MahjongCore.Riichi
                 Global.Assert(tileA.GetSuit() == tileD.GetSuit());
             }
 
-            MeldImpl meld = new MeldImpl();
-            meld.Owner = caller;
-            meld.State = MeldState.KanConcealed;
+            MeldImpl meld = new MeldImpl { Owner = caller, State = MeldState.KanConcealed };
 
             TileImpl tileImplA = meld.TilesRaw[0];
             tileImplA.Type = tileA;
@@ -287,6 +289,34 @@ namespace MahjongCore.Riichi
             tileImplD.Slot = slotD;
 
             meld.SortMeldTilesForClosedKan();
+            return meld;
+        }
+
+        public static IMeld BuildMeld(Player owner, MeldState state, ITile tileA, ITile tileB, ITile tileC, ITile tileD)
+        {
+            MeldImpl meld = new MeldImpl() { Owner = owner, State = state };
+            
+            // TODO: all these.
+            if (state == MeldState.Chii)
+            {
+
+            }
+            else if (state == MeldState.Pon)
+            {
+
+            }
+            else if (state == MeldState.KanOpen)
+            {
+
+            }
+            else if (state == MeldState.KanConcealed)
+            {
+
+            }
+            else if (state == MeldState.KanPromoted)
+            {
+
+            }
             return meld;
         }
     }
