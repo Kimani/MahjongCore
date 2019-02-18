@@ -70,8 +70,7 @@ namespace MahjongCore.Riichi
 
             public static PlayState GetPlayState(string text)
             {
-                PlayState ps;
-                CommonHelpers.Check(EnumHelper.TryGetEnumByCode<PlayState, SkyValue>(text, out ps), ("Could not parse into PlayState: " + text));
+                CommonHelpers.Check(EnumHelper.TryGetEnumByCode<PlayState, SkyValue>(text, out PlayState ps), ("Could not parse into PlayState: " + text));
                 return ps;
             }
         }
@@ -104,56 +103,39 @@ namespace MahjongCore.Riichi
             public static bool    TryGetGameAction(string text, out GameAction ga) { return EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga); }
             public static bool    IsAgari(this GameAction ga)                      { return (ga == GameAction.Ron) || (ga == GameAction.Tsumo); }
             public static bool    IsOpenCall(this GameAction ga)                   { return (ga == GameAction.Chii) || (ga == GameAction.Pon) || (ga == GameAction.OpenKan); }
+            public static bool    IsKan(this GameAction ga)                        { return (ga == GameAction.ClosedKan) || (ga == GameAction.PromotedKan) || (ga == GameAction.OpenKan); }
 
             public static GameAction GetGameAction(string text)
             {
-                GameAction ga;
-                if (!EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out ga))
-                {
-                    throw new Exception("Failed to parse GameAction: " + text);
-                }
+                CommonHelpers.Check(EnumHelper.TryGetEnumByCode<GameAction, SkyValue>(text, out GameAction ga), ("Failed to parse GameAction: " + text));
                 return ga;
             }
         }
     #endregion
 
-    public delegate void BasicEventHandler              ();
-    public delegate void PlayerEventHandler             (Player player);
-    public delegate void PlayerIndexEventHandler        (Player player, int i);
-    public delegate void PlayerTileEventHandler         (Player player, ITile tile);
-    public delegate void PlayerMeldEventHandler         (Player player, IMeld meld);
-    public delegate void PlayerAbortiveDrawEventHandler (Player player, AbortiveDrawType type);
-    public delegate void TileEventHandler               (ITile tile);
-    public delegate void TileCollectionEventHandler     (ITile[] tile, TileSource source);
-    public delegate void DiscardInfoEventHandler        (IDiscardInfo info);
-    public delegate void PostDiscardInfoEventHandler    (IPostDiscardInfo info);
-    public delegate void WinResultEventHandler          (IWinResult result);
-    public delegate void WinCollectionEventHandler      (IWinResult[] results);
-    public delegate void GameResultEventHandler         (IGameResult result);
-
     public interface IGameState
     {
-        event PlayerIndexEventHandler        WallPicking;
-        event TileCollectionEventHandler     WallPicked;
-        event PlayerTileEventHandler         WallPickUndone;
-        event WinResultEventHandler          Ron;
-        event WinResultEventHandler          Tsumo;
-        event PlayerEventHandler             WinUndone;
-        event DiscardInfoEventHandler        DiscardRequested;
-        event PostDiscardInfoEventHandler    PostDiscardRequested;
-        event PostDiscardInfoEventHandler    PostKanRequested;
-        event WinCollectionEventHandler      MultiWin;
-        event WinResultEventHandler          ExhaustiveDraw;
-        event PlayerAbortiveDrawEventHandler AbortiveDraw;
-        event GameResultEventHandler         GameComplete;
-        event PlayerEventHandler             Chombo;
-        event BasicEventHandler              DiceRolled;
-        event BasicEventHandler              DeadWallMoved;
-        event TileEventHandler               DoraIndicatorFlipped;
-        event BasicEventHandler              PreCheckAdvance;
-        event BasicEventHandler              TableCleared;
-        event BasicEventHandler              PreCheckRewind;
-        event PlayerMeldEventHandler         DecisionCancelled; // If Meld is null, it was a ron that was head bumped.
+        event Action<Player,int>               WallPicking;
+        event Action<ITile[], TileSource>      WallPicked;
+        event Action<Player, ITile>            WallPickUndone;
+        event Action<IWinResult>               Ron;
+        event Action<IWinResult>               Tsumo;
+        event Action<Player>                   WinUndone;
+        event Action<IDiscardInfo>             DiscardRequested;
+        event Action<IPostDiscardInfo>         PostDiscardRequested;
+        event Action<IPostDiscardInfo>         PostKanRequested;
+        event Action<IWinResult[]>             MultiWin;
+        event Action<IWinResult>               ExhaustiveDraw;
+        event Action<Player, AbortiveDrawType> AbortiveDraw;
+        event Action<IGameResult>              GameComplete;
+        event Action<Player>                   Chombo;
+        event Action                           DiceRolled;
+        event Action                           DeadWallMoved;
+        event Action<ITile>                    DoraIndicatorFlipped;
+        event Action                           PreCheckAdvance;
+        event Action                           TableCleared;
+        event Action                           PreCheckRewind;
+        event Action<Player, IMeld>            DecisionCancelled; // If Meld is null, it was a ron that was head bumped.
 
         ITile[]        Wall               { get; }
         ITile[]        DoraIndicators     { get; }

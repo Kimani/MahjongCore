@@ -98,7 +98,7 @@ namespace MahjongCore.Riichi.Impl
 
         public void Rewind()
         {
-            if (!CheckForPause(PreCheckRewind))
+            if (!CheckForPause(true))
             {
                 CommonHelpers.Check(_RewindPreHandlers.ContainsKey(State), "Cannot rewind from here!");
                 _RewindPreHandlers[State].Invoke();   // Use the rewind mode handler to rewind the mode to the correct previous mode. This must exist.
@@ -147,7 +147,7 @@ namespace MahjongCore.Riichi.Impl
         }
 
         // GameStateImpl
-        internal TileImpl[]    WallRaw                  { get; private set; } = new TileImpl[TileHelpers.MAIN_WALL_TILE_COUNT];
+        internal TileImpl[]    WallRaw                  { get; private set; } = new TileImpl[TileHelpers.TOTAL_TILE_COUNT];
         internal TileImpl[]    DoraIndicatorsRaw        { get; private set; } = new TileImpl[5];
         internal TileImpl[]    UraDoraIndicatorsRaw     { get; private set; } = new TileImpl[5];
         internal HandImpl      Player1HandRaw           { get; private set; }
@@ -283,7 +283,7 @@ namespace MahjongCore.Riichi.Impl
 
             // Query the AI for the discard decision, or raise the event requesting for the discard decision. If we 
             // can query the AI or the discard decision is supplied immediately during the event, then _AdvanceAction
-            // will get set. Otherwise, _AdvanceAction will remain "Done" and our caller can supply discard info later.
+            // will get set. Otherwise, _AdvanceAction will be set to "Done".
             IPlayerAI ai = GetAI(Current);
             _ExpectingDiscard = true;
             if (ai != null)
@@ -292,6 +292,7 @@ namespace MahjongCore.Riichi.Impl
             }
             else
             {
+                _AdvanceAction = AdvanceAction.Done;
                 DiscardRequested?.Invoke(_DiscardInfoCache);
             }
         }
@@ -905,7 +906,7 @@ namespace MahjongCore.Riichi.Impl
             // Set settings and determine if we're in tutorial mode if ts is null or not.
             Settings          = settings ?? new GameSettingsImpl();
             ExtraSettings     = extra ?? new ExtraSettingsImpl();
-            _HasExtraSettings = (extra != null);            
+            _HasExtraSettings = (extra != null);
 
             int score = Settings.GetSetting<int>(GameOption.StartingPoints);
             Player1HandRaw = new HandImpl(this, Player.Player1, score);
@@ -913,7 +914,7 @@ namespace MahjongCore.Riichi.Impl
             Player3HandRaw = new HandImpl(this, Player.Player3, score);
             Player4HandRaw = new HandImpl(this, Player.Player4, score);
 
-            if (skipHandlers)
+            if (!skipHandlers)
             {
                 foreach (PlayState ps in Enum.GetValues(typeof(PlayState)))
                 {
@@ -935,13 +936,16 @@ namespace MahjongCore.Riichi.Impl
 
             do
             {
-                _AdvanceAction = AdvanceAction.Done;
+                _AdvanceAction = AdvanceAction.Advance;
 
-                if (!queuedSkipCheck)
+                if (queuedSkipCheck)
+                {
+                    queuedSkipCheck = false;
+                }
+                else
                 {
                     // Advance player, set flags/game mode/etc.
                     State = queuedMode;
-                    queuedSkipCheck = false;
 
                     if (_SkipAdvancePlayer)
                     {
@@ -954,8 +958,12 @@ namespace MahjongCore.Riichi.Impl
 
                     // Execute a pre-break handler which will make the new state valid if we end up pausing here.
                     // Skip this if we previously paused because we already did it.
-                    _PreBreakStateHandlers[queuedMode]?.Invoke();
-                    if (CheckForPause(PreCheckAdvance))
+                    if (_PreBreakStateHandlers.ContainsKey(queuedMode))
+                    {
+                        _PreBreakStateHandlers[queuedMode].Invoke();
+                    }
+
+                    if (CheckForPause(false))
                     {
                         _AdvanceAction = AdvanceAction.Done;
                         break;
@@ -963,7 +971,10 @@ namespace MahjongCore.Riichi.Impl
                 }
 
                 // Execute the bulk of the game mode.
-                _PostBreakStateHandlers[queuedMode]?.Invoke();
+                if (_PostBreakStateHandlers.ContainsKey(queuedMode))
+                {
+                    _PostBreakStateHandlers[queuedMode].Invoke();
+                }
 
                 // Determine what the next step will be.
                 DetermineAdvanceState(_AdvanceAction, out queuedMode, out queuedAdvancePlayer);
@@ -975,13 +986,13 @@ namespace MahjongCore.Riichi.Impl
         {
             advancePlayer = false;
 
-            switch (_AdvanceAction)
+            switch (action)
             {
                 case AdvanceAction.Done:    state = PlayState.NA;
                                             break;
 
                 case AdvanceAction.Advance: state = State.GetNext();
-                                            advancePlayer = EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(State.GetNext());
+                                            advancePlayer = EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(state);
                                             break;
 
                 default:                    throw new Exception("Unexpected AdvanceAction");
@@ -1140,7 +1151,7 @@ namespace MahjongCore.Riichi.Impl
             }
         }
 
-        private bool CheckForPause(Action handler)
+        private bool CheckForPause(bool rewindHandler)
         {
             Exception stashedException = null;
             bool pause = false;
@@ -1148,7 +1159,14 @@ namespace MahjongCore.Riichi.Impl
             {
                 _ExpectingPause = true;
                 _ShouldPause = false;
-                handler?.Invoke();
+                if (rewindHandler)
+                {
+                    PreCheckRewind?.Invoke();
+                }
+                else
+                {
+                    PreCheckAdvance?.Invoke();
+                }
                 pause = _ShouldPause;
             }
             catch (Exception e)
