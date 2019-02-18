@@ -12,7 +12,7 @@ namespace MahjongCore.Riichi.Impl
     public class HandImpl : IHand
     {
         // IHand
-        public event Action                           Sorted;
+        public event Action<Player>                   Sorted;
         public event Action<Player, ITile[]>          TilesAdded;
         public event Action<Player, IMeld>            Called;
         public event Action<Player, ITile, ReachType> Reached;
@@ -461,7 +461,7 @@ namespace MahjongCore.Riichi.Impl
 
             if (fireEvent)
             {
-                Sorted?.Invoke();
+                Sorted?.Invoke(Player);
             }
         }
 
@@ -526,7 +526,7 @@ namespace MahjongCore.Riichi.Impl
             }
 
             DiscardUndone?.Invoke(Player, discardedTile.Type);
-            Sorted?.Invoke();
+            Sorted?.Invoke(Player);
         }
 
         public bool RewindAddTile(TileType targetTile)
@@ -665,7 +665,7 @@ namespace MahjongCore.Riichi.Impl
             nextMeld.Set(cached);
 
             Called?.Invoke(Player, nextMeld);
-            Sorted?.Invoke();
+            Sorted?.Invoke(Player);
         }
 
         internal bool CanTsumo()

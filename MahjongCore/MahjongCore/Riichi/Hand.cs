@@ -7,7 +7,7 @@ namespace MahjongCore.Riichi
 {
     public interface IHand
     {
-        event Action                           Sorted;
+        event Action<Player>                   Sorted;
         event Action<Player, ITile[]>          TilesAdded;
         event Action<Player, IMeld>            Called;
         event Action<Player, ITile, ReachType> Reached;

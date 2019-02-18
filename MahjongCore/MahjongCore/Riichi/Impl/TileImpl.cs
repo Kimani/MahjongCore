@@ -5,7 +5,7 @@ using System;
 
 namespace MahjongCore.Riichi.Impl
 {
-    internal class TileImpl : ITile, ICloneable
+    internal class TileImpl : ITile, ICloneable, IComparable
     {
         // ITile
         public TileType  Type        { get; internal set; } = TileType.None;
@@ -24,6 +24,9 @@ namespace MahjongCore.Riichi.Impl
             tile.Set(this);
             return tile;
         }
+
+        // IComparable
+        public int CompareTo(object obj) { return Type.CompareTo((obj as ITile).Type); }
 
         // TileImpl
         private static readonly uint REACH_FLAG      = 0x0040;
