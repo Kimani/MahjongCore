@@ -6,6 +6,7 @@ using MahjongCore.Common;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace MahjongCore.Riichi.Impl
 {
@@ -24,7 +25,7 @@ namespace MahjongCore.Riichi.Impl
         public Wind            Seat                  { get { return WindExtensionMethods.GetWind(Player, Parent.Dealer); } }
         public ITile[]         Tiles                 { get { return ActiveHandRaw; } }
         public IMeld[]         Melds                 { get { return MeldsRaw; } }
-        public IList<ITile>    Discards              { get { return (IList<ITile>)DiscardsRaw; } }
+        public IList<ITile>    Discards              { get { return new List<ITile>(DiscardsRaw.Cast<ITile>()); } }
         public IList<TileType> Waits                 { get; internal set; } = new List<TileType>();
         public IList<ICommand> DrawsAndKans          { get; internal set; } = new List<ICommand>();
         public ReachType       Reach                 { get; internal set; } = ReachType.None;
@@ -230,7 +231,7 @@ namespace MahjongCore.Riichi.Impl
                 // We haven't populated WaitTiles yet. In this case, we're tempai if anything in ActiveTileWaits is non-null.
                 foreach (List<TileType> tileWaits in _ActiveTileWaits)
                 {
-                    if (tileWaits.Count > 0)
+                    if ((tileWaits != null) && (tileWaits.Count > 0))
                     {
                         Tempai = true;
                         break;

@@ -12,20 +12,20 @@ namespace MahjongCore.Riichi.Evaluator
 {
     public class HandEvaluator
     {
-        private static int BITFIELD_KOKUSHI_1_CHAR = 0x0001;
-        private static int BITFIELD_KOKUSHI_9_CHAR = 0x0002;
-        private static int BITFIELD_KOKUSHI_1_BAM  = 0x0004;
-        private static int BITFIELD_KOKUSHI_9_BAM  = 0x0008;
-        private static int BITFIELD_KOKUSHI_1_CIRC = 0x0010;
-        private static int BITFIELD_KOKUSHI_9_CIRC = 0x0020;
-        private static int BITFIELD_KOKUSHI_NORTH  = 0x0040;
-        private static int BITFIELD_KOKUSHI_SOUTH  = 0x0080;
-        private static int BITFIELD_KOKUSHI_EAST   = 0x0100;
-        private static int BITFIELD_KOKUSHI_WEST   = 0x0200;
-        private static int BITFIELD_KOKUSHI_HATSU  = 0x0400;
-        private static int BITFIELD_KOKUSHI_HAKU   = 0x0800;
-        private static int BITFIELD_KOKUSHI_CHUN   = 0x1000;
-        private static int BITFIELD_KOKUSHI_ALL    = 0x1fff;
+        private static readonly int BITFIELD_KOKUSHI_1_CHAR = 0x0001;
+        private static readonly int BITFIELD_KOKUSHI_9_CHAR = 0x0002;
+        private static readonly int BITFIELD_KOKUSHI_1_BAM  = 0x0004;
+        private static readonly int BITFIELD_KOKUSHI_9_BAM  = 0x0008;
+        private static readonly int BITFIELD_KOKUSHI_1_CIRC = 0x0010;
+        private static readonly int BITFIELD_KOKUSHI_9_CIRC = 0x0020;
+        private static readonly int BITFIELD_KOKUSHI_NORTH  = 0x0040;
+        private static readonly int BITFIELD_KOKUSHI_SOUTH  = 0x0080;
+        private static readonly int BITFIELD_KOKUSHI_EAST   = 0x0100;
+        private static readonly int BITFIELD_KOKUSHI_WEST   = 0x0200;
+        private static readonly int BITFIELD_KOKUSHI_HATSU  = 0x0400;
+        private static readonly int BITFIELD_KOKUSHI_HAKU   = 0x0800;
+        private static readonly int BITFIELD_KOKUSHI_CHUN   = 0x1000;
+        private static readonly int BITFIELD_KOKUSHI_ALL    = 0x1fff;
 
         /**
          * Returns an array with the waits this hand has. Note that this will return regular 5 and never RED_5. This does NOT take into account
@@ -50,10 +50,8 @@ namespace MahjongCore.Riichi.Evaluator
             IGameState state = hand.Parent;
             bool anyCalls = (state.Player1Hand.MeldCount > 0) || (state.Player2Hand.MeldCount > 0) ||
                             (state.Player3Hand.MeldCount > 0) || (state.Player4Hand.MeldCount > 0);
-            bool overrideNoReachFlag;
-            List<TileType> waits = GetWaits(sublist, approvedReachKanTiles, hand.Discards, anyCalls, out overrideNoReachFlag);
-            HandImpl handImpl = hand as HandImpl;
-            if (handImpl != null)
+            List<TileType> waits = GetWaits(sublist, approvedReachKanTiles, hand.Discards, anyCalls, out bool overrideNoReachFlag);
+            if (hand is HandImpl handImpl)
             {
                 handImpl.OverrideNoReachFlag = overrideNoReachFlag;
             }
@@ -334,8 +332,10 @@ namespace MahjongCore.Riichi.Evaluator
                     if (lastTileLookedCount == 1)
                     {
                         TileType[] waitSubHand = GetSubhand(sortedWaitingHand, (i - 1), -1);
-                        WaitCandidateHand wch = new WaitCandidateHand(waitSubHand, calledMeldCount, false);
-                        wch.WaitA = lastTileLookedAt;
+                        WaitCandidateHand wch = new WaitCandidateHand(waitSubHand, calledMeldCount, false)
+                        {
+                            WaitA = lastTileLookedAt
+                        };
                         GetWaitsBranch(waitList, wch, threeOfAKindTiles, threeInARowInHandTiles);
                     }
 
@@ -348,8 +348,10 @@ namespace MahjongCore.Riichi.Evaluator
             {
                 // Branch using this tile as the wait tile!
                 TileType[] waitSubHand = GetSubhand(sortedWaitingHand, (activeTileCount - 1), -1);
-                WaitCandidateHand wch = new WaitCandidateHand(waitSubHand, calledMeldCount, false);
-                wch.WaitA = lastTileLookedAt;
+                WaitCandidateHand wch = new WaitCandidateHand(waitSubHand, calledMeldCount, false)
+                {
+                    WaitA = lastTileLookedAt
+                };
                 GetWaitsBranch(waitList, wch, threeOfAKindTiles, threeInARowInHandTiles);
             }
 
@@ -455,16 +457,13 @@ namespace MahjongCore.Riichi.Evaluator
                 }
 
                 int score = 0;
-                bool limitDummy;
                 if (fRon)
                 {
-                    score = RiichiScoring.GetScoreRon(hand.Parent.Settings, cHand.Han, cHand.Fu, hand.Dealer, out limitDummy);
+                    score = RiichiScoring.GetScoreRon(hand.Parent.Settings, cHand.Han, cHand.Fu, hand.Dealer, out LimitType dummyLimit, out bool dummyError);
                 }
                 else
                 {
-                    int scoreHi;
-                    int scoreLo;
-                    RiichiScoring.GetScoreTsumo(hand.Parent.Settings, cHand.Han, cHand.Fu, hand.Dealer, out limitDummy, out scoreHi, out scoreLo);
+                    RiichiScoring.GetScoreTsumo(hand.Parent.Settings, cHand.Han, cHand.Fu, hand.Dealer, out LimitType dummyLimit, out int scoreHi, out int scoreLo, out bool dummyError);
                     score = scoreHi + (scoreLo * 2);
                 }
 

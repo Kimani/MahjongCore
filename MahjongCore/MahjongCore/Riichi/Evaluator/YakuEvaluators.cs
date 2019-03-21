@@ -1124,10 +1124,9 @@ namespace MahjongCore.Riichi.Evaluator
         public static int Evaluate_AoNoDoumon(IHand hand, ICandidateHand candidateHand, bool ron)
         {
             StandardCandidateHand scHand = candidateHand as StandardCandidateHand;
-            SevenPairsCandidateHand spHand = candidateHand as SevenPairsCandidateHand;
 
             bool success = false;
-            if (spHand != null)
+            if (candidateHand is SevenPairsCandidateHand spHand)
             {
                 for (int i = 0; i < 7; ++i)
                 {
@@ -1258,10 +1257,9 @@ namespace MahjongCore.Riichi.Evaluator
             // standards
             if (hand.Parent.TilesRemaining == 0)
             {
-                StandardCandidateHand scHand = candidateHand as StandardCandidateHand;
-                SevenPairsCandidateHand spHand = candidateHand as SevenPairsCandidateHand;
+                var spHand = candidateHand as SevenPairsCandidateHand;
                 bool found = false;
-                if (scHand != null)
+                if (candidateHand is StandardCandidateHand scHand)
                 {
                     foreach (IMeld meld in scHand.Melds)
                     {

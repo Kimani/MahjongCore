@@ -29,7 +29,7 @@ namespace MahjongCore.Riichi.Evaluator
                                            out int player2PoolDelta,
                                            out int player3PoolDelta,
                                            out int player4PoolDelta,
-                                           out bool limit)
+                                           out LimitType limit)
         {
             Global.Assert(winner.IsPlayer());
             Global.Assert(dealer.IsPlayer());
@@ -41,7 +41,7 @@ namespace MahjongCore.Riichi.Evaluator
             // Process Tsumo or Ron for non-winners. If there are sekinin barai players then determine the scoring like a Ron.
             if ((target == Player.Multiple) && (pao1 == Player.None) && (pao2 == Player.None))
             {
-                GetScoreTsumo(settings, finalHan, fu, (winner == dealer), out limit, out scoreHi, out scoreLo);
+                GetScoreTsumo(settings, finalHan, fu, (winner == dealer), out limit, out scoreHi, out scoreLo, out bool dummyError);
 
                 foreach (Player p in PlayerHelpers.Players)
                 {
@@ -65,7 +65,7 @@ namespace MahjongCore.Riichi.Evaluator
                 // Note that only the person who paid in will need to pay the homba payments. The liable player will pay half
                 // of the non-homba score. Also take into account warame. If this is actually a tsumo, then we're doing
                 // sekinin barai, so don't count one extra person for the split.
-                int ronScore = GetScoreRon(settings, finalHan, fu, (winner == dealer), out limit);
+                int ronScore = GetScoreRon(settings, finalHan, fu, (winner == dealer), out limit, out bool dummyError);
                 int paymentSplit = ((target == Player.Multiple) ? 0 : 1) + ((pao1 != Player.None) ? 1 : 0) + ((pao2 != Player.None) ? 1 : 0);
                 int rawPayment = ronScore / paymentSplit;
 
@@ -105,13 +105,23 @@ namespace MahjongCore.Riichi.Evaluator
             player4PoolDelta = poolDelta[3];
         }
 
-        public static int GetScoreRon(IGameSettings settings, int han, int fu, bool dealer, out bool limit)
+        public static int GetScoreRon(IGameSettings settings, int han, int fu, bool dealer, out LimitType limit, out bool isError)
         {
-            int basicpoint = fu * (int)Math.Pow(2, (2 + han));
-            limit = (han >= 5) || (han < 0) || (basicpoint >= 2000);
+            limit = LimitType.NonLimit;
+            isError = (han == 1) && (fu <= 25);
 
-            if (limit)
+            int basicpoint = fu * (int)Math.Pow(2, (2 + han));
+            bool isLimit = (han >= 5) || (han < 0) || (basicpoint >= 2000);
+            if (isLimit)
             {
+                limit = (han < 0)   ? LimitType.Yakuman :
+                        (han >= 13) ? LimitType.KazoeYakuman :
+                        (han >= 11) ? LimitType.Sanbaiman :
+                        (han >= 8)  ? LimitType.Baiman :
+                        (han >= 6)  ? LimitType.Haneman :
+                                      LimitType.Mangan;
+
+
                 return (han < 0)   ? Math.Abs((dealer ? 48000 : 32000) * han) : // Yakuman
                        (han >= 13) ? (dealer ? 48000 : 32000) :                 // Kazoe-Yakuman
                        (han >= 11) ? (dealer ? 36000 : 24000) :                 // Sanbaiman
@@ -125,20 +135,29 @@ namespace MahjongCore.Riichi.Evaluator
             {
                 if (((han == 3) && (fu >= 80)) || ((han == 4) && (fu >= 30)))
                 {
-                    limit = true;
+                    limit = LimitType.Mangan;
                     points = (dealer ? 12000 : 8000);
                 }
             }
             return points;
         }
 
-        public static void GetScoreTsumo(IGameSettings settings, int han, int fu, bool dealer, out bool limit, out int scoreHi, out int scoreLo)
+        public static void GetScoreTsumo(IGameSettings settings, int han, int fu, bool dealer, out LimitType limit, out int scoreHi, out int scoreLo, out bool isError)
         {
-            int basicpoint = fu * (int)Math.Pow(2, (2 + han));
-            limit = (han >= 5) || (han < 0) || (basicpoint >= 2000);
+            limit = LimitType.NonLimit;
+            isError = (han == 1) && (fu <= 25);
 
-            if (limit)
+            int basicpoint = fu * (int)Math.Pow(2, (2 + han));
+            bool isLimit = (han >= 5) || (han < 0) || (basicpoint >= 2000);
+            if (isLimit)
             {
+                limit = (han < 0)   ? LimitType.Yakuman :
+                        (han >= 13) ? LimitType.KazoeYakuman :
+                        (han >= 11) ? LimitType.Sanbaiman :
+                        (han >= 8)  ? LimitType.Baiman :
+                        (han >= 6)  ? LimitType.Haneman :
+                                      LimitType.Mangan;
+
                 basicpoint = (han < 0) ? Math.Abs(8000 * han) : // Yakuman
                              (han >= 13) ? 8000 :               // Kazoe-Yakuman
                              (han >= 11) ? 6000 :               // Sanbaiman
@@ -150,7 +169,7 @@ namespace MahjongCore.Riichi.Evaluator
             {
                 if (((han == 3) && (fu >= 80)) || ((han == 4) && (fu >= 30)))
                 {
-                    limit = true;
+                    limit = LimitType.Mangan;
                     basicpoint = 2000;
                 }
             }

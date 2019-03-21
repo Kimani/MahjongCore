@@ -50,7 +50,7 @@ namespace MahjongCore.Riichi.Impl
         public event Action<Player, IMeld>            DecisionCancelled;
 
 #pragma warning disable 67
-        public event Action<Player>                 Chombo;
+        public event Action<Player>                   Chombo;
 #pragma warning restore 67
 
         public ITile[]          Wall               { get { return WallRaw; } }
@@ -882,7 +882,7 @@ namespace MahjongCore.Riichi.Impl
         {
             InitializeCommon(settings, extra);
 
-            FirstDealer = PlayerHelpers.GetRandom();
+            FirstDealer = Player.Player1; // FOR TESTING // PlayerHelpers.GetRandom();
             Dealer = FirstDealer;
             Current = FirstDealer;
         }

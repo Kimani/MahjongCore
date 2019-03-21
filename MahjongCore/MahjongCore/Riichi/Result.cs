@@ -12,6 +12,17 @@ namespace MahjongCore.Riichi
         Draw
     }
 
+    public enum LimitType
+    {
+        NonLimit,
+        Mangan,
+        Haneman,
+        Baiman,
+        Sanbaiman,
+        KazoeYakuman,
+        Yakuman
+    }
+
     public interface ICandidateHand
     {
         int Dora         { get; }
@@ -38,7 +49,7 @@ namespace MahjongCore.Riichi
         int            Player2PoolDelta { get; }
         int            Player3PoolDelta { get; }
         int            Player4PoolDelta { get; }
-        bool           Limit            { get; } // True if mangan or better.
+        LimitType      Limit            { get; }
     }
 
     public interface IGameResult

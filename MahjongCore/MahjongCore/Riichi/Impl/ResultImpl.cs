@@ -156,11 +156,13 @@ namespace MahjongCore.Riichi
             }
 
             // Use knowledge of the first dealer to figure out final rankings.
-            List<RankOrder> ranks = new List<RankOrder>();
-            ranks.Add(new RankOrder(Player.Player1, pointsP1, (1 - startingDealer.GetZeroIndex()) + (((1 - startingDealer.GetZeroIndex()) < 0) ? 4 : 0), yakitoriDelta1));
-            ranks.Add(new RankOrder(Player.Player2, pointsP2, (2 - startingDealer.GetZeroIndex()) + (((2 - startingDealer.GetZeroIndex()) < 0) ? 4 : 0), yakitoriDelta2));
-            ranks.Add(new RankOrder(Player.Player3, pointsP3, (3 - startingDealer.GetZeroIndex()) + (((3 - startingDealer.GetZeroIndex()) < 0) ? 4 : 0), yakitoriDelta3));
-            ranks.Add(new RankOrder(Player.Player4, pointsP4, (4 - startingDealer.GetZeroIndex()) + (((4 - startingDealer.GetZeroIndex()) < 0) ? 4 : 0), yakitoriDelta4));
+            List<RankOrder> ranks = new List<RankOrder>
+            {
+                new RankOrder(Player.Player1, pointsP1, (1 - startingDealer.GetZeroIndex()) + (((1 - startingDealer.GetZeroIndex()) < 0) ? 4 : 0), yakitoriDelta1),
+                new RankOrder(Player.Player2, pointsP2, (2 - startingDealer.GetZeroIndex()) + (((2 - startingDealer.GetZeroIndex()) < 0) ? 4 : 0), yakitoriDelta2),
+                new RankOrder(Player.Player3, pointsP3, (3 - startingDealer.GetZeroIndex()) + (((3 - startingDealer.GetZeroIndex()) < 0) ? 4 : 0), yakitoriDelta3),
+                new RankOrder(Player.Player4, pointsP4, (4 - startingDealer.GetZeroIndex()) + (((4 - startingDealer.GetZeroIndex()) < 0) ? 4 : 0), yakitoriDelta4)
+            };
             ranks.Sort();
 
             // Give extra points (like remaining reach sticks) to the winner.
@@ -213,7 +215,7 @@ namespace MahjongCore.Riichi
         public int            Player2PoolDelta { get { return _Player2PoolDelta; } }
         public int            Player3PoolDelta { get { return _Player3PoolDelta; } }
         public int            Player4PoolDelta { get { return _Player4PoolDelta; } }
-        public bool           Limit            { get { return _Limit; } }
+        public LimitType      Limit            { get { return _Limit; } }
 
         // WinResultImpl
         private Player         _WinningPlayer;
@@ -229,7 +231,7 @@ namespace MahjongCore.Riichi
         private int            _Player2PoolDelta;
         private int            _Player3PoolDelta;
         private int            _Player4PoolDelta;
-        private bool           _Limit;
+        private LimitType      _Limit;
 
         internal WinResultImpl()                                                                    { }
         internal WinResultImpl(IGameState s, Player w, Player t, Player r, WinType a, int b, int p) { Populate(s, w, t, r, a, b, p); }
@@ -249,7 +251,7 @@ namespace MahjongCore.Riichi
             _Player2PoolDelta = 0;
             _Player3PoolDelta = 0;
             _Player4PoolDelta = 0;
-            _Limit = false;
+            _Limit = LimitType.NonLimit;
         }
 
         internal int GetPlayerDelta(Player p)
