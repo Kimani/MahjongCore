@@ -250,7 +250,7 @@ namespace MahjongCore.Riichi
         Location  Location    { get; }
         Player    Ancillary   { get; } // Ex: For discarded tiles, point to player who called. For called meld && Called == true, player who sourced tile
         ReachType Reach       { get; } // Ex: Set to not-None if this tile is from a discard pile and is reached/open reached/etc.
-        bool      Ghost       { get; } // Ex: True if a called tile from a discard pile or a drawn tile from a wall.
+        bool      Ghost       { get; } // Ex: True if a called tile from a discard pile or a drawn tile from a wall. Or if a hand tile that doesn't exist.
         bool      Called      { get; } // Ex: Called tile either from a discard pile or the called tile from a meld.
         bool      WinningTile { get; } // Ex: Tile in a candidate hand that is the winning tile Tsumo or Ron is called upon.
         int       Slot        { get; } // Ex: Slot index from source hand or discard pile. Could also refer to wall index. When part of a meld, may ref slot from hand.

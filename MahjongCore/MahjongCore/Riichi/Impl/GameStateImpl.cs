@@ -367,6 +367,7 @@ namespace MahjongCore.Riichi.Impl
                 List<TileImpl> targetDiscards = GetHand(Current).DiscardsRaw;
                 var targetTile = targetDiscards[targetDiscards.Count - 1];
                 targetTile.Called = true;
+                targetTile.Ghost = true;
                 targetTile.Ancillary = NextActionPlayer;
 
                 // Perform the stored call. This will sort the hand and fire events.

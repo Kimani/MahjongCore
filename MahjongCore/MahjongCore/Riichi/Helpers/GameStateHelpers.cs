@@ -17,6 +17,16 @@ namespace MahjongCore.Riichi.Helpers
             return offset + (roll * 2);                                 // Offset for the dead wall. *2 cause there's 2 tiles on top of each other...
         }
 
+        public static int GetNextDrawIndex(IGameState state)
+        {
+            bool pickDeadWall = (state.NextAction == GameAction.ReplacementTilePick);
+            int doraCount = state.DoraCount;
+            return pickDeadWall ? (state.Offset - ((doraCount == 1) ? -1 :
+                                                   (doraCount == 2) ? 1 :
+                                                   (doraCount == 3) ? 4 : 3)) :
+                                  TileHelpers.ClampTile(state.Offset + (122 - state.TilesRemaining));
+        }
+
         public static int GetDoraIndicatorTileIndex(IGameState state, int doraIndex)
         {
             CommonHelpers.Check((doraIndex < 5), "Dora indicator out of range.");

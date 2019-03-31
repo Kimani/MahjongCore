@@ -19,7 +19,7 @@ namespace MahjongCore.Riichi.Helpers
         public static int HAND_SIZE             = 14;
         public static int MAX_DISCARD_PILE_SIZE = 32;
 
-        private static TileType[] TileSource = new TileType[TOTAL_TILE_COUNT];
+        private static readonly TileType[] TileSource = new TileType[TOTAL_TILE_COUNT];
 
         public static TileType BuildTile(int skyValue)
         {
@@ -70,9 +70,11 @@ namespace MahjongCore.Riichi.Helpers
                 targetArray = new TileImpl[TOTAL_TILE_COUNT];
                 for (int i = 0; i < TOTAL_TILE_COUNT; ++i)
                 {
-                    targetArray[i] = new TileImpl();
-                    targetArray[i].Slot = i;
-                    targetArray[i].Location = Location.Wall;
+                    targetArray[i] = new TileImpl
+                    {
+                        Slot = i,
+                        Location = Location.Wall
+                    };
                 }
             }
 

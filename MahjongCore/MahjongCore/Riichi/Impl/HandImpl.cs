@@ -125,9 +125,9 @@ namespace MahjongCore.Riichi.Impl
         // HandImpl
         internal ICandidateHand WinningHandCache                             { get; set; } = null;
         internal IMeld          CachedCall                                   { get; set; } = null;
-        internal List<TileImpl> DiscardsRaw                                  { get; set; } = new List<TileImpl>();
-        internal TileImpl[]     ActiveHandRaw                                { get; set; } = new TileImpl[TileHelpers.HAND_SIZE];
-        internal MeldImpl[]     MeldsRaw                                     { get; set; } = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
+        internal List<TileImpl> DiscardsRaw                                  { get; private set; } = new List<TileImpl>();
+        internal TileImpl[]     ActiveHandRaw                                { get; private set; } = new TileImpl[TileHelpers.HAND_SIZE];
+        internal MeldImpl[]     MeldsRaw                                     { get; private set; } = new MeldImpl[] { new MeldImpl(), new MeldImpl(), new MeldImpl(), new MeldImpl() };
         internal bool           OverrideNoReachFlag                          { get; set; } = false; // Used for things like thirteen broken, which you can't reach for.
         internal bool           FourKans                                     { get { return KanCount == 4; } }
         internal List<TileType> GetTileWaits(int slot)                       { return _ActiveTileWaits[(slot == -1) ? (TileCount - 1) : slot]; }
@@ -458,6 +458,11 @@ namespace MahjongCore.Riichi.Impl
         {
             // Sort the tiles. Any unset tiles will end up at the end.
             Array.Sort(ActiveHandRaw);
+            for (int i = 0; i < ActiveHandRaw.Length; ++i)
+            {
+                ActiveHandRaw[i].Slot = i;
+            }
+
             // %%%%%%%%%%%%%%%%%%%%% REDO ALL THIS..
 
             if (fireEvent)
@@ -553,25 +558,22 @@ namespace MahjongCore.Riichi.Impl
         internal void PerformDiscard(ITile tile, ReachType reach)
         {
             CommonHelpers.Check((!Reach.IsReach() || !reach.IsReach()), "Attempting to reach a hand that is already in reach");
-            CommonHelpers.Check(ActiveHandRaw[tile.Slot].Type.IsEqual(tile.Type, true), "Invalid tile parameter");
+            CommonHelpers.Check(ActiveHandRaw[tile.Slot].Type.IsEqual(tile.Type, true), "Invalid tile parameter: Tile type: " + tile.Type + " tile slot: " + tile.Slot + " rawhand[slot] tile: " + ActiveHandRaw[tile.Slot].Type);
             CommonHelpers.Check(tile.Type.IsTile(), "Trying to discard a non-tile");
 
-            TileType discardType = tile.Type;
-            int discardSlot = tile.Slot;
-
-            ActiveHandRaw[discardSlot].Type = TileType.None;
-            ActiveHandRaw[discardSlot].Ghost = true;
+            ITile discardedHandTile = tile.Clone() as ITile;
+            ActiveHandRaw[discardedHandTile.Slot].Type = TileType.None;
+            ActiveHandRaw[discardedHandTile.Slot].Ghost = true;
             TileCount--;
             Sort(false);
 
-            TileImpl discardTile = new TileImpl(discardType) { Reach = reach, Slot = DiscardsRaw.Count, Location = Location.Discard };
-
+            DiscardsRaw.Add(new TileImpl(discardedHandTile.Type) { Reach = reach, Slot = DiscardsRaw.Count, Location = Location.Discard });
             WinningHandCache = null;
 
             // Update our waits unless we're PREVIOUSLY in reach.
             if (!Reach.IsReach())
             {
-                _WaitTiles = _ActiveTileWaits[discardSlot];
+                _WaitTiles = _ActiveTileWaits[discardedHandTile.Slot];
                 UpdateFuritenWithDiscards();
             }
 
@@ -579,11 +581,11 @@ namespace MahjongCore.Riichi.Impl
             if (reach.IsReach())
             {
                 Reach = reach;
-                _ActiveRiichiKanTiles = _RiichiKanTilesPerSlot[discardSlot];
+                _ActiveRiichiKanTiles = _RiichiKanTilesPerSlot[discardedHandTile.Slot];
             }
 
-            if (reach.IsReach()) { Reached?.Invoke(Player, discardTile, reach); }
-            else                 { Discarded?.Invoke(Player, discardTile); }
+            if (reach.IsReach()) { Reached?.Invoke(Player, discardedHandTile, reach); }
+            else                 { Discarded?.Invoke(Player, discardedHandTile); }
         }
 
         internal void PerformClosedKan(TileType tile)
@@ -916,14 +918,17 @@ namespace MahjongCore.Riichi.Impl
         {
             // Set the furiten flag if any of our waits match one of our discards.
             Furiten = false;
-            foreach (TileType waitTile in _WaitTiles)
+            if ((_WaitTiles != null) && (_WaitTiles.Count > 0) && (DiscardsRaw != null) && (DiscardsRaw.Count > 0))
             {
-                foreach (TileImpl discardTile in DiscardsRaw)
+                foreach (TileType waitTile in _WaitTiles)
                 {
-                    if (discardTile.Type.IsEqual(waitTile))
+                    foreach (TileImpl discardTile in DiscardsRaw)
                     {
-                        Furiten = true;
-                        return;
+                        if (discardTile.Type.IsEqual(waitTile))
+                        {
+                            Furiten = true;
+                            return;
+                        }
                     }
                 }
             }
