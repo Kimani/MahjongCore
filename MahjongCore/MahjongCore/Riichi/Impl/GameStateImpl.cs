@@ -937,6 +937,7 @@ namespace MahjongCore.Riichi.Impl
 
             do
             {
+                CommonHelpers.Check(queuedMode != PlayState.NA, "Next play mode to advance is NA! Invalid state!");
                 _AdvanceAction = AdvanceAction.Advance;
 
                 if (queuedSkipCheck)
@@ -989,14 +990,21 @@ namespace MahjongCore.Riichi.Impl
 
             switch (action)
             {
-                case AdvanceAction.Done:    state = PlayState.NA;
-                                            break;
+                case AdvanceAction.Done:            state = PlayState.NA;
+                                                    break;
 
-                case AdvanceAction.Advance: state = State.GetNext();
-                                            advancePlayer = EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(state);
-                                            break;
+                case AdvanceAction.Advance:         state = State.GetNext();
+                                                    advancePlayer = EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(state);
+                                                    break;
 
-                default:                    throw new Exception("Unexpected AdvanceAction");
+                case AdvanceAction.GatherDecisions: state = PlayState.GatherDecisions;
+                                                    break;
+
+                case AdvanceAction.PrePickTile:     state = PlayState.PrePickTile;
+                                                    advancePlayer = true;
+                                                    break;
+
+                default:                            throw new Exception("Unexpected AdvanceAction");
             }
         }
 
@@ -1095,6 +1103,7 @@ namespace MahjongCore.Riichi.Impl
             {
                 case DiscardDecisionType.Discard:           PerformDiscardState(decision.Tile, GameAction.Discard);
                                                             hand.PerformDiscard(decision.Tile, ReachType.None);
+                                                            action = AdvanceAction.GatherDecisions;
                                                             break;
 
                 case DiscardDecisionType.OpenRiichiDiscard:

@@ -676,14 +676,17 @@ namespace MahjongCore.Riichi.Impl
             if (!_Parent.PreviousAction.IsOpenCall())
             {
                 TileType pickedTile = ActiveHandRaw[TileCount - 1].Type;
-                foreach (TileType waitTile in _WaitTiles)
+                if (_WaitTiles != null)
                 {
-                    // Check if the picked tile is equal to any one of our waits. If so,
-                    // check if we have a winning hand (false if we don't have a yaku.)
-                    if (pickedTile.IsEqual(waitTile))
+                    foreach (TileType waitTile in _WaitTiles)
                     {
-                        WinningHandCache = HandEvaluator.GetWinningHand(this, false, false);
-                        return (WinningHandCache != null);
+                        // Check if the picked tile is equal to any one of our waits. If so,
+                        // check if we have a winning hand (false if we don't have a yaku.)
+                        if (pickedTile.IsEqual(waitTile))
+                        {
+                            WinningHandCache = HandEvaluator.GetWinningHand(this, false, false);
+                            return (WinningHandCache != null);
+                        }
                     }
                 }
             }
@@ -825,27 +828,29 @@ namespace MahjongCore.Riichi.Impl
             bool handAtozuke = false;
             WinningHandCache = null;
 
-            foreach (TileType waitTile in _WaitTiles)
+            if ((_WaitTiles != null) && (_WaitTiles.Count > 0))
             {
-                // Check all of our wait tiles to check for atozuke. Make sure we have yaku.
-                AddTemporaryTile(waitTile);
-                ICandidateHand winningHandCheck = HandEvaluator.GetWinningHand(this, true, (_Parent.PreviousAction == GameAction.ClosedKan));
-                RemoveTemporaryTile();
-
-                if (winningHandCheck == null)
+                foreach (TileType waitTile in _WaitTiles)
                 {
-                    handAtozuke = true;
-                }
+                    // Check all of our wait tiles to check for atozuke. Make sure we have yaku.
+                    AddTemporaryTile(waitTile);
+                    ICandidateHand winningHandCheck = HandEvaluator.GetWinningHand(this, true, (_Parent.PreviousAction == GameAction.ClosedKan));
+                    RemoveTemporaryTile();
 
-                if (waitTile.IsEqual(discardedTile))
-                {
-                    // They've discarded one of our wait tiles. We can put our best hand into WinningHandCache.
-                    WinningHandCache = winningHandCheck;
+                    if (winningHandCheck == null)
+                    {
+                        handAtozuke = true;
+                    }
+
+                    if (waitTile.IsEqual(discardedTile))
+                    {
+                        // They've discarded one of our wait tiles. We can put our best hand into WinningHandCache.
+                        WinningHandCache = winningHandCheck;
+                    }
                 }
             }
 
-
-            if (!Parent.Settings.GetSetting<bool>(GameOption.Atozuke) && handAtozuke)
+            if (!_Parent.Settings.GetSetting<bool>(GameOption.Atozuke) && handAtozuke)
             {
                 WinningHandCache = null;
             }
@@ -870,7 +875,7 @@ namespace MahjongCore.Riichi.Impl
 
         internal void UpdateTemporaryFuriten(TileType tile)
         {
-            Furiten = Furiten || _WaitTiles.Contains(tile.GetNonRedDoraVersion());
+            Furiten |= ((_WaitTiles != null) && _WaitTiles.Contains(tile.GetNonRedDoraVersion()));
         }
 
         private void RebuildFuriten()

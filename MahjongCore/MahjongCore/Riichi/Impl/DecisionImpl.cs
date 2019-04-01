@@ -1,6 +1,7 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
 using MahjongCore.Common;
+using MahjongCore.Riichi.Helpers;
 using System.Collections.Generic;
 
 namespace MahjongCore.Riichi.Impl
@@ -106,7 +107,7 @@ namespace MahjongCore.Riichi.Impl
         {
             Hand = null;
             TargetPlayer = null;
-            Calls.Clear();
+            CallsRaw.Clear();
             DiscardedTile = null;
             CanRon = false;
             CanChankanRon = false;
@@ -118,6 +119,12 @@ namespace MahjongCore.Riichi.Impl
             GameStateImpl state = hand.Parent as GameStateImpl;
 
             Reset();
+            Hand = hand;
+            TargetPlayer = GameStateHelpers.GetHand(state, state.Current);
+
+            IList<ITile> targetDiscards = TargetPlayer.Discards;
+            DiscardedTile = targetDiscards[targetDiscards.Count - 1];
+
             CanRon = !hand.Furiten && hand.CheckRon();
             CanChankanRon = state.Settings.GetSetting<bool>(GameOption.Chankan) && CanRon && (state.PreviousAction == GameAction.PromotedKan);
 

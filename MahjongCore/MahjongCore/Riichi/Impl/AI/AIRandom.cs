@@ -67,6 +67,7 @@ namespace MahjongCore.Riichi.Impl.AI
         public IPostDiscardDecision GetPostDiscardDecision(IPostDiscardInfo info)
         {
             stashedPostDecision.Reset();
+            stashedPostDecision.Player = info.Hand.Player;
 
             // Ron if the option is available.
             if (info.CanRon)
