@@ -23,8 +23,7 @@ namespace MahjongCore.Riichi.Impl
             Global.Assert(optionType == typeof(T));
             if ((optionType == typeof(T)) && _CustomSettings.ContainsKey(option))
             {
-                object settingObject;
-                if (_CustomSettings.TryGetValue(option, out settingObject))
+                if (_CustomSettings.TryGetValue(option, out object settingObject))
                 {
                     return (T)settingObject;
                 }
@@ -58,12 +57,7 @@ namespace MahjongCore.Riichi.Impl
         }
 
         // ICloneable
-        public object Clone()
-        {
-            GameSettingsImpl settings = new GameSettingsImpl(_CustomSettings);
-            settings.Locked = Locked;
-            return settings;
-        }
+        public object Clone() { return new GameSettingsImpl(_CustomSettings) { Locked = Locked }; }
 
         // GameSettingsImpl
         internal bool Locked { get; set; } = false;

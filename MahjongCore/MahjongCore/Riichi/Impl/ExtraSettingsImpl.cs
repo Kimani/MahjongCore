@@ -44,20 +44,21 @@ namespace MahjongCore.Riichi.Impl
         // ICloneable
         object ICloneable.Clone()
         {
-            ExtraSettingsImpl extra = new ExtraSettingsImpl();
-            extra.DisableAnyDiscard   = DisableAnyDiscard;
-            extra.DisableCall         = DisableCall;
-            extra.DisableCalling      = DisableCalling;
-            extra.DisableCallPass     = DisableCallPass;
-            extra.DisableCPUWin       = DisableCPUWin;
-            extra.DisableCPUCalling   = DisableCPUCalling;
-            extra.DisablePlainDiscard = DisablePlainDiscard;
-            extra.DisableRonPass      = DisableRonPass;
-            extra.DisableReach        = DisableReach;
-            extra.DisableRed5         = DisableRed5;
-            extra.DisableReach        = DisableReach;
-            extra.DisableAbortiveDraw = DisableAbortiveDraw;
-            extra.OverrideDiceRoll    = OverrideDiceRoll;
+            ExtraSettingsImpl extra = new ExtraSettingsImpl
+            {
+                DisableAnyDiscard    = DisableAnyDiscard,
+                DisableCall         = DisableCall,
+                DisableCalling      = DisableCalling,
+                DisableCallPass     = DisableCallPass,
+                DisableCPUWin       = DisableCPUWin,
+                DisableCPUCalling   = DisableCPUCalling,
+                DisablePlainDiscard = DisablePlainDiscard,
+                DisableRonPass      = DisableRonPass,
+                DisableReach        = DisableReach,
+                DisableRed5         = DisableRed5,
+                DisableAbortiveDraw = DisableAbortiveDraw,
+                OverrideDiceRoll    = OverrideDiceRoll
+            };
             (extra.RestrictDiscardTiles as List<TileType>).AddRange(RestrictDiscardTiles);
             return extra;
         }

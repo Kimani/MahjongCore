@@ -196,12 +196,12 @@ namespace MahjongCore.Riichi
         int                         Player4Score   { get; }
         int                         TilesRemaining { get; }
 
-        string     Marshall();
+        string     Marshal();
         ISaveState Clone();
     }
 
     public static class SaveStateFactory
     {
-        public static ISaveState Unmarshall(string state) { return new SaveStateImpl(state); }
+        public static ISaveState Unmarshal(string state) { return new SaveStateImpl(state); }
     }
 }

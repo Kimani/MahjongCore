@@ -67,6 +67,8 @@
     <Compile Include="Riichi\Hand.cs" />
     <Compile Include="Riichi\Impl\DecisionImpl.cs" />
     <Compile Include="Riichi\Impl\GameSettingsImpl.cs" />
+    <Compile Include="Riichi\Impl\SaveState\SaveStateV2.cs" />
+    <Compile Include="Riichi\Impl\SaveState\SaveStateV3.cs" />
     <Compile Include="Riichi\Meld.cs" />
     <Compile Include="Riichi\AI.cs" />
     <Compile Include="Riichi\Attributes\AdvancePlayer.cs" />

@@ -88,8 +88,7 @@ namespace MahjongCore.Riichi.Impl
             tile = null;
             if ((value != null) && (value.Length == 4))
             {
-                uint skyValue;
-                if (uint.TryParse(value, System.Globalization.NumberStyles.HexNumber, null, out skyValue))
+                if (uint.TryParse(value, System.Globalization.NumberStyles.HexNumber, null, out uint skyValue))
                 {
                     tile = new TileImpl();
                     tile.Type = TileTypeExtensionMethods.GetTile((int)(skyValue & TILE_MASK));

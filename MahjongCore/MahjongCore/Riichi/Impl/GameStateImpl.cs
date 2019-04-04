@@ -147,21 +147,21 @@ namespace MahjongCore.Riichi.Impl
         }
 
         // GameStateImpl
-        internal TileImpl[]    WallRaw                  { get; private set; } = new TileImpl[TileHelpers.TOTAL_TILE_COUNT];
-        internal TileImpl[]    DoraIndicatorsRaw        { get; private set; } = new TileImpl[5];
-        internal TileImpl[]    UraDoraIndicatorsRaw     { get; private set; } = new TileImpl[5];
-        internal HandImpl      Player1HandRaw           { get; private set; }
-        internal HandImpl      Player2HandRaw           { get; private set; }
-        internal HandImpl      Player3HandRaw           { get; private set; }
-        internal HandImpl      Player4HandRaw           { get; private set; }
-        internal Stack<Player> DiscardPlayerList        { get; private set; } = new Stack<Player>();
-        internal Player        PlayerRecentOpenKan      { get; set; }         = Player.None;
-        internal Player        NextActionPlayer         { get; set; }         = Player.None;
-        internal TileType      NextActionTile           { get; set; }         = TileType.None;
-        internal bool          PlayerDeadWallPick       { get; set; }         = false;
-        internal bool          FlipDoraAfterNextDiscard { get; set; }         = false;
-        internal bool          ChankanFlag              { get; private set; } = false;
-        internal bool          KanburiFlag              { get; private set; } = false;
+        internal TileImpl[]    WallRaw                  { get; set; } = new TileImpl[TileHelpers.TOTAL_TILE_COUNT];
+        internal TileImpl[]    DoraIndicatorsRaw        { get; set; } = new TileImpl[5];
+        internal TileImpl[]    UraDoraIndicatorsRaw     { get; set; } = new TileImpl[5];
+        internal HandImpl      Player1HandRaw           { get; set; }
+        internal HandImpl      Player2HandRaw           { get; set; }
+        internal HandImpl      Player3HandRaw           { get; set; }
+        internal HandImpl      Player4HandRaw           { get; set; }
+        internal Stack<Player> DiscardPlayerList        { get; set; } = new Stack<Player>();
+        internal Player        PlayerRecentOpenKan      { get; set; } = Player.None;
+        internal Player        NextActionPlayer         { get; set; } = Player.None;
+        internal TileType      NextActionTile           { get; set; } = TileType.None;
+        internal bool          PlayerDeadWallPick       { get; set; } = false;
+        internal bool          FlipDoraAfterNextDiscard { get; set; } = false;
+        internal bool          ChankanFlag              { get; set; } = false;
+        internal bool          KanburiFlag              { get; set; } = false;
 
         private readonly Dictionary<PlayState, Action> _PreBreakStateHandlers  = new Dictionary<PlayState, Action>();
         private readonly Dictionary<PlayState, Action> _PostBreakStateHandlers = new Dictionary<PlayState, Action>();
@@ -894,7 +894,7 @@ namespace MahjongCore.Riichi.Impl
             _CanResume = true;
 
             CommonHelpers.Check((state is SaveStateImpl), "SaveState not from MahjongCore, external save states not supported at this time.");
-            (state as SaveStateImpl).PopulateState(this, null);
+            (state as SaveStateImpl).PopulateState(this);
         }
 
         private void InitializeCommon(IGameSettings settings, IExtraSettings extra, bool skipHandlers = false)

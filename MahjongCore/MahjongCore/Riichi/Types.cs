@@ -172,8 +172,7 @@ namespace MahjongCore.Riichi
 
             public static Player GetPlayer(string text)
             {
-                Player p;
-                CommonHelpers.Check(EnumHelper.TryGetEnumByCode<Player, PlayerValue>(text, out p), ("Failed to parse into Player: " + text));
+                CommonHelpers.Check(EnumHelper.TryGetEnumByCode<Player, PlayerValue>(text, out Player p), ("Failed to parse into Player: " + text));
                 return p;
             }
         }

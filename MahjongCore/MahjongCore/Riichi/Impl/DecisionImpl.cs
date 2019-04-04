@@ -172,11 +172,8 @@ namespace MahjongCore.Riichi.Impl
 
         internal bool Validate(IHand hand)
         {
-            HandImpl handImpl = hand as HandImpl;
-            GameStateImpl stateImpl = hand.Parent as GameStateImpl;
-
             bool valid = true;
-            if ((handImpl != null) && (stateImpl != null))
+            if ((hand is HandImpl handImpl) && (hand.Parent is GameStateImpl stateImpl))
             {
                 valid = false;
                 switch (Decision)
