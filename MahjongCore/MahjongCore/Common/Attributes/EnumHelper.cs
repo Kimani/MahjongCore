@@ -22,6 +22,22 @@ namespace MahjongCore.Common.Attributes
             return found;
         }
 
+        public static bool TryGetEnumByString<T>(string value, out T result) where T : struct
+        {
+            T[] tValArray = (T[])Enum.GetValues(typeof(T));
+            for (int i = 0; i < tValArray.Length; ++i)
+            {
+                if (tValArray[i].ToString().Equals(value))
+                {
+                    result = tValArray[i];
+                    return true;
+                }
+            }
+
+            result = default(T);
+            return false;
+        }
+
         // Uses http://stackoverflow.com/questions/2230657/help-with-c-sharp-generics-error-the-type-t-must-be-a-non-nullable-value-ty to get T contraints.
         public static T? GetEnumValueFromAttribute<T, R, N>(N attributeMatchValue) where T : struct, IComparable
         {

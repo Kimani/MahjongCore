@@ -62,7 +62,7 @@ namespace MahjongCore.Riichi.Impl
         // GameSettingsImpl
         internal bool Locked { get; set; } = false;
 
-        private Dictionary<GameOption, object> _CustomSettings = new Dictionary<GameOption, object>();
+        internal Dictionary<GameOption, object> _CustomSettings = new Dictionary<GameOption, object>();
 
         internal GameSettingsImpl()                                               { _CustomSettings = new Dictionary<GameOption, object>(); }
         internal GameSettingsImpl(Dictionary<GameOption, object> settingsToClone) { _CustomSettings = new Dictionary<GameOption, object>(settingsToClone); }

@@ -163,31 +163,31 @@ namespace MahjongCore.Riichi.Impl
         internal bool          ChankanFlag              { get; set; } = false;
         internal bool          KanburiFlag              { get; set; } = false;
 
-        private readonly Dictionary<PlayState, Action> _PreBreakStateHandlers  = new Dictionary<PlayState, Action>();
-        private readonly Dictionary<PlayState, Action> _PostBreakStateHandlers = new Dictionary<PlayState, Action>();
-        private readonly Dictionary<PlayState, Action> _RewindPreHandlers      = new Dictionary<PlayState, Action>();
-        private readonly Dictionary<PlayState, Action> _RewindPostHandlers     = new Dictionary<PlayState, Action>();
-        private WinResultImpl                          _WinResultCache         = new WinResultImpl();
-        private DiscardInfoImpl                        _DiscardInfoCache       = new DiscardInfoImpl();
-        private PostDiscardInfoImpl                    _PostDiscardInfoCache   = new PostDiscardInfoImpl();
-        private PostDiscardDecisionImpl                _CachedPostDiscardPass  = new PostDiscardDecisionImpl();
-        private Player                                 _NextActionPlayerTarget = Player.None;
-        private GameAction                             _NextAction1            = GameAction.Nothing;
-        private GameAction                             _NextAction2            = GameAction.Nothing;
-        private GameAction                             _NextAction3            = GameAction.Nothing;
-        private GameAction                             _NextAction4            = GameAction.Nothing;
-        private GameAction                             _RewindAction           = GameAction.Nothing;
-        private AdvanceAction                          _AdvanceAction          = AdvanceAction.Done;
-        private AbortiveDrawType                       _NextAbortiveDrawType   = AbortiveDrawType.Other;
-        private bool                                   _SkipAdvancePlayer      = false;
-        private bool                                   _HasExtraSettings       = false;
-        private int                                    _NextActionSlot         = -1;
-        private bool                                   _ExpectingPause         = false;
-        private bool                                   _ShouldPause            = false;
-        private bool                                   _CanAdvance             = true;
-        private bool                                   _CanResume              = false;
-        private bool                                   _ExpectingDiscard       = false;
-        private bool                                   _NagashiWin             = false;
+        private readonly Dictionary<PlayState, Action> _PreBreakStateHandlers   = new Dictionary<PlayState, Action>();
+        private readonly Dictionary<PlayState, Action> _PostBreakStateHandlers  = new Dictionary<PlayState, Action>();
+        private readonly Dictionary<PlayState, Action> _RewindPreHandlers       = new Dictionary<PlayState, Action>();
+        private readonly Dictionary<PlayState, Action> _RewindPostHandlers      = new Dictionary<PlayState, Action>();
+        private WinResultImpl                          _WinResultCache          = new WinResultImpl();
+        private DiscardInfoImpl                        _DiscardInfoCache        = new DiscardInfoImpl();
+        private PostDiscardInfoImpl                    _PostDiscardInfoCache    = new PostDiscardInfoImpl();
+        private PostDiscardDecisionImpl                _CachedPostDiscardPass   = new PostDiscardDecisionImpl();
+        internal Player                                 _NextActionPlayerTarget = Player.None;
+        internal GameAction                             _NextAction1            = GameAction.Nothing;
+        internal GameAction                             _NextAction2            = GameAction.Nothing;
+        internal GameAction                             _NextAction3            = GameAction.Nothing;
+        internal GameAction                             _NextAction4            = GameAction.Nothing;
+        internal GameAction                             _RewindAction           = GameAction.Nothing;
+        internal AdvanceAction                          _AdvanceAction          = AdvanceAction.Done;
+        internal AbortiveDrawType                       _NextAbortiveDrawType   = AbortiveDrawType.Other;
+        internal bool                                   _SkipAdvancePlayer      = false;
+        internal bool                                   _HasExtraSettings       = false;
+        internal int                                    _NextActionSlot         = -1;
+        internal bool                                   _ExpectingPause         = false;
+        internal bool                                   _ShouldPause            = false;
+        internal bool                                   _CanAdvance             = true;
+        internal bool                                   _CanResume              = false;
+        internal bool                                   _ExpectingDiscard       = false;
+        internal bool                                   _NagashiWin             = false;
 
         internal     GameStateImpl()                                       { InitializeCommon(null, null, true); }
         internal     GameStateImpl(IGameSettings settings)                 { Initialize(settings, null); }
