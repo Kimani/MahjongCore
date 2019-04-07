@@ -70,5 +70,27 @@ namespace MahjongCore.Common
             }
             return targetList;
         }
+
+        public static void IterateList<T>(IList<T> sourceList, Action<T> callback)
+        {
+            if (sourceList != null)
+            {
+                foreach (T item in sourceList)
+                {
+                    callback(item);
+                }
+            }
+        }
+
+        public static void IterateDictionary<T,U>(IDictionary<T,U> sourceDictionary, Action<T,U> callback)
+        {
+            if (sourceDictionary != null)
+            {
+                foreach (KeyValuePair<T,U> item in sourceDictionary)
+                {
+                    callback(item.Key, item.Value);
+                }
+            }
+        }
     }
 }
