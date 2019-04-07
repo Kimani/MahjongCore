@@ -1,7 +1,5 @@
 ﻿// [Ready Design Corps] - [Mahjong Core Unit Tests] - Copyright 2018
 
-using System;
-using MahjongCore.Riichi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MahjongCore.Riichi.UnitTests

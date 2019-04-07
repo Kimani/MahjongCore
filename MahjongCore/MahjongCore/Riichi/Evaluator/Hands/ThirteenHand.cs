@@ -7,7 +7,7 @@ namespace MahjongCore.Riichi.Evaluator
 {
     internal class ThirteenHand : CandidateHand
     {
-        private Yaku _Type;
+        internal Yaku _Type;
 
         internal ThirteenHand(Yaku type)                                                     { _Type = type; }
         internal override void ExpandAndInsert(List<CandidateHand> chBucket, IHand baseHand) { chBucket.Add(this); }

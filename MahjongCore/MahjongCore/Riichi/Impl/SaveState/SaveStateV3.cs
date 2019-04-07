@@ -2,6 +2,7 @@
 
 using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
+using MahjongCore.Riichi.Evaluator;
 using MahjongCore.Riichi.Helpers;
 using System;
 using System.Collections.Generic;
@@ -98,8 +99,23 @@ namespace MahjongCore.Riichi.Impl.SaveState
     //             <tile />
     //             ...
     //         </waittiles>
-    //         <winninghandcache>
-    //             ????
+    //         <winninghandcache dora="int" uradora="int" reddora="int" han="int" fu="int" yakuman="int">
+    //              <yaku type="string" />
+    //              ...
+    //              <standardhand>
+    //                  <tile ... />
+    //                  <meld ... />
+    //                  ...
+    //              </standardhand>
+    //              OR
+    //              <sevenpairshand>
+    //                  <tile />
+    //                  ...
+    //              </sevenpairshand>
+    //              OR
+    //              <thirteenhand type="string" />
+    //              OR
+    //              <fourteenhand />
     //         </winninghandcache>
     //     </hand>
     //     ...
@@ -201,13 +217,30 @@ namespace MahjongCore.Riichi.Impl.SaveState
         private static readonly string MELD_DIRECTION_ATTR                   = "direction";
         private static readonly string CACHEDMELD_TAG                        = "meld";
         private static readonly string WAITTILES_TAG                         = "waittiles";
+        private static readonly string WAITTILES_SLOT_ATTR                   = "slot";
         private static readonly string DRAWSANDKANS_TAG                      = "drawsandkans";
         private static readonly string ACTIVERIICHIKANTILES_TAG              = "activeriichikantiles";
         private static readonly string RIICHIKANTILESPERSLOT_TAG             = "riichikantilesperslot";
         private static readonly string WINNINGHANDCACHE_TAG                  = "winninghandcache";
+        private static readonly string WINNINGHANDCACHE_DORA_ATTR            = "dora";
+        private static readonly string WINNINGHANDCACHE_URADORA_ATTR         = "uradora";
+        private static readonly string WINNINGHANDCACHE_REDDORA_ATTR         = "reddora";
+        private static readonly string WINNINGHANDCACHE_HAN_ATTR             = "han";
+        private static readonly string WINNINGHANDCACHE_FU_ATTR              = "fu";
+        private static readonly string WINNINGHANDCACHE_YAKUMAN_ATTR         = "yakuman";
+        private static readonly string YAKU_TAG                              = "yaku";
+        private static readonly string YAKU_TYPE_ATTR                        = "type";
         private static readonly string KANTILES_TAG                          = "kantiles";
         private static readonly string ACTIVETILEWAITS_TAG                   = "activetilewaits";
         private static readonly string COMMAND_TAG                           = "command";
+        private static readonly string COMMAND_TYPE_ATTR                     = "type";
+        private static readonly string COMMAND_TILEB_ATTR                    = "tileb";
+        private static readonly string COMMAND_TILEC_ATTR                    = "tilec";
+        private static readonly string STANDARDHAND_TAG                      = "standardhand";
+        private static readonly string SEVENPAIRSHAND_TAG                    = "sevenpairshand";
+        private static readonly string THIRTEENHAND_TAG                      = "thirteenhand";
+        private static readonly string THIRTEENHAND_TYPE_ATTR                = "type";
+        private static readonly string FOURTEENHAND_TAG                      = "fourteenhand";
 
         private static readonly string VERSION_VALUE = "3";
 
@@ -220,7 +253,11 @@ namespace MahjongCore.Riichi.Impl.SaveState
         {
             try
             {
-                return Unmarshal(state).GetElementById(SAVE_TAG).GetAttribute(SAVE_VERSION_ATTR).Equals(VERSION_VALUE);
+                XmlDocument document = Unmarshal(state);
+                XmlNodeList saveList = document.GetElementsByTagName(SAVE_TAG);
+                XmlElement saveElement = saveList.Item(0) as XmlElement;
+                string versionAttribute = saveElement.GetAttribute(SAVE_VERSION_ATTR);
+                return VERSION_VALUE.Equals(versionAttribute);
             }
             catch (Exception e)
             {
@@ -232,11 +269,11 @@ namespace MahjongCore.Riichi.Impl.SaveState
         internal static void LoadCommon(string state, SaveStateImpl save)
         {
             XmlDocument content = Unmarshal(state);
-            XmlElement saveElement = content.GetElementById(SAVE_TAG);
+            var saveElement = content.GetElementsByTagName(SAVE_TAG).Item(0) as XmlElement;
 
             // Load the common save state data.
             save.Round          = LoadAttributeEnum<Round>(saveElement, SAVE_ROUND_ATTR, RequiredAttribute.Required);
-            save.TilesRemaining = LoadAttributeInt(saveElement, SAVE_ROUND_ATTR, RequiredAttribute.Required);
+            save.TilesRemaining = LoadAttributeInt(saveElement, SAVE_REMAINING_ATTR, RequiredAttribute.Required);
             save.Lapped         = LoadAttributeBool(saveElement, SAVE_LAPPED_ATTR, false);
             save.Settings       = LoadSettings(saveElement.GetElementsByTagName(SETTINGS_TAG).Item(0) as XmlElement);
 
@@ -386,7 +423,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
 
             // Add the save element to the document and return it as a string.
             content.AppendChild(saveElement);
-            return content.ToString();
+            return content.OuterXml;
         }
 
         private static XmlElement MarshalHandElement(XmlDocument document, HandImpl hand)
@@ -493,33 +530,112 @@ namespace MahjongCore.Riichi.Impl.SaveState
 
         private static XmlElement MarshalCommand(XmlDocument document, ICommand command)
         {
-            // COMMAND_TAG
-            return null;
+            XmlElement commandElement = document.CreateElement(COMMAND_TAG);
+            MarshalAttribute(commandElement, COMMAND_TYPE_ATTR, command.Command);
+            MarshalAttribute(commandElement, COMMAND_TILEB_ATTR, command.TileB);
+            MarshalAttribute(commandElement, COMMAND_TILEC_ATTR, command.TileC);
+            commandElement.AppendChild(MarshalTileElement(document, (command.Tile as TileImpl), MarshalSlot.Include, MarshalLocation.Include));
+            return commandElement;
         }
 
         private static XmlElement MarshalActiveTileWaits(XmlDocument document, List<TileType>[] activeTileWaits)
         {
-            // ACTIVETILEWAITS_TAG
-            return null;
+            XmlElement activeTileWaitsElement = document.CreateElement(ACTIVETILEWAITS_TAG);
+            for (int i = 0; i < activeTileWaits.Length; ++i)
+            {
+                if (activeTileWaits[i].Count > 0)
+                {
+                    XmlElement waitTilesElement = document.CreateElement(WAITTILES_TAG);
+                    MarshalAttribute(waitTilesElement, WAITTILES_SLOT_ATTR, i);
+                    foreach (TileType tile in activeTileWaits[i])
+                    {
+                        waitTilesElement.AppendChild(MarshalTileElement(document, tile));
+                    }
+                    activeTileWaitsElement.AppendChild(waitTilesElement);
+                }
+            }
+            return activeTileWaitsElement;
         }
 
         private static XmlElement MarshalActiveRiichiKanTiles(XmlDocument document, TileType[] activeRiichiKanTiles)
         {
-            // ACTIVERIICHIKANTILES_TAG
-            return null;
+            XmlElement activeRiichiKanTilesElement = document.CreateElement(ACTIVERIICHIKANTILES_TAG);
+            foreach (TileType tile in activeRiichiKanTiles)
+            {
+                activeRiichiKanTilesElement.AppendChild(MarshalTileElement(document, tile));
+            }
+            return activeRiichiKanTilesElement;
         }
 
         private static XmlElement MarshalRiichiKanTilesPerSlot(XmlDocument document, TileType[][] riichiKanTilesPerSlot)
         {
-            // RIICHIKANTILESPERSLOT_TAG
-            // KANTILES_TAG
-            return null;
+            XmlElement riichiKanTilesPerSlotElement = document.CreateElement(RIICHIKANTILESPERSLOT_TAG);
+            foreach (TileType[] kanTiles in riichiKanTilesPerSlot)
+            {
+                XmlElement kanTilesElement = document.CreateElement(KANTILES_TAG);
+                foreach (TileType tile in kanTiles)
+                {
+                    kanTilesElement.AppendChild(MarshalTileElement(document, tile));
+                }
+                riichiKanTilesPerSlotElement.AppendChild(kanTilesElement);
+            }
+            return riichiKanTilesPerSlotElement;
+        }
+
+        private static XmlElement MarshalYaku(XmlDocument document, Yaku yaku)
+        {
+            XmlElement yakuElement = document.CreateElement(YAKU_TAG);
+            MarshalAttribute(yakuElement, YAKU_TYPE_ATTR, yaku);
+            return yakuElement;
         }
 
         private static XmlElement MarshalWinningHandCache(XmlDocument document, ICandidateHand candidateHand)
         {
-            // WINNINGHANDCACHE_TAG
-            return null;
+            XmlElement winningHandCacheElement = document.CreateElement(WINNINGHANDCACHE_TAG);
+            MarshalAttribute(winningHandCacheElement, WINNINGHANDCACHE_DORA_ATTR, candidateHand.Dora);
+            MarshalAttribute(winningHandCacheElement, WINNINGHANDCACHE_URADORA_ATTR, candidateHand.UraDora);
+            MarshalAttribute(winningHandCacheElement, WINNINGHANDCACHE_REDDORA_ATTR, candidateHand.RedDora);
+            MarshalAttribute(winningHandCacheElement, WINNINGHANDCACHE_HAN_ATTR, candidateHand.Han);
+            MarshalAttribute(winningHandCacheElement, WINNINGHANDCACHE_FU_ATTR, candidateHand.Fu);
+            MarshalAttribute(winningHandCacheElement, WINNINGHANDCACHE_YAKUMAN_ATTR, candidateHand.Yakuman);
+
+            foreach (Yaku yaku in candidateHand.Yaku)
+            {
+                winningHandCacheElement.AppendChild(MarshalYaku(document, yaku));
+            }
+
+            if (candidateHand is FourteenHand)
+            {
+                winningHandCacheElement.AppendChild(document.CreateElement(FOURTEENHAND_TAG));
+            }
+            else if (candidateHand is ThirteenHand)
+            {
+                XmlElement thirteenHandElement = document.CreateElement(THIRTEENHAND_TAG);
+                MarshalAttribute(thirteenHandElement, THIRTEENHAND_TYPE_ATTR, ((ThirteenHand)candidateHand)._Type);
+                winningHandCacheElement.AppendChild(thirteenHandElement);
+            }
+            else if (candidateHand is StandardCandidateHand)
+            {
+                var standardHand = candidateHand as StandardCandidateHand;
+                XmlElement standardHandElement = document.CreateElement(STANDARDHAND_TAG);
+                standardHandElement.AppendChild(MarshalTileElement(document, standardHand.PairTile));
+                foreach (MeldImpl meld in standardHand.Melds)
+                {
+                    standardHandElement.AppendChild(MarshalMeldElement(document, meld, MELD_TAG));
+                }
+                winningHandCacheElement.AppendChild(standardHandElement);
+            }
+            else if (candidateHand is SevenPairsCandidateHand)
+            {
+                var sevenHand = candidateHand as SevenPairsCandidateHand;
+                XmlElement sevenHandElement = document.CreateElement(SEVENPAIRSHAND_TAG);
+                foreach (TileImpl tile in sevenHand.PairTiles)
+                {
+                    sevenHandElement.AppendChild(MarshalTileElement(document, tile));
+                }
+                winningHandCacheElement.AppendChild(sevenHandElement);
+            }
+            return winningHandCacheElement;
         }
 
         private static XmlElement MarshalGameSettings(XmlDocument document, GameSettingsImpl settings)

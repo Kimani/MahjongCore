@@ -184,7 +184,7 @@ namespace MahjongCore.Riichi.Impl
             OverrideNoReachFlag = false;
             TileCount = 0;
             CachedCall = null;
-            ActiveRiichiKanTiles = null;
+            ActiveRiichiKanTiles = RiichiKanTilesPerSlot[TileHelpers.HAND_SIZE - 1];
             Reach = ReachType.None;
             Tempai = false;
             Furiten = false;
