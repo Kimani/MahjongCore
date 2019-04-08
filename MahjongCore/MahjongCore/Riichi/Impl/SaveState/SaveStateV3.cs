@@ -60,7 +60,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
     //     <discardplayerlist>
     //         <player type="string" />
     //     </discardplayerlist>
-    //     <hand player="string" seat="string" score="int" tileCount="int" streak="int" tempai="bool" furiten="bool" yakitori="bool"
+    //     <hand player="string" score="int" tileCount="int" streak="int" tempai="bool" furiten="bool" yakitori="bool" reach="string"
     //           couldippatsu="bool" coulddoublereach="bool" couldkyuushuukyuuhai="bool" couldsuufurendan="bool" overridenoreach="bool"
     //           hastemporarytile="bool">
     //         <tile ... />
@@ -198,8 +198,8 @@ namespace MahjongCore.Riichi.Impl.SaveState
         private static readonly string EXTRASETTING_RESTRICTDISCARDTILES_TAG = "restrictdiscardtiles";
         private static readonly string HAND_TAG                              = "hand";
         private static readonly string HAND_PLAYER_ATTR                      = "player";
-        private static readonly string HAND_SEAT_ATTR                        = "seat";
         private static readonly string HAND_SCORE_ATTR                       = "score";
+        private static readonly string HAND_REACH_ATTR                       = "reach";
         private static readonly string HAND_TILECOUNT_ATTR                   = "tilecount";
         private static readonly string HAND_STREAK_ATTR                      = "streak";
         private static readonly string HAND_TEMPAI_ATTR                      = "tempai";
@@ -275,7 +275,13 @@ namespace MahjongCore.Riichi.Impl.SaveState
             save.Round          = LoadAttributeEnum<Round>(saveElement, SAVE_ROUND_ATTR, RequiredAttribute.Required);
             save.TilesRemaining = LoadAttributeInt(saveElement, SAVE_REMAINING_ATTR, RequiredAttribute.Required);
             save.Lapped         = LoadAttributeBool(saveElement, SAVE_LAPPED_ATTR, false);
-            save.Settings       = LoadSettings(saveElement.GetElementsByTagName(SETTINGS_TAG).Item(0) as XmlElement);
+
+            save.Settings = new GameSettingsImpl();
+            XmlNodeList settingsList = saveElement.GetElementsByTagName(SETTINGS_TAG);
+            if ((settingsList != null) && (settingsList.Count > 0))
+            {
+                LoadSettings((settingsList.Item(0) as XmlElement), save.Settings);
+            }
 
             XmlNodeList handList = saveElement.GetElementsByTagName(HAND_TAG);
             CommonHelpers.Check((handList.Count == 4), ("Expected four hands, found " + handList.Count));
@@ -287,24 +293,90 @@ namespace MahjongCore.Riichi.Impl.SaveState
             // Load the tags.
             save.Tags.Clear();
             XmlNodeList nodeList = saveElement.GetElementsByTagName(TAG_TAG);
-            for (int i = 0; i < nodeList.Count; ++i)
+            if (nodeList != null)
             {
-                var tagNode = nodeList.Item(i) as XmlElement;
-                save.Tags.Add(tagNode.GetAttribute(TUPLE_KEY_ATTR), tagNode.GetAttribute(TUPLE_VALUE_ATTR));
+                for (int i = 0; i < nodeList.Count; ++i)
+                {
+                    var tagNode = nodeList.Item(i) as XmlElement;
+                    save.Tags.Add(tagNode.GetAttribute(TUPLE_KEY_ATTR), tagNode.GetAttribute(TUPLE_VALUE_ATTR));
+                }
             }
         }
 
         internal static IGameState LoadState(string state, GameStateImpl target)
         {
+            target.Reset();
             XmlDocument content = Unmarshal(state);
+            var saveElement = content.GetElementsByTagName(SAVE_TAG).Item(0) as XmlElement;
 
             // Setup the basic GameStateImpl values.
+            target.Round                    = LoadAttributeEnum<Round>(saveElement, SAVE_ROUND_ATTR, RequiredAttribute.Required);
+            target.FirstDealer              = LoadAttributeEnum<Player>(saveElement, SAVE_FIRSTDEALER_ATTR, RequiredAttribute.Required);
+            target.Dealer                   = LoadAttributeEnum<Player>(saveElement, SAVE_DEALER_ATTR, RequiredAttribute.Required);
+            target.Current                  = LoadAttributeEnum<Player>(saveElement, SAVE_CURRENT_ATTR, RequiredAttribute.Required);
+            target.Wareme                   = LoadAttributeEnum(saveElement, SAVE_WAREME_ATTR, Player.None);
+            target.State                    = LoadAttributeEnum<PlayState>(saveElement, SAVE_STATE_ATTR, RequiredAttribute.Required);
+            target.NextAction               = LoadAttributeEnum<GameAction>(saveElement, SAVE_NEXTACTION_ATTR, RequiredAttribute.Required);
+            target.PreviousAction           = LoadAttributeEnum<GameAction>(saveElement, SAVE_PREVACTION_ATTR, RequiredAttribute.Required);
+            target.Lapped                   = LoadAttributeBool(saveElement, SAVE_LAPPED_ATTR, false);
+            target.Offset                   = LoadAttributeInt(saveElement, SAVE_OFFSET_ATTR, RequiredAttribute.Required);
+            target.TilesRemaining           = LoadAttributeInt(saveElement, SAVE_REMAINING_ATTR, RequiredAttribute.Required);
+            target.Bonus                    = LoadAttributeInt(saveElement, SAVE_BONUS_ATTR, RequiredAttribute.Required);
+            target.Pool                     = LoadAttributeInt(saveElement, SAVE_POOL_ATTR, RequiredAttribute.Required);
+            target.DoraCount                = LoadAttributeInt(saveElement, SAVE_DORACOUNT_ATTR, RequiredAttribute.Required);
+            target.Roll                     = LoadAttributeInt(saveElement, SAVE_ROLL_ATTR, RequiredAttribute.Required);
+            target.PlayerRecentOpenKan      = LoadAttributeEnum<Player>(saveElement, SAVE_PLAYERRECENTOPENKAN_ATTR, RequiredAttribute.Required);
+            target.NextActionPlayer         = LoadAttributeEnum<Player>(saveElement, SAVE_NEXTACTIONPLAYER_ATTR, RequiredAttribute.Required);
+            target.NextActionTile           = LoadAttributeEnum<TileType>(saveElement, SAVE_NEXTACTIONTILE_ATTR, RequiredAttribute.Required);
+            target.PlayerDeadWallPick       = LoadAttributeBool(saveElement, SAVE_PLAYERDEADWALLPICK_ATTR, RequiredAttribute.Required);
+            target.FlipDoraAfterNextDiscard = LoadAttributeBool(saveElement, SAVE_FLIPDORAAFTERNEXTDISCARD_ATTR, RequiredAttribute.Required);
+            target.ChankanFlag              = LoadAttributeBool(saveElement, SAVE_CHANKAN_ATTR, RequiredAttribute.Required);
+            target.KanburiFlag              = LoadAttributeBool(saveElement, SAVE_KANBURI_ATTR, RequiredAttribute.Required);
+            target.NextActionPlayerTarget   = LoadAttributeEnum<Player>(saveElement, SAVE_NEXTACTIONPLAYERTARGET_ATTR, RequiredAttribute.Required);
+            target.NextAction1              = LoadAttributeEnum<GameAction>(saveElement, SAVE_NEXTACTION1_ATTR, RequiredAttribute.Required);
+            target.NextAction2              = LoadAttributeEnum<GameAction>(saveElement, SAVE_NEXTACTION2_ATTR, RequiredAttribute.Required);
+            target.NextAction3              = LoadAttributeEnum<GameAction>(saveElement, SAVE_NEXTACTION3_ATTR, RequiredAttribute.Required);
+            target.NextAction4              = LoadAttributeEnum<GameAction>(saveElement, SAVE_NEXTACTION4_ATTR, RequiredAttribute.Required);
+            target.RewindAction             = LoadAttributeEnum(saveElement, SAVE_REWINDACTION_ATTR, GameAction.Nothing);
+            target.AdvanceAction            = LoadAttributeEnum<AdvanceAction>(saveElement, SAVE_ADVANCEACTION_ATTR, RequiredAttribute.Required);
+            target.NextAbortiveDrawType     = LoadAttributeEnum<AbortiveDrawType>(saveElement, SAVE_NEXTABORTIVEDRAWTYPE_ATTR, RequiredAttribute.Required);
+            target.SkipAdvancePlayer        = LoadAttributeBool(saveElement, SAVE_SKIPADVANCEPLAYER_ATTR, RequiredAttribute.Required);
+            target.HasExtraSettings         = LoadAttributeBool(saveElement, SAVE_HASEXTRASETTINGS_ATTR, false);
+            target.NextActionSlot           = LoadAttributeInt(saveElement, SAVE_NEXTACTIONSLOT_ATTR, RequiredAttribute.Required);
+            target.CanAdvance               = LoadAttributeBool(saveElement, SAVE_CANADVANCE_ATTR, RequiredAttribute.Required);
+            target.CanResume                = LoadAttributeBool(saveElement, SAVE_CANRESUME_ATTR, true);
+            target.ExpectingDiscard         = LoadAttributeBool(saveElement, SAVE_EXPECTINGDISCARD_ATTR, RequiredAttribute.Required);
+            target.NagashiWin               = LoadAttributeBool(saveElement, SAVE_NAGASHIWIN_ATTR, RequiredAttribute.Required);
 
             // Setup the more in depth GameStateImpl values.
+            XmlNodeList tileElements = saveElement.GetElementsByTagName(TILE_TAG);
+            CommonHelpers.Check((tileElements.Count == TileHelpers.TOTAL_TILE_COUNT), ("Expected 136 tiles in the wall in the save state, found: " + tileElements.Count));
+            for (int i = 0; i < tileElements.Count; ++i)
+            {
+                LoadTile((tileElements.Item(i) as XmlElement), target.WallRaw[i], i, Location.Wall);
+            }
+
+            CommonHelpers.TryIterateTagElements(saveElement, SETTINGS_TAG, (XmlElement settings) => { LoadSettings(settings, target.Settings); }, IterateCount.One);
+            CommonHelpers.TryIterateTagElements(saveElement, EXTRASETTINGS_TAG, (XmlElement extra) => { LoadExtraSettings(extra, target.ExtraSettings); }, IterateCount.One);
+            CommonHelpers.TryIterateTagElements(saveElement, DISCARDPLAYERLIST_TAG, (XmlElement discardPlayerElement) =>
+            {
+                CommonHelpers.TryIterateTagElements(discardPlayerElement, PLAYER_TAG, (XmlElement playerElement) =>
+                {
+                    target.DiscardPlayerList.Push(LoadAttributeEnum<Player>(playerElement, PLAYER_TYPE_ATTR, RequiredAttribute.Required));
+                });
+            }, IterateCount.One);
 
             // Setup the hands.
+            XmlNodeList handElements = saveElement.GetElementsByTagName(HAND_TAG);
+            CommonHelpers.Check((handElements.Count == 4), ("Expected 4 hand elements in the save state, found: " + handElements.Count));
+            LoadHand((handElements.Item(0) as XmlElement), target.Player1HandRaw);
+            LoadHand((handElements.Item(1) as XmlElement), target.Player2HandRaw);
+            LoadHand((handElements.Item(2) as XmlElement), target.Player3HandRaw);
+            LoadHand((handElements.Item(3) as XmlElement), target.Player4HandRaw);
 
             // Done! Return the state.
+            target.FixPostStateLoad();
+            target.SanityCheck();
             return target;
         }
 
@@ -315,9 +387,76 @@ namespace MahjongCore.Riichi.Impl.SaveState
             return content;
         }
 
-        private static IGameSettings LoadSettings(XmlElement gameSettingsDocument)
+        private static void LoadSettings(XmlElement settingsElement, IGameSettings settings)
         {
-            return null;
+            CommonHelpers.TryIterateTagElements(settingsElement, SETTING_TAG, (XmlElement settingElement) =>
+            {
+                LoadTuple(settingElement, out string key, out string value);
+                ...
+            });
+        }
+
+        private static void LoadExtraSettings(XmlElement extraSettingsElement, IExtraSettings settings)
+        {
+            CommonHelpers.TryIterateTagElements(extraSettingsElement, EXTRASETTING_TAG, (XmlElement extraSettingElement) =>
+            {
+                LoadTuple(extraSettingElement, out string key, out string value);
+                ...
+            });
+        }
+
+        private static void LoadHand(XmlElement handElement, HandImpl hand)
+        {
+            // Load simple values.
+            hand.Player               = LoadAttributeEnum<Player>(handElement, HAND_PLAYER_ATTR);
+            hand.Score                = LoadAttributeInt(handElement, HAND_SCORE_ATTR);
+            hand.TileCount            = LoadAttributeInt(handElement, HAND_TILECOUNT_ATTR);
+            hand.Reach                = LoadAttributeEnum<ReachType>(handElement, HAND_REACH_ATTR);
+            hand.Streak               = LoadAttributeInt(handElement, HAND_STREAK_ATTR);
+            hand.Tempai               = LoadAttributeBool(handElement, HAND_TEMPAI_ATTR);
+            hand.Furiten              = LoadAttributeBool(handElement, HAND_FURITEN_ATTR);
+            hand.Yakitori             = LoadAttributeBool(handElement, HAND_YAKITORI_ATTR);
+            hand.CouldIppatsu         = LoadAttributeBool(handElement, HAND_COULDIPPATSU_ATTR);
+            hand.CouldDoubleReach     = LoadAttributeBool(handElement, HAND_COULDDOUBLEREACH_ATTR);
+            hand.CouldKyuushuuKyuuhai = LoadAttributeBool(handElement, HAND_COULDKYUUSHUUKYUUHAI_ATTR);
+            hand.CouldSuufurendan     = LoadAttributeBool(handElement, HAND_COULDSUUFURENDAN_ATTR);
+            hand.OverrideNoReachFlag  = LoadAttributeBool(handElement, HAND_OVERRIDENOREACH_ATTR);
+            hand.HasTemporaryTile     = LoadAttributeBool(handElement, HAND_HASTEMPORARYTILE_ATTR);
+
+            // Load more complicated values.
+            XmlNodeList tileElements = handElement.GetElementsByTagName(TILE_TAG);
+            int? tileElementCount = (tileElements == null) ? null : new int?(tileElements.Count);
+            CommonHelpers.Check(((tileElements != null) && (tileElementCount.Value == hand.TileCount)), ("Unexpected hand tile could, found " + tileElementCount));
+            for (int i = 0; i < hand.TileCount; ++i)
+            {
+                LoadTile((tileElements.Item(i) as XmlElement), hand.ActiveHandRaw[i], i, Location.Hand);
+            }
+
+            XmlNodeList meldElements = handElement.GetElementsByTagName(MELD_TAG);
+
+        }
+
+        private static void LoadMeld(XmlElement meldElement, MeldImpl meld, Player owner)
+        {
+
+        }
+
+        private static void LoadTile(XmlElement tileElement, TileImpl tile, int? slot, Location? location)
+        {
+            tile.Type        = LoadAttributeEnum<TileType>(tileElement, TILE_TYPE_ATTR, RequiredAttribute.Required);
+            tile.Ancillary   = LoadAttributeEnum<Player>(tileElement, TILE_ANCILLARY_ATTR, RequiredAttribute.Required);
+            tile.Reach       = LoadAttributeEnum<ReachType>(tileElement, TILE_REACH_ATTR, RequiredAttribute.Required);
+            tile.Ghost       = LoadAttributeBool(tileElement, TILE_GHOST_ATTR, RequiredAttribute.Required);
+            tile.Called      = LoadAttributeBool(tileElement, TILE_CALLED_ATTR, RequiredAttribute.Required);
+            tile.WinningTile = LoadAttributeBool(tileElement, TILE_WINNINGTILE_ATTR, RequiredAttribute.Required);
+            tile.Location    = (location != null) ? location.Value : LoadAttributeEnum<Location>(tileElement, TILE_LOCATION_ATTR, RequiredAttribute.Required);
+            tile.Slot        = (slot != null)     ? slot.Value     : LoadAttributeInt(tileElement, TILE_SLOT_ATTR, RequiredAttribute.Required);
+        }
+
+        private static void LoadTuple(XmlElement tupleElement, out string key, out string value)
+        {
+            key = LoadRequiredAttribute(tupleElement, TUPLE_KEY_ATTR);
+            value = LoadRequiredAttribute(tupleElement, TUPLE_VALUE_ATTR);
         }
 
         private static T LoadAttributeEnum<T>(XmlElement element, string attribute, RequiredAttribute required = RequiredAttribute.Optional) where T : struct
@@ -344,6 +483,27 @@ namespace MahjongCore.Riichi.Impl.SaveState
                 throw new Exception("Couldn't find required attribute!");
             }
             return default(int);
+        }
+
+        private static bool LoadAttributeBool(XmlElement element, string attribute, RequiredAttribute required = RequiredAttribute.Optional)
+        {
+            if (bool.TryParse(element.GetAttribute(attribute), out bool boolValue))
+            {
+                return boolValue;
+            }
+            else if (required == RequiredAttribute.Required)
+            {
+                throw new Exception("Couldn't find required attribute!");
+            }
+            return default(bool);
+        }
+
+        private static string LoadRequiredAttribute(XmlElement element, string attribute)
+        {
+            CommonHelpers.Check(element.HasAttribute(attribute), ("Missing required attribute: " + attribute));
+            string attrValue = element.GetAttribute(attribute);
+            CommonHelpers.Check(attrValue.Length > 0, "Empty attribute value!");
+            return attrValue;
         }
 
         internal static string Marshal(GameStateImpl state, IDictionary<string, string> tags = null)
@@ -375,21 +535,21 @@ namespace MahjongCore.Riichi.Impl.SaveState
             MarshalAttribute(saveElement, SAVE_FLIPDORAAFTERNEXTDISCARD_ATTR, state.FlipDoraAfterNextDiscard);
             MarshalAttribute(saveElement, SAVE_CHANKAN_ATTR, state.ChankanFlag);
             MarshalAttribute(saveElement, SAVE_KANBURI_ATTR, state.KanburiFlag);
-            MarshalAttribute(saveElement, SAVE_NEXTACTIONPLAYERTARGET_ATTR, state._NextActionPlayerTarget);
-            MarshalAttribute(saveElement, SAVE_NEXTACTION1_ATTR, state._NextAction1);
-            MarshalAttribute(saveElement, SAVE_NEXTACTION2_ATTR, state._NextAction2);
-            MarshalAttribute(saveElement, SAVE_NEXTACTION3_ATTR, state._NextAction3);
-            MarshalAttribute(saveElement, SAVE_NEXTACTION4_ATTR, state._NextAction4);
-            MarshalAttribute(saveElement, SAVE_REWINDACTION_ATTR, state._RewindAction);
-            MarshalAttribute(saveElement, SAVE_ADVANCEACTION_ATTR, state._AdvanceAction);
-            MarshalAttribute(saveElement, SAVE_NEXTABORTIVEDRAWTYPE_ATTR, state._NextAbortiveDrawType);
-            MarshalAttribute(saveElement, SAVE_SKIPADVANCEPLAYER_ATTR, state._SkipAdvancePlayer);
-            MarshalAttribute(saveElement, SAVE_HASEXTRASETTINGS_ATTR, state._HasExtraSettings);
-            MarshalAttribute(saveElement, SAVE_NEXTACTIONSLOT_ATTR, state._NextActionSlot);
-            MarshalAttribute(saveElement, SAVE_CANADVANCE_ATTR, state._CanAdvance);
-            MarshalAttribute(saveElement, SAVE_CANRESUME_ATTR, state._CanResume);
-            MarshalAttribute(saveElement, SAVE_EXPECTINGDISCARD_ATTR, state._ExpectingDiscard);
-            MarshalAttribute(saveElement, SAVE_NAGASHIWIN_ATTR, state._NagashiWin);
+            MarshalAttribute(saveElement, SAVE_NEXTACTIONPLAYERTARGET_ATTR, state.NextActionPlayerTarget);
+            MarshalAttribute(saveElement, SAVE_NEXTACTION1_ATTR, state.NextAction1);
+            MarshalAttribute(saveElement, SAVE_NEXTACTION2_ATTR, state.NextAction2);
+            MarshalAttribute(saveElement, SAVE_NEXTACTION3_ATTR, state.NextAction3);
+            MarshalAttribute(saveElement, SAVE_NEXTACTION4_ATTR, state.NextAction4);
+            MarshalAttribute(saveElement, SAVE_REWINDACTION_ATTR, state.RewindAction);
+            MarshalAttribute(saveElement, SAVE_ADVANCEACTION_ATTR, state.AdvanceAction);
+            MarshalAttribute(saveElement, SAVE_NEXTABORTIVEDRAWTYPE_ATTR, state.NextAbortiveDrawType);
+            MarshalAttribute(saveElement, SAVE_SKIPADVANCEPLAYER_ATTR, state.SkipAdvancePlayer);
+            MarshalAttribute(saveElement, SAVE_HASEXTRASETTINGS_ATTR, state.HasExtraSettings);
+            MarshalAttribute(saveElement, SAVE_NEXTACTIONSLOT_ATTR, state.NextActionSlot);
+            MarshalAttribute(saveElement, SAVE_CANADVANCE_ATTR, state.CanAdvance);
+            MarshalAttribute(saveElement, SAVE_CANRESUME_ATTR, state.CanResume);
+            MarshalAttribute(saveElement, SAVE_EXPECTINGDISCARD_ATTR, state.ExpectingDiscard);
+            MarshalAttribute(saveElement, SAVE_NAGASHIWIN_ATTR, state.NagashiWin);
 
             // Setup the GameStateImpl children values on the save element.
             CommonHelpers.IterateDictionary(tags, (string key, string value) => { saveElement.AppendChild(MarshalTupleElement(content, TAG_TAG, key, value)); });
@@ -402,7 +562,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
 
             saveElement.AppendChild(MarshalGameSettings(content, state.Settings as GameSettingsImpl));
             saveElement.AppendChild(MarshalExtraSettings(content, state.ExtraSettings as ExtraSettingsImpl));
-                        
+
             if (state.DiscardPlayerList.Count > 0)
             {
                 XmlElement discardPlayerListElement = content.CreateElement(DISCARDPLAYERLIST_TAG);
@@ -413,7 +573,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
                     discardPlayerListElement.AppendChild(playerElement);
                 }
                 saveElement.AppendChild(discardPlayerListElement);
-            }            
+            }
 
             // Setup the hands and add them to the save element.
             saveElement.AppendChild(MarshalHandElement(content, state.Player1HandRaw));
@@ -432,9 +592,9 @@ namespace MahjongCore.Riichi.Impl.SaveState
 
             // Save the simple hand element attributes.
             MarshalAttribute(handElement, HAND_PLAYER_ATTR, hand.Player);
-            MarshalAttribute(handElement, HAND_SEAT_ATTR, hand.Seat);
             MarshalAttribute(handElement, HAND_SCORE_ATTR, hand.Score);
             MarshalAttribute(handElement, HAND_TILECOUNT_ATTR, hand.TileCount);
+            MarshalAttribute(handElement, HAND_REACH_ATTR, hand.Reach);
             MarshalAttribute(handElement, HAND_STREAK_ATTR, hand.Streak);
             MarshalAttribute(handElement, HAND_TEMPAI_ATTR, hand.Tempai);
             MarshalAttribute(handElement, HAND_FURITEN_ATTR, hand.Furiten);
@@ -487,7 +647,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
 
         private static XmlElement MarshalTileElement(
             XmlDocument document,
-            TileImpl tile, 
+            TileImpl tile,
             MarshalSlot shouldMarshalSlot = MarshalSlot.Ignore,
             MarshalLocation shouldMarshalLocation = MarshalLocation.Ignore)
         {

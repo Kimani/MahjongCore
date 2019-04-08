@@ -2,9 +2,16 @@
 
 using System;
 using System.Collections.Generic;
+using System.Xml;
 
 namespace MahjongCore.Common
 {
+    public enum IterateCount
+    {
+        All,
+        One
+    }
+
     public static class CommonHelpers
     {
         public static bool IsFlagSet(this uint value, uint flag) { return (flag != 0) && ((value & flag) == flag); }
@@ -89,6 +96,25 @@ namespace MahjongCore.Common
                 foreach (KeyValuePair<T,U> item in sourceDictionary)
                 {
                     callback(item.Key, item.Value);
+                }
+            }
+        }
+
+        public static void TryIterateTagElements(XmlElement root, string tag, Action<XmlElement> callback, IterateCount count = IterateCount.All)
+        {
+            XmlNodeList elementList = root.GetElementsByTagName(tag);
+            if ((elementList != null) && (elementList.Count > 0))
+            { 
+                if (count == IterateCount.All)
+                {
+                    foreach (XmlNode node in elementList)
+                    {
+                        callback(node as XmlElement);
+                    }
+                }
+                else
+                {
+                    callback(elementList.Item(0) as XmlElement);
                 }
             }
         }

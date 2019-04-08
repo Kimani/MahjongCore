@@ -59,7 +59,10 @@ namespace MahjongCore.Riichi.Impl
         internal SaveStateImpl(string state)
         {
             _State = state;
-            SaveStateV3.LoadCommon(state, this);
+
+            if      (SaveStateV3.Matches(state)) { SaveStateV3.LoadCommon(state, this); }
+            else if (SaveStateV2.Matches(state)) { SaveStateV2.LoadCommon(state, this); }
+            else                                 { throw new Exception("Unrecognized state string"); }
         }
 
         internal GameStateImpl PopulateState(GameStateImpl state = null)

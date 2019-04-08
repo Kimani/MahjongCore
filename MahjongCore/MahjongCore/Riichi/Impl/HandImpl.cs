@@ -21,7 +21,7 @@ namespace MahjongCore.Riichi.Impl
         public event Action<Player, TileType>         DiscardUndone;
 
         public IGameState      Parent                { get { return _Parent; } }
-        public Player          Player                { get; private set; }
+        public Player          Player                { get; internal set; }
         public Wind            Seat                  { get { return WindExtensionMethods.GetWind(Player, Parent.Dealer); } }
         public ITile[]         Tiles                 { get { return ActiveHandRaw; } }
         public IMeld[]         Melds                 { get { return MeldsRaw; } }

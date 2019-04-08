@@ -86,13 +86,13 @@ namespace MahjongCore.Riichi.Impl
 
         public void Advance()
         {
-            CommonHelpers.Check(_CanAdvance, "Advance reentry detected! Cannot call advance at this time.");
+            CommonHelpers.Check(CanAdvance, "Advance reentry detected! Cannot call advance at this time.");
             Advance(State.GetNext(), EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(State.GetNext()), false);
         }
 
         public void Resume()
         {
-            CommonHelpers.Check(_CanResume, "Cannot resume, as this hasn't been paused.");
+            CommonHelpers.Check(CanResume, "Cannot resume, as this hasn't been paused.");
             Advance(State, false, true);
         }
 
@@ -112,22 +112,22 @@ namespace MahjongCore.Riichi.Impl
 
         public void Pause()
         {
-            CommonHelpers.Check(_ExpectingPause, "Not expecting pause at this time. Can only pause during PreCheckAdvance or PreCheckRewind handlers.");
-            _ShouldPause = true;
-            _CanResume = true;
+            CommonHelpers.Check(ExpectingPause, "Not expecting pause at this time. Can only pause during PreCheckAdvance or PreCheckRewind handlers.");
+            ShouldPause = true;
+            CanResume = true;
         }
 
         public void SubmitDiscard(IDiscardDecision decision)
         {
-            CommonHelpers.Check(_ExpectingDiscard, "Not expecting discard decision at this time!");
-            _ExpectingDiscard = false;
+            CommonHelpers.Check(ExpectingDiscard, "Not expecting discard decision at this time!");
+            ExpectingDiscard = false;
 
             // If we're currently processing DecideMove (evidenced by the _CanAdvance reentry flag being cleared)
             // then we want to setup _AdvanceAction. Otherwise we want to pump state advancement at this time.
-            _AdvanceAction = ProcessDiscardDecision(decision);
-            if (_CanAdvance)
+            AdvanceAction = ProcessDiscardDecision(decision);
+            if (CanAdvance)
             {
-                DetermineAdvanceState(_AdvanceAction, out PlayState state, out bool advancePlayer);
+                DetermineAdvanceState(AdvanceAction, out PlayState state, out bool advancePlayer);
                 Advance(state, advancePlayer, false);
             }
         }
@@ -139,29 +139,46 @@ namespace MahjongCore.Riichi.Impl
 
             // If we're currently processing DecideMove (evidenced by the _CanAdvance reentry flag being cleared)
             // then we just want to leave _AdvanceAction set. Otherwise we want to pump state advancement at this time.
-            _AdvanceAction = ProcessPostDiscardDecision(decision);
-            if (_CanAdvance && (_AdvanceAction == AdvanceAction.Advance))
+            AdvanceAction = ProcessPostDiscardDecision(decision);
+            if (CanAdvance && (AdvanceAction == AdvanceAction.Advance))
             {
                 Advance();
             }
         }
 
         // GameStateImpl
-        internal TileImpl[]    WallRaw                  { get; set; } = new TileImpl[TileHelpers.TOTAL_TILE_COUNT];
-        internal TileImpl[]    DoraIndicatorsRaw        { get; set; } = new TileImpl[5];
-        internal TileImpl[]    UraDoraIndicatorsRaw     { get; set; } = new TileImpl[5];
-        internal HandImpl      Player1HandRaw           { get; set; }
-        internal HandImpl      Player2HandRaw           { get; set; }
-        internal HandImpl      Player3HandRaw           { get; set; }
-        internal HandImpl      Player4HandRaw           { get; set; }
-        internal Stack<Player> DiscardPlayerList        { get; set; } = new Stack<Player>();
-        internal Player        PlayerRecentOpenKan      { get; set; } = Player.None;
-        internal Player        NextActionPlayer         { get; set; } = Player.None;
-        internal TileType      NextActionTile           { get; set; } = TileType.None;
-        internal bool          PlayerDeadWallPick       { get; set; } = false;
-        internal bool          FlipDoraAfterNextDiscard { get; set; } = false;
-        internal bool          ChankanFlag              { get; set; } = false;
-        internal bool          KanburiFlag              { get; set; } = false;
+        internal TileImpl[]       WallRaw                  { get; set; } = new TileImpl[TileHelpers.TOTAL_TILE_COUNT];
+        internal TileImpl[]       DoraIndicatorsRaw        { get; set; } = new TileImpl[5];
+        internal TileImpl[]       UraDoraIndicatorsRaw     { get; set; } = new TileImpl[5];
+        internal HandImpl         Player1HandRaw           { get; set; }
+        internal HandImpl         Player2HandRaw           { get; set; }
+        internal HandImpl         Player3HandRaw           { get; set; }
+        internal HandImpl         Player4HandRaw           { get; set; }
+        internal Stack<Player>    DiscardPlayerList        { get; set; } = new Stack<Player>();
+        internal Player           PlayerRecentOpenKan      { get; set; } = Player.None;
+        internal Player           NextActionPlayer         { get; set; } = Player.None;
+        internal TileType         NextActionTile           { get; set; } = TileType.None;
+        internal Player           NextActionPlayerTarget   { get; set; } = Player.None;
+        internal GameAction       NextAction1              { get; set; } = GameAction.Nothing;
+        internal GameAction       NextAction2              { get; set; } = GameAction.Nothing;
+        internal GameAction       NextAction3              { get; set; } = GameAction.Nothing;
+        internal GameAction       NextAction4              { get; set; } = GameAction.Nothing;
+        internal GameAction       RewindAction             { get; set; } = GameAction.Nothing;
+        internal AdvanceAction    AdvanceAction            { get; set; } = AdvanceAction.Done;
+        internal AbortiveDrawType NextAbortiveDrawType     { get; set; } = AbortiveDrawType.Other;
+        internal bool             PlayerDeadWallPick       { get; set; } = false;
+        internal bool             FlipDoraAfterNextDiscard { get; set; } = false;
+        internal bool             ChankanFlag              { get; set; } = false;
+        internal bool             KanburiFlag              { get; set; } = false;
+        internal bool             SkipAdvancePlayer        { get; set; } = false;
+        internal bool             HasExtraSettings         { get; set; } = false;
+        internal bool             ExpectingPause           { get; set; } = false;
+        internal bool             ShouldPause              { get; set; } = false;
+        internal bool             CanAdvance               { get; set; } = true;
+        internal bool             CanResume                { get; set; } = false;
+        internal bool             ExpectingDiscard         { get; set; } = false;
+        internal bool             NagashiWin               { get; set; } = false;
+        internal int              NextActionSlot           { get; set; } = -1;
 
         private readonly Dictionary<PlayState, Action> _PreBreakStateHandlers   = new Dictionary<PlayState, Action>();
         private readonly Dictionary<PlayState, Action> _PostBreakStateHandlers  = new Dictionary<PlayState, Action>();
@@ -171,23 +188,6 @@ namespace MahjongCore.Riichi.Impl
         private DiscardInfoImpl                        _DiscardInfoCache        = new DiscardInfoImpl();
         private PostDiscardInfoImpl                    _PostDiscardInfoCache    = new PostDiscardInfoImpl();
         private PostDiscardDecisionImpl                _CachedPostDiscardPass   = new PostDiscardDecisionImpl();
-        internal Player                                 _NextActionPlayerTarget = Player.None;
-        internal GameAction                             _NextAction1            = GameAction.Nothing;
-        internal GameAction                             _NextAction2            = GameAction.Nothing;
-        internal GameAction                             _NextAction3            = GameAction.Nothing;
-        internal GameAction                             _NextAction4            = GameAction.Nothing;
-        internal GameAction                             _RewindAction           = GameAction.Nothing;
-        internal AdvanceAction                          _AdvanceAction          = AdvanceAction.Done;
-        internal AbortiveDrawType                       _NextAbortiveDrawType   = AbortiveDrawType.Other;
-        internal bool                                   _SkipAdvancePlayer      = false;
-        internal bool                                   _HasExtraSettings       = false;
-        internal int                                    _NextActionSlot         = -1;
-        internal bool                                   _ExpectingPause         = false;
-        internal bool                                   _ShouldPause            = false;
-        internal bool                                   _CanAdvance             = true;
-        internal bool                                   _CanResume              = false;
-        internal bool                                   _ExpectingDiscard       = false;
-        internal bool                                   _NagashiWin             = false;
 
         internal     GameStateImpl()                                       { InitializeCommon(null, null, true); }
         internal     GameStateImpl(IGameSettings settings)                 { Initialize(settings, null); }
@@ -285,14 +285,14 @@ namespace MahjongCore.Riichi.Impl
             // can query the AI or the discard decision is supplied immediately during the event, then _AdvanceAction
             // will get set. Otherwise, _AdvanceAction will be set to "Done".
             IPlayerAI ai = GetAI(Current);
-            _ExpectingDiscard = true;
+            ExpectingDiscard = true;
             if (ai != null)
             {
                 SubmitDiscard(ai.GetDiscardDecision(_DiscardInfoCache));
             }
             else
             {
-                _AdvanceAction = AdvanceAction.Done;
+                AdvanceAction = AdvanceAction.Done;
                 DiscardRequested?.Invoke(_DiscardInfoCache);
             }
         }
@@ -305,7 +305,7 @@ namespace MahjongCore.Riichi.Impl
 
             // Poll decisions from AI, or query decisions from caller. If we populate all actions then _AdvanceAction
             // will get set. Otherwise a later call by the caller to SubmitPostDiscard will pump advancements.
-            _AdvanceAction = AdvanceAction.Done;
+            AdvanceAction = AdvanceAction.Done;
             foreach (Player p in PlayerHelpers.Players) { QueryPostDiscardDecision(GetNextAction(p), GetHand(p), GetAI(p)); }
         }
 
@@ -334,9 +334,9 @@ namespace MahjongCore.Riichi.Impl
                 KanburiFlag = false;
                 NextAction = GameAction.AbortiveDraw;
                 NextActionTile = TileType.None;
-                _NextActionSlot = -1;
-                _AdvanceAction = AdvanceAction.HandEnd;
-                _NextAbortiveDrawType = AbortiveDrawType.FourKans;
+                NextActionSlot = -1;
+                AdvanceAction = AdvanceAction.HandEnd;
+                NextAbortiveDrawType = AbortiveDrawType.FourKans;
             }
             else if (NextAction == GameAction.Nothing)
             {
@@ -347,15 +347,15 @@ namespace MahjongCore.Riichi.Impl
                     // Four reaches! Draw game!
                     NextAction = GameAction.AbortiveDraw;
                     NextActionTile = TileType.None;
-                    _NextActionSlot = -1;
-                    _AdvanceAction = AdvanceAction.HandEnd;
-                    _NextAbortiveDrawType = AbortiveDrawType.FourReach;
+                    NextActionSlot = -1;
+                    AdvanceAction = AdvanceAction.HandEnd;
+                    NextAbortiveDrawType = AbortiveDrawType.FourReach;
                 }
                 else
                 {
                     updateFuriten = true;
                     PreviousAction = GameAction.Discard;
-                    _AdvanceAction = (TilesRemaining == 0) ? AdvanceAction.HandEnd : AdvanceAction.Advance;
+                    AdvanceAction = (TilesRemaining == 0) ? AdvanceAction.HandEnd : AdvanceAction.Advance;
                 }
             }
             else if ((NextAction == GameAction.Chii) || (NextAction == GameAction.Pon) || (NextAction == GameAction.OpenKan))
@@ -380,9 +380,9 @@ namespace MahjongCore.Riichi.Impl
                     NextActionTile = TileType.None;
                     NextActionPlayer = NextActionPlayer;
                     NextAction = GameAction.AbortiveDraw;
-                    _NextActionSlot = -1;
-                    _AdvanceAction = AdvanceAction.HandEnd;
-                    _NextAbortiveDrawType = AbortiveDrawType.FiveKans;
+                    NextActionSlot = -1;
+                    AdvanceAction = AdvanceAction.HandEnd;
+                    NextAbortiveDrawType = AbortiveDrawType.FiveKans;
                 }
                 else
                 {
@@ -392,11 +392,11 @@ namespace MahjongCore.Riichi.Impl
                     {
                         PlayerRecentOpenKan = Current; // For Sekinin Barai
                         NextAction = GameAction.ReplacementTilePick;
-                        _AdvanceAction = AdvanceAction.ReplacementPickTile;
+                        AdvanceAction = AdvanceAction.ReplacementPickTile;
                     }
                     else
                     {
-                        _AdvanceAction = AdvanceAction.DecidePostCallMove;
+                        AdvanceAction = AdvanceAction.DecidePostCallMove;
                     }
 
                     updateFuriten = true;
@@ -405,8 +405,8 @@ namespace MahjongCore.Riichi.Impl
             }
             else if (NextAction == GameAction.Ron)
             {
-                _NextActionPlayerTarget = Current;
-                _AdvanceAction = AdvanceAction.HandEnd;
+                NextActionPlayerTarget = Current;
+                AdvanceAction = AdvanceAction.HandEnd;
             }
             else
             {
@@ -426,7 +426,7 @@ namespace MahjongCore.Riichi.Impl
         public void ExecutePostBreak_HandEnd()
         {
             // Process Nagashi Mangan.
-            _NagashiWin = false;
+            NagashiWin = false;
             if ((TilesRemaining == 0) && (NextAction == GameAction.Nothing))
             {
                 bool player1Nagashi = Player1HandRaw.CheckNagashiMangan();
@@ -435,18 +435,18 @@ namespace MahjongCore.Riichi.Impl
                 bool player4Nagashi = Player4HandRaw.CheckNagashiMangan();
 
                 int nagashiCount = (player1Nagashi ? 1 : 0) + (player2Nagashi ? 1 : 0) + (player3Nagashi ? 1 : 0) + (player4Nagashi ? 1 : 0);
-                _NagashiWin = (nagashiCount != 0);
+                NagashiWin = (nagashiCount != 0);
 
                 if (nagashiCount > 1)
                 {
                     NextActionPlayer = Player.Multiple;
-                    _NextAction1 = player1Nagashi ? GameAction.Tsumo : GameAction.Nothing;
-                    _NextAction2 = player2Nagashi ? GameAction.Tsumo : GameAction.Nothing;
-                    _NextAction3 = player3Nagashi ? GameAction.Tsumo : GameAction.Nothing;
-                    _NextAction4 = player4Nagashi ? GameAction.Tsumo : GameAction.Nothing;
-                    _NextActionPlayerTarget = Dealer.GetPrevious(); // Start at the player before the dealer so that the dealer gets resolved first.
+                    NextAction1 = player1Nagashi ? GameAction.Tsumo : GameAction.Nothing;
+                    NextAction2 = player2Nagashi ? GameAction.Tsumo : GameAction.Nothing;
+                    NextAction3 = player3Nagashi ? GameAction.Tsumo : GameAction.Nothing;
+                    NextAction4 = player4Nagashi ? GameAction.Tsumo : GameAction.Nothing;
+                    NextActionPlayerTarget = Dealer.GetPrevious(); // Start at the player before the dealer so that the dealer gets resolved first.
                 }
-                else if (_NagashiWin)
+                else if (NagashiWin)
                 {
                     NextAction = GameAction.Tsumo;
                     NextActionPlayer = player1Nagashi ? Player.Player1 :
@@ -458,8 +458,8 @@ namespace MahjongCore.Riichi.Impl
 
             // Determine our state delta.
             WinResultImpl[] multiWinResults = null;
-            bool consumePool = !_NagashiWin || Settings.GetSetting<bool>(GameOption.NagashiConsumesPool);
-            int bonus = (!_NagashiWin || Settings.GetSetting<bool>(GameOption.NagashiUsesBonus)) ? Bonus : 0;
+            bool consumePool = !NagashiWin || Settings.GetSetting<bool>(GameOption.NagashiConsumesPool);
+            int bonus = (!NagashiWin || Settings.GetSetting<bool>(GameOption.NagashiUsesBonus)) ? Bonus : 0;
 
             if (NextActionPlayer == Player.Multiple)
             {
@@ -467,7 +467,7 @@ namespace MahjongCore.Riichi.Impl
                 foreach (Player p in PlayerHelpers.Players) { if (GetNextAction(p).IsAgari()) { ++winCount; } }
                 multiWinResults = new WinResultImpl[winCount];
 
-                Player processPlayer = _NagashiWin ? Dealer : _NextActionPlayerTarget;
+                Player processPlayer = NagashiWin ? Dealer : NextActionPlayerTarget;
                 int resultSlot = 0;
                 for (int i = 0; i < 4; ++i, processPlayer = processPlayer.GetNext())
                 {
@@ -479,7 +479,7 @@ namespace MahjongCore.Riichi.Impl
                         hand.Yakitori = false;
                         multiWinResults[resultSlot++] = new WinResultImpl(this,
                                                                           processPlayer,
-                                                                          ((winType == WinType.Tsumo) ? Player.Multiple : _NextActionPlayerTarget),
+                                                                          ((winType == WinType.Tsumo) ? Player.Multiple : NextActionPlayerTarget),
                                                                           PlayerRecentOpenKan,
                                                                           winType,
                                                                           bonus,
@@ -500,7 +500,7 @@ namespace MahjongCore.Riichi.Impl
 
                 _WinResultCache.Populate(this,
                                          NextActionPlayer,
-                                         ((NextAction == GameAction.Ron) ? _NextActionPlayerTarget : Player.Multiple),
+                                         ((NextAction == GameAction.Ron) ? NextActionPlayerTarget : Player.Multiple),
                                          PlayerRecentOpenKan,
                                          NextAction.GetWinType(),
                                          bonus,
@@ -521,7 +521,7 @@ namespace MahjongCore.Riichi.Impl
             else if (NextAction == GameAction.Tsumo)        { Tsumo?.Invoke(_WinResultCache); }
             else if (NextAction == GameAction.Ron)          { Ron?.Invoke(_WinResultCache); }
             else if (NextAction == GameAction.Nothing)      { ExhaustiveDraw?.Invoke(_WinResultCache); }
-            else if (NextAction == GameAction.AbortiveDraw) { AbortiveDraw?.Invoke(Current, _NextAbortiveDrawType); }
+            else if (NextAction == GameAction.AbortiveDraw) { AbortiveDraw?.Invoke(Current, NextAbortiveDrawType); }
             else                                            { throw new Exception("Unexpected hand end state!"); }
         }
 
@@ -548,7 +548,7 @@ namespace MahjongCore.Riichi.Impl
                  !endGameRenchan &&
                  ((Player1Hand.Score >= checkScore) || (Player2Hand.Score >= checkScore) || (Player3Hand.Score >= checkScore) || (Player4Hand.Score >= checkScore)))
             {
-                _AdvanceAction = AdvanceAction.GameEnd;
+                AdvanceAction = AdvanceAction.GameEnd;
             }
             else
             {
@@ -567,7 +567,7 @@ namespace MahjongCore.Riichi.Impl
                 }
                 else
                 {
-                    if (_NagashiWin && Settings.GetSetting<bool>(GameOption.NagashiBonusOnEastTempaiOnly))
+                    if (NagashiWin && Settings.GetSetting<bool>(GameOption.NagashiBonusOnEastTempaiOnly))
                     {
                         advanceBonus = GetHand(Dealer).Tempai;
                     }
@@ -610,18 +610,18 @@ namespace MahjongCore.Riichi.Impl
                 NextAction = GameAction.Nothing;
                 NextActionTile = TileType.None;
                 NextActionPlayer = Player.None;
-                _NextActionSlot = 0;
-                _NextAction1 = GameAction.Nothing;
-                _NextAction2 = GameAction.Nothing;
-                _NextAction3 = GameAction.Nothing;
-                _NextAction4 = GameAction.Nothing;
-                _NextActionPlayerTarget = Player.None;
+                NextActionSlot = 0;
+                NextAction1 = GameAction.Nothing;
+                NextAction2 = GameAction.Nothing;
+                NextAction3 = GameAction.Nothing;
+                NextAction4 = GameAction.Nothing;
+                NextActionPlayerTarget = Player.None;
                 PlayerDeadWallPick = false;
 
                 TableCleared?.Invoke();
 
                 // Start the next state.
-                _AdvanceAction = AdvanceAction.RandomizingBreak;
+                AdvanceAction = AdvanceAction.RandomizingBreak;
             }
         }
 
@@ -632,8 +632,8 @@ namespace MahjongCore.Riichi.Impl
                 // This is the 5th kan. Immediately abort.
                 NextAction = GameAction.AbortiveDraw;
                 NextActionPlayer = Current;
-                _NextAbortiveDrawType = AbortiveDrawType.FiveKans;
-                _AdvanceAction = AdvanceAction.HandEnd;
+                NextAbortiveDrawType = AbortiveDrawType.FiveKans;
+                AdvanceAction = AdvanceAction.HandEnd;
             }
             else
             {
@@ -650,7 +650,7 @@ namespace MahjongCore.Riichi.Impl
                 // We'll use GatherDecisions again, but because of PrevAction we'll only look for the applicable rons.
                 PreviousAction = NextAction;
                 ChankanFlag = true;
-                _AdvanceAction = AdvanceAction.GatherDecisions;
+                AdvanceAction = AdvanceAction.GatherDecisions;
             }
         }
 
@@ -664,13 +664,13 @@ namespace MahjongCore.Riichi.Impl
                 KanburiFlag = true;
                 ChankanFlag = false;
                 NextAction = GameAction.ReplacementTilePick;
-                _SkipAdvancePlayer = true;
-                _AdvanceAction = AdvanceAction.PrePickTile;
+                SkipAdvancePlayer = true;
+                AdvanceAction = AdvanceAction.PrePickTile;
             }
             else
             {
                 // HandEnd will process the ron.
-                _AdvanceAction = AdvanceAction.HandEnd;
+                AdvanceAction = AdvanceAction.HandEnd;
             }
         }
 
@@ -692,12 +692,12 @@ namespace MahjongCore.Riichi.Impl
 
         public void ExecuteRewindModeChange_DecideMove()
         {
-            CommonHelpers.Check((_RewindAction != GameAction.Nothing), "Expected _RewindAction to not be Nothing, but it is!");
-            State = (_RewindAction == GameAction.OpenKan) ||
-                    (_RewindAction == GameAction.Chii)    ||
-                    (_RewindAction == GameAction.Pon)            ? PlayState.PerformDecision :
-                    (_RewindAction == GameAction.PickedFromWall) ? PlayState.PickTile :
-                                                                   PlayState.KanChosenTile;
+            CommonHelpers.Check((RewindAction != GameAction.Nothing), "Expected _RewindAction to not be Nothing, but it is!");
+            State = (RewindAction == GameAction.OpenKan) ||
+                    (RewindAction == GameAction.Chii)    ||
+                    (RewindAction == GameAction.Pon)            ? PlayState.PerformDecision :
+                    (RewindAction == GameAction.PickedFromWall) ? PlayState.PickTile :
+                                                                  PlayState.KanChosenTile;
         }
 
         public void ExecuteRewindPostModeChange_DecideMove()
@@ -708,13 +708,13 @@ namespace MahjongCore.Riichi.Impl
             if (shouldRewindPonOrChiiOrOpenKan)
             {
                 MeldImpl meld = GetHand(Current).GetLatestMeld();
-                _RewindAction = (meld.State == MeldState.KanOpen) ? GameAction.OpenKan :
-                                (meld.State == MeldState.Chii)    ? GameAction.Chii :
-                                                                    GameAction.Pon; 
+                RewindAction = (meld.State == MeldState.KanOpen) ? GameAction.OpenKan :
+                               (meld.State == MeldState.Chii)    ? GameAction.Chii :
+                                                                   GameAction.Pon; 
             }
             else
             {
-                _RewindAction = GetHand(Current).PeekLastDrawKanType();
+                RewindAction = GetHand(Current).PeekLastDrawKanType();
             }
         }
 
@@ -770,6 +770,8 @@ namespace MahjongCore.Riichi.Impl
 
         internal void Reset()
         {
+            (Settings as GameSettingsImpl).Locked = false;
+
             Settings.Reset();
             ExtraSettings.Reset();
             Player1HandRaw.Reset();
@@ -808,21 +810,21 @@ namespace MahjongCore.Riichi.Impl
             FlipDoraAfterNextDiscard = false;
             ChankanFlag = false;
             KanburiFlag = false;
-            _NextActionPlayerTarget = Player.None;
-            _NextAction1 = GameAction.Nothing;
-            _NextAction2 = GameAction.Nothing;
-            _NextAction3 = GameAction.Nothing;
-            _NextAction4 = GameAction.Nothing;
-            _RewindAction = GameAction.Nothing;
-            _AdvanceAction = AdvanceAction.Done;
-            _SkipAdvancePlayer = false;
-            _HasExtraSettings = false;
-            _NextActionSlot = -1;
-            _ExpectingPause = false;
-            _ShouldPause = false;
-            _CanAdvance = true;
-            _CanResume = false;
-            _ExpectingDiscard = false;
+            NextActionPlayerTarget = Player.None;
+            NextAction1 = GameAction.Nothing;
+            NextAction2 = GameAction.Nothing;
+            NextAction3 = GameAction.Nothing;
+            NextAction4 = GameAction.Nothing;
+            RewindAction = GameAction.Nothing;
+            AdvanceAction = AdvanceAction.Done;
+            SkipAdvancePlayer = false;
+            HasExtraSettings = false;
+            NextActionSlot = -1;
+            ExpectingPause = false;
+            ShouldPause = false;
+            CanAdvance = true;
+            CanResume = false;
+            ExpectingDiscard = false;
         }
 
         internal void PopulateDoraIndicators()
@@ -837,6 +839,11 @@ namespace MahjongCore.Riichi.Impl
             UraDoraIndicatorsRaw[2] = WallRaw[TileHelpers.ClampTile(Offset - 9)];
             UraDoraIndicatorsRaw[3] = WallRaw[TileHelpers.ClampTile(Offset - 11)];
             UraDoraIndicatorsRaw[4] = WallRaw[TileHelpers.ClampTile(Offset - 13)];
+        }
+
+        internal void FixPostStateLoad()
+        {
+            PopulateDoraIndicators();
         }
 
         internal HandImpl GetHand(Player p)
@@ -891,10 +898,10 @@ namespace MahjongCore.Riichi.Impl
         private void InitializeFromState(ISaveState state, IExtraSettings extra)
         {
             InitializeCommon(state.Settings, extra);
-            _CanResume = true;
-
             CommonHelpers.Check((state is SaveStateImpl), "SaveState not from MahjongCore, external save states not supported at this time.");
             (state as SaveStateImpl).PopulateState(this);
+
+            CanResume = true;
         }
 
         private void InitializeCommon(IGameSettings settings, IExtraSettings extra, bool skipHandlers = false)
@@ -905,9 +912,9 @@ namespace MahjongCore.Riichi.Impl
             }
 
             // Set settings and determine if we're in tutorial mode if ts is null or not.
-            Settings          = settings ?? new GameSettingsImpl();
-            ExtraSettings     = extra ?? new ExtraSettingsImpl();
-            _HasExtraSettings = (extra != null);
+            Settings         = settings ?? new GameSettingsImpl();
+            ExtraSettings    = extra ?? new ExtraSettingsImpl();
+            HasExtraSettings = (extra != null);
 
             int score = Settings.GetSetting<int>(GameOption.StartingPoints);
             Player1HandRaw = new HandImpl(this, Player.Player1, score);
@@ -929,8 +936,8 @@ namespace MahjongCore.Riichi.Impl
 
         private void Advance(PlayState nextMode, bool advancePlayer, bool skipCheck)
         {
-            _RewindAction = GameAction.Nothing;
-            _CanAdvance = false;
+            RewindAction = GameAction.Nothing;
+            CanAdvance = false;
             bool queuedSkipCheck = skipCheck;
             bool queuedAdvancePlayer = advancePlayer;
             PlayState queuedMode = nextMode;
@@ -938,7 +945,7 @@ namespace MahjongCore.Riichi.Impl
             do
             {
                 CommonHelpers.Check(queuedMode != PlayState.NA, "Next play mode to advance is NA! Invalid state!");
-                _AdvanceAction = AdvanceAction.Advance;
+                AdvanceAction = AdvanceAction.Advance;
 
                 if (queuedSkipCheck)
                 {
@@ -949,9 +956,9 @@ namespace MahjongCore.Riichi.Impl
                     // Advance player, set flags/game mode/etc.
                     State = queuedMode;
 
-                    if (_SkipAdvancePlayer)
+                    if (SkipAdvancePlayer)
                     {
-                        _SkipAdvancePlayer = false;
+                        SkipAdvancePlayer = false;
                     }
                     else if (queuedAdvancePlayer)
                     {
@@ -967,7 +974,7 @@ namespace MahjongCore.Riichi.Impl
 
                     if (CheckForPause(false))
                     {
-                        _AdvanceAction = AdvanceAction.Done;
+                        AdvanceAction = AdvanceAction.Done;
                         break;
                     }
                 }
@@ -979,9 +986,9 @@ namespace MahjongCore.Riichi.Impl
                 }
 
                 // Determine what the next step will be.
-                DetermineAdvanceState(_AdvanceAction, out queuedMode, out queuedAdvancePlayer);
-            } while (_AdvanceAction != AdvanceAction.Done);
-            _CanAdvance = true;
+                DetermineAdvanceState(AdvanceAction, out queuedMode, out queuedAdvancePlayer);
+            } while (AdvanceAction != AdvanceAction.Done);
+            CanAdvance = true;
         }
 
         private void DetermineAdvanceState(AdvanceAction action, out PlayState state, out bool advancePlayer)
@@ -1052,10 +1059,10 @@ namespace MahjongCore.Riichi.Impl
                                                                                                     GameAction.OpenKan);
 
             // Advance if all decisions are accounted for.
-            AdvanceAction nextAction = (_NextAction1 != GameAction.DecisionPending) &&
-                                       (_NextAction2 != GameAction.DecisionPending) &&
-                                       (_NextAction3 != GameAction.DecisionPending) &&
-                                       (_NextAction4 != GameAction.DecisionPending) ? AdvanceAction.Advance : AdvanceAction.Done;
+            AdvanceAction nextAction = (NextAction1 != GameAction.DecisionPending) &&
+                                       (NextAction2 != GameAction.DecisionPending) &&
+                                       (NextAction3 != GameAction.DecisionPending) &&
+                                       (NextAction4 != GameAction.DecisionPending) ? AdvanceAction.Advance : AdvanceAction.Done;
 
             if (nextAction == AdvanceAction.Advance)
             {
@@ -1074,7 +1081,7 @@ namespace MahjongCore.Riichi.Impl
                 // Check to see if multiple people have ronned.
                 // TODO: Implement head bump here. Be sure to invoke DecisionCancelled with a null call.
                 if ((NextAction == GameAction.Ron) &&
-                    (((_NextAction1.IsAgari() ? 1 : 0) + (_NextAction2.IsAgari() ? 1 : 0) + (_NextAction3.IsAgari() ? 1 : 0) + (_NextAction4.IsAgari() ? 1 : 0)) > 1))
+                    (((NextAction1.IsAgari() ? 1 : 0) + (NextAction2.IsAgari() ? 1 : 0) + (NextAction3.IsAgari() ? 1 : 0) + (NextAction4.IsAgari() ? 1 : 0)) > 1))
                 {
                     NextActionPlayer = Player.Multiple;
                 }
@@ -1094,7 +1101,7 @@ namespace MahjongCore.Riichi.Impl
 
         private AdvanceAction ProcessDiscardDecision(IDiscardDecision decision)
         {
-            _ExpectingDiscard = false;
+            ExpectingDiscard = false;
             HandImpl hand = GetHand(Current);
             CommonHelpers.Check((!(decision is DiscardDecisionImpl) || ((DiscardDecisionImpl)decision).Validate(hand)), "Post discard decision failed validation.");
 
@@ -1121,21 +1128,21 @@ namespace MahjongCore.Riichi.Impl
 
                 case DiscardDecisionType.ClosedKan:         NextActionTile = decision.Tile.Type;
                                                             NextAction = GameAction.ClosedKan;
-                                                            _NextActionSlot = decision.Tile.Slot;
+                                                            NextActionSlot = decision.Tile.Slot;
                                                             action = AdvanceAction.KanChosenTile;
                                                             hand.PerformClosedKan(decision.Tile.Type);
                                                             break;
 
                 case DiscardDecisionType.PromotedKan:       NextActionTile = decision.Tile.Type;
                                                             NextAction = GameAction.PromotedKan;
-                                                            _NextActionSlot = decision.Tile.Slot;
+                                                            NextActionSlot = decision.Tile.Slot;
                                                             action = AdvanceAction.KanChosenTile;
                                                             hand.PerformPromotedKan(decision.Tile);
                                                             break;
 
                 case DiscardDecisionType.AbortiveDraw:      NextActionPlayer = Current;
                                                             NextAction = GameAction.AbortiveDraw;
-                                                            _NextAbortiveDrawType = (decision.Tile == null) ? AbortiveDrawType.KyuushuuKyuuhai : AbortiveDrawType.Suufuurendan;
+                                                            NextAbortiveDrawType = (decision.Tile == null) ? AbortiveDrawType.KyuushuuKyuuhai : AbortiveDrawType.Suufuurendan;
                                                             if (decision.Tile != null)
                                                             {
                                                                 PerformDiscardState(decision.Tile, GameAction.AbortiveDraw);
@@ -1167,8 +1174,8 @@ namespace MahjongCore.Riichi.Impl
             bool pause = false;
             try
             {
-                _ExpectingPause = true;
-                _ShouldPause = false;
+                ExpectingPause = true;
+                ShouldPause = false;
                 if (rewindHandler)
                 {
                     PreCheckRewind?.Invoke();
@@ -1177,7 +1184,7 @@ namespace MahjongCore.Riichi.Impl
                 {
                     PreCheckAdvance?.Invoke();
                 }
-                pause = _ShouldPause;
+                pause = ShouldPause;
             }
             catch (Exception e)
             {
@@ -1185,8 +1192,8 @@ namespace MahjongCore.Riichi.Impl
             }
             finally
             {
-                _ExpectingPause = false;
-                _ShouldPause = false;
+                ExpectingPause = false;
+                ShouldPause = false;
                 if (stashedException != null)
                 {
                     throw stashedException;
@@ -1297,26 +1304,26 @@ namespace MahjongCore.Riichi.Impl
         private GameAction GetNextAction(Player p)
         {
             CommonHelpers.Check(p.IsPlayer(), "Tried to get action for non-player: " + p);
-            return (p == Player.Player1) ? _NextAction1 :
-                   (p == Player.Player2) ? _NextAction2 :
-                   (p == Player.Player3) ? _NextAction3 :
-                                           _NextAction4;
+            return (p == Player.Player1) ? NextAction1 :
+                   (p == Player.Player2) ? NextAction2 :
+                   (p == Player.Player3) ? NextAction3 :
+                                           NextAction4;
         }
 
         private void SetNextAction(Player p, GameAction action)
         {
             CommonHelpers.Check(p.IsPlayer(), "Tried to get action for non-player: " + p);
-            if      (p == Player.Player1) { _NextAction1 = action; }
-            else if (p == Player.Player2) { _NextAction2 = action; }
-            else if (p == Player.Player3) { _NextAction3 = action; }
-            else                          { _NextAction4 = action; }
+            if      (p == Player.Player1) { NextAction1 = action; }
+            else if (p == Player.Player2) { NextAction2 = action; }
+            else if (p == Player.Player3) { NextAction3 = action; }
+            else                          { NextAction4 = action; }
         }
 
         private void PerformDiscardState(ITile tile, GameAction nextAction)
         {
             NextAction = nextAction;
             NextActionTile = tile.Type;
-            _NextActionSlot = tile.Slot;
+            NextActionSlot = tile.Slot;
             PlayerRecentOpenKan = Player.None;
 
             DiscardPlayerList.Push(Current);
