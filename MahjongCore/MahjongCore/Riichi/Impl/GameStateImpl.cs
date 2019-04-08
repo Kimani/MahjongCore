@@ -846,6 +846,11 @@ namespace MahjongCore.Riichi.Impl
             PopulateDoraIndicators();
         }
 
+        internal void SanityCheck()
+        {
+            // TODO: this!!!
+        }
+
         internal HandImpl GetHand(Player p)
         {
             CommonHelpers.Check(p.IsPlayer(), "Tried to get hand for non-player: " + p);

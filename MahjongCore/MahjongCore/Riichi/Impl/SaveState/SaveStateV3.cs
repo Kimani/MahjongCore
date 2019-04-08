@@ -244,10 +244,11 @@ namespace MahjongCore.Riichi.Impl.SaveState
 
         private static readonly string VERSION_VALUE = "3";
 
-        private static void MarshalAttribute<T>(XmlElement element, string attribute, T value)                          { element.SetAttribute(attribute, value.ToString()); }
-        private static int  LoadAttributeInt(XmlElement element, string attribute, int defaultValue)                    { return int.TryParse(element.GetAttribute(attribute), out int intValue) ? intValue : defaultValue; }
-        private static bool LoadAttributeBool(XmlElement element, string attribute, bool defaultValue)                  { return bool.TryParse(element.GetAttribute(attribute), out bool boolValue) ? boolValue : defaultValue; }
-        private static T    LoadAttributeEnum<T>(XmlElement element, string attribute, T defaultValue) where T : struct { return EnumHelper.TryGetEnumByString<T>(element.GetAttribute(attribute), out T attrValue) ? attrValue : defaultValue; }
+        private static void     MarshalAttribute<T>(XmlElement element, string attribute, T value)                          { element.SetAttribute(attribute, value.ToString()); }
+        private static int      LoadAttributeInt(XmlElement element, string attribute, int defaultValue)                    { return int.TryParse(element.GetAttribute(attribute), out int intValue) ? intValue : defaultValue; }
+        private static bool     LoadAttributeBool(XmlElement element, string attribute, bool defaultValue)                  { return bool.TryParse(element.GetAttribute(attribute), out bool boolValue) ? boolValue : defaultValue; }
+        private static T        LoadAttributeEnum<T>(XmlElement element, string attribute, T defaultValue) where T : struct { return EnumHelper.TryGetEnumByString<T>(element.GetAttribute(attribute), out T attrValue) ? attrValue : defaultValue; }
+        private static TileType LoadTile(XmlElement tileElement)                                                            { return LoadAttributeEnum<TileType>(tileElement, TILE_TYPE_ATTR, RequiredAttribute.Required); }
 
         internal static bool Matches(string state)
         {
@@ -392,7 +393,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
             CommonHelpers.TryIterateTagElements(settingsElement, SETTING_TAG, (XmlElement settingElement) =>
             {
                 LoadTuple(settingElement, out string key, out string value);
-                ...
+                //...
             });
         }
 
@@ -401,7 +402,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
             CommonHelpers.TryIterateTagElements(extraSettingsElement, EXTRASETTING_TAG, (XmlElement extraSettingElement) =>
             {
                 LoadTuple(extraSettingElement, out string key, out string value);
-                ...
+                //...
             });
         }
 
@@ -433,12 +434,180 @@ namespace MahjongCore.Riichi.Impl.SaveState
             }
 
             XmlNodeList meldElements = handElement.GetElementsByTagName(MELD_TAG);
+            if ((meldElements != null) && (meldElements.Count > 0))
+            {
+                for (int i = 0; i < meldElements.Count; ++i)
+                {
+                    LoadMeld(meldElements.Item(i) as XmlElement, hand.MeldsRaw[i], hand.Player);
+                }
+            }
 
+            LoadActiveTileWaits(handElement.GetElementsByTagName(ACTIVETILEWAITS_TAG).Item(0) as XmlElement, hand.ActiveTileWaits);
+            LoadRiichiKanTilesPerSlot(handElement.GetElementsByTagName(RIICHIKANTILESPERSLOT_TAG).Item(0) as XmlElement, hand.RiichiKanTilesPerSlot);
+            TileType[] activeRiichiKanTiles = new TileType[4];
+            LoadActiveRiichiKanTiles(handElement.GetElementsByTagName(ACTIVERIICHIKANTILES_TAG).Item(0) as XmlElement, activeRiichiKanTiles);
+            hand.ActiveRiichiKanTiles = activeRiichiKanTiles;
+
+            CommonHelpers.TryIterateTagElements(handElement, DRAWSANDKANS_TAG, (XmlElement drawsAndKansElement) =>
+            {
+                CommonHelpers.TryIterateTagElements(drawsAndKansElement, COMMAND_TAG, (XmlElement commandElement) =>
+                {
+                    hand.DrawsAndKans.Add(LoadCommand(commandElement));
+                });
+            }, IterateCount.One);
+
+            CommonHelpers.TryIterateTagElements(handElement, CACHEDMELD_TAG, (XmlElement cachedMeldElement) =>
+            {
+                MeldImpl meld = new MeldImpl();
+                LoadMeld(cachedMeldElement, meld, hand.Player);
+                hand.CachedCall = meld;
+            }, IterateCount.One);
+
+            CommonHelpers.TryIterateTagElements(handElement, WAITTILES_TAG, (XmlElement waitTileElement) =>
+            {
+                CommonHelpers.TryIterateTagElements(waitTileElement, TILE_TAG, (XmlElement tileElement) =>
+                {
+                    hand.Waits.Add(LoadTile(tileElement));
+                });
+            }, IterateCount.One);
+
+            CommonHelpers.TryIterateTagElements(handElement, WINNINGHANDCACHE_TAG, (XmlElement winningHandCacheElement) =>
+            {
+                hand.WinningHandCache = LoadWinningHandCache(winningHandCacheElement, hand.Player);
+            }, IterateCount.One);
+        }
+
+        private static ICommand LoadCommand(XmlElement commandElement)
+        {
+            var commandTile = new TileImpl();
+            CommonHelpers.TryIterateTagElements(commandElement, TILE_TAG, (XmlElement tileElement) =>
+            {
+                LoadTile(tileElement, commandTile, 0, Location.Hand);
+            }, IterateCount.One);
+
+            return new CommandImpl(LoadAttributeEnum<CommandType>(commandElement, COMMAND_TYPE_ATTR, RequiredAttribute.Required), commandTile)
+            {
+                TileB = LoadAttributeEnum<TileType>(commandElement, COMMAND_TILEB_ATTR, RequiredAttribute.Required),
+                TileC = LoadAttributeEnum<TileType>(commandElement, COMMAND_TILEC_ATTR, RequiredAttribute.Required)
+            };
+        }
+
+        private static ICandidateHand LoadWinningHandCache(XmlElement winningHandElement, Player owner)
+        {
+            CandidateHand candidateHand = null;
+            XmlElement candidateTypeElement;
+            if (CommonHelpers.TryGetFirstElement(winningHandElement, FOURTEENHAND_TAG, out candidateTypeElement))
+            {
+                candidateHand = new FourteenHand();
+            }
+            else if (CommonHelpers.TryGetFirstElement(winningHandElement, THIRTEENHAND_TAG, out candidateTypeElement))
+            {
+                candidateHand = new ThirteenHand(LoadAttributeEnum<Yaku>(candidateTypeElement, THIRTEENHAND_TYPE_ATTR, RequiredAttribute.Required));
+            }
+            else if (CommonHelpers.TryGetFirstElement(winningHandElement, STANDARDHAND_TAG, out candidateTypeElement))
+            {
+                TileImpl pairTile = new TileImpl();
+                CommonHelpers.Check(CommonHelpers.TryGetFirstElement(candidateTypeElement, TILE_TAG, out XmlElement pairTileElement), "Expected to find pair tile");
+                LoadTile(pairTileElement, pairTile, 0, Location.Hand);
+
+                StandardCandidateHand scHand = new StandardCandidateHand(pairTile.Type, pairTile.WinningTile);
+                XmlNodeList meldList = candidateTypeElement.GetElementsByTagName(MELD_TAG);
+                for (int i = 0; i < meldList.Count; ++i)
+                {
+                    LoadMeld(meldList.Item(i) as XmlElement, scHand.Melds[i], owner);
+                }
+                candidateHand = scHand;
+            }
+            else if (CommonHelpers.TryGetFirstElement(winningHandElement, SEVENPAIRSHAND_TAG, out candidateTypeElement))
+            {
+                SevenPairsCandidateHand spHand = new SevenPairsCandidateHand();
+                XmlNodeList tileNodeList = candidateTypeElement.GetElementsByTagName(TILE_TAG);
+                CommonHelpers.Check(((tileNodeList != null) && (tileNodeList.Count == 7)), "Expected 7 seven pairs tiles");
+
+                for (int i = 0; i < 7; ++i)
+                {
+                    LoadTile(tileNodeList.Item(i) as XmlElement, spHand.PairTiles[i], i, Location.Hand);
+                }
+                candidateHand = spHand;
+            }
+            else
+            {
+                throw new Exception("Unknown candidate hand type");
+            }
+
+            candidateHand.Dora    = LoadAttributeInt(winningHandElement, WINNINGHANDCACHE_DORA_ATTR, RequiredAttribute.Required);
+            candidateHand.UraDora = LoadAttributeInt(winningHandElement, WINNINGHANDCACHE_URADORA_ATTR, RequiredAttribute.Required);
+            candidateHand.RedDora = LoadAttributeInt(winningHandElement, WINNINGHANDCACHE_REDDORA_ATTR, RequiredAttribute.Required);
+            candidateHand.Han     = LoadAttributeInt(winningHandElement, WINNINGHANDCACHE_HAN_ATTR, RequiredAttribute.Required);
+            candidateHand.Fu      = LoadAttributeInt(winningHandElement, WINNINGHANDCACHE_FU_ATTR, RequiredAttribute.Required);
+            candidateHand.Yakuman = LoadAttributeInt(winningHandElement, WINNINGHANDCACHE_YAKUMAN_ATTR, RequiredAttribute.Required);
+
+            CommonHelpers.TryIterateTagElements(winningHandElement, YAKU_TAG, (XmlElement yakuElement) =>
+            {
+                candidateHand.Yaku.Add(LoadAttributeEnum<Yaku>(yakuElement, YAKU_TYPE_ATTR, RequiredAttribute.Required));
+            });
+            return candidateHand;
+        }
+
+        private static void LoadActiveTileWaits(XmlElement activeTileWaitsElement, List<TileType>[] activeTileWaits)
+        {
+            CommonHelpers.TryIterateTagElements(activeTileWaitsElement, WAITTILES_TAG, (XmlElement waitTilesElement) =>
+            {
+                int slot = LoadAttributeInt(waitTilesElement, WAITTILES_SLOT_ATTR, RequiredAttribute.Required);
+                List<TileType> tileWaits = activeTileWaits[slot];
+
+                CommonHelpers.TryIterateTagElements(waitTilesElement, TILE_TAG, (XmlElement tileElement) =>
+                {
+                    tileWaits.Add(LoadTile(tileElement));
+                });
+            });
+        }
+
+        private static void LoadActiveRiichiKanTiles(XmlElement activeRiichiKanTilesElement, TileType[] activeRiichiKanTiles)
+        {
+            XmlNodeList tileNodes = activeRiichiKanTilesElement.GetElementsByTagName(TILE_TAG);
+            CommonHelpers.Check((tileNodes.Count == 4), ("Expected 4 activeRiichiKanTiles, found: " + tileNodes.Count));
+
+            for (int i = 0; i < tileNodes.Count; ++i)
+            {
+                activeRiichiKanTiles[i] = LoadTile(tileNodes.Item(i) as XmlElement);
+            }
+        }
+
+        private static void LoadRiichiKanTilesPerSlot(XmlElement riichiKanTilesPerSlotElement, TileType[][] riichiKanTilesPerSlot)
+        {
+            XmlNodeList waitTilesList = riichiKanTilesPerSlotElement.GetElementsByTagName(WAITTILES_TAG);
+            CommonHelpers.Check((waitTilesList.Count == riichiKanTilesPerSlot.Length), ("Not enough waittile groups found, found " + waitTilesList.Count));
+
+            for (int i = 0; i < riichiKanTilesPerSlot.Length; ++i)
+            {
+                LoadWaitTiles((waitTilesList.Item(i) as XmlElement), riichiKanTilesPerSlot[i]);
+            }
+        }
+
+        private static void LoadWaitTiles(XmlElement waitTilesElement, TileType[] waitTiles)
+        {
+            XmlNodeList tileList = waitTilesElement.GetElementsByTagName(TILE_TAG);
+            CommonHelpers.Check((tileList.Count == 4), ("WaitTiles expected 4, found " + tileList.Count));
+
+            for (int i = 0; i < 4; ++i)
+            {
+                waitTiles[i] = LoadTile(tileList.Item(i) as XmlElement);
+            }
         }
 
         private static void LoadMeld(XmlElement meldElement, MeldImpl meld, Player owner)
         {
+            meld.Owner = owner;
+            meld.Target = LoadAttributeEnum<Player>(meldElement, MELD_TARGET_ATTR);
+            meld.State = LoadAttributeEnum<MeldState>(meldElement, MELD_STATE_ATTR);
+            meld.Direction = LoadAttributeEnum<CalledDirection>(meldElement, MELD_DIRECTION_ATTR);
 
+            XmlNodeList meldTileList = meldElement.GetElementsByTagName(TILE_TAG);
+            for (int i = 0; i < meldTileList.Count; ++i)
+            {
+                LoadTile((meldTileList.Item(i) as XmlElement), meld.TilesRaw[i], i, Location.Call);
+            }
         }
 
         private static void LoadTile(XmlElement tileElement, TileImpl tile, int? slot, Location? location)

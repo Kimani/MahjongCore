@@ -118,5 +118,16 @@ namespace MahjongCore.Common
                 }
             }
         }
+
+        public static bool TryGetFirstElement(XmlElement root, string tag, out XmlElement element)
+        {
+            element = null;
+            XmlNodeList nodeList = root.GetElementsByTagName(tag);
+            if ((nodeList != null) && (nodeList.Count > 0))
+            {
+                element = nodeList.Item(0) as XmlElement;
+            }
+            return (element != null);
+        }
     }
 }

@@ -33,6 +33,14 @@ namespace MahjongCore.Riichi.UnitTests
             // Take originalMarshaledSave and turn it into an IGameState.
             ISaveState loadedSave = SaveStateFactory.Unmarshal(originalMarshaledSave);
             IGameState loadedState = GameStateFactory.LoadGame(loadedSave);
+
+            // Compare the original and loaded stats to ensure they are the same.
+            Assert.IsTrue(CompareStates(originalState, loadedState));
+        }
+
+        private bool CompareStates(IGameState stateA, IGameState stateB)
+        {
+            return false;
         }
     }
 }

@@ -143,7 +143,7 @@ namespace MahjongCore.Riichi.Impl
         internal ITile            AddTile(ITile wallTile, bool rewind = false) { return AddTile(wallTile.Type, rewind); }
         internal void             AddTileCompleted(ITile[] ts)                 { TilesAdded?.Invoke(Player, ts); }
 
-        private GameStateImpl              _Parent;
+        private GameStateImpl _Parent;
 
         internal HandImpl(GameStateImpl parent, Player p, int score)
         {
