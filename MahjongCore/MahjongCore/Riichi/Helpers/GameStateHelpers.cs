@@ -47,6 +47,15 @@ namespace MahjongCore.Riichi.Helpers
                                            state.Player4Hand;
         }
 
+        public static IHand GetHandZeroIndex(IGameState state, int i)
+        {
+            CommonHelpers.Check(((i >= 0) && (i <= 3)), "Requested player is not a player.");
+            return (i == 0) ? state.Player1Hand :
+                   (i == 1) ? state.Player2Hand :
+                   (i == 2) ? state.Player3Hand :
+                              state.Player4Hand;
+        }
+
         public static void IterateHands(IGameState state, Action<IHand> callback)
         {
             callback(state.Player1Hand);

@@ -14,6 +14,7 @@ namespace MahjongCore.Riichi
         Yaku
     }
 
+    // NOTE: If any settings are added that use an OptionValueType that is not an int, bool, or enum, SaveStateV3.LoadSettings must be updated to parse it.
     public enum GameOption
     {
         // Rules

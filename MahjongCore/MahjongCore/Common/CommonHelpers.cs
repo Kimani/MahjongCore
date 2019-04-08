@@ -89,11 +89,11 @@ namespace MahjongCore.Common
             }
         }
 
-        public static void IterateDictionary<T,U>(IDictionary<T,U> sourceDictionary, Action<T,U> callback)
+        public static void IterateDictionary<T, U>(IDictionary<T, U> sourceDictionary, Action<T, U> callback)
         {
             if (sourceDictionary != null)
             {
-                foreach (KeyValuePair<T,U> item in sourceDictionary)
+                foreach (KeyValuePair<T, U> item in sourceDictionary)
                 {
                     callback(item.Key, item.Value);
                 }
@@ -102,32 +102,61 @@ namespace MahjongCore.Common
 
         public static void TryIterateTagElements(XmlElement root, string tag, Action<XmlElement> callback, IterateCount count = IterateCount.All)
         {
-            XmlNodeList elementList = root.GetElementsByTagName(tag);
-            if ((elementList != null) && (elementList.Count > 0))
-            { 
-                if (count == IterateCount.All)
+            foreach (XmlElement child in root.ChildNodes)
+            {
+                if (child.Name.Equals(tag))
                 {
-                    foreach (XmlNode node in elementList)
+                    callback(child);
+                    if (count == IterateCount.One)
                     {
-                        callback(node as XmlElement);
+                        return;
                     }
                 }
-                else
+            }
+        }
+
+        public static void TryIterateTagElements(XmlElement root, string tag, Action<XmlElement, int> callback, IterateCount count = IterateCount.All)
+        {
+            int i = 0;
+            foreach (XmlElement child in root.ChildNodes)
+            {
+                if (child.Name.Equals(tag))
                 {
-                    callback(elementList.Item(0) as XmlElement);
+                    callback(child, i++);
+                    if (count == IterateCount.One)
+                    {
+                        return;
+                    }
                 }
             }
         }
 
         public static bool TryGetFirstElement(XmlElement root, string tag, out XmlElement element)
         {
-            element = null;
-            XmlNodeList nodeList = root.GetElementsByTagName(tag);
-            if ((nodeList != null) && (nodeList.Count > 0))
+            foreach (XmlElement child in root.ChildNodes)
             {
-                element = nodeList.Item(0) as XmlElement;
+                if (child.Name.Equals(tag))
+                {
+                    element = child;
+                    return true;
+                }
             }
-            return (element != null);
+
+            element = null;
+            return false;
+        }
+
+        public static int CountChildElements(XmlElement root, string name)
+        {
+            int count = 0;
+            foreach (XmlElement child in root.ChildNodes)
+            {
+                if (child.Name.Equals(name))
+                {
+                    ++count;
+                }
+            }
+            return count;
         }
     }
 }

@@ -2,6 +2,7 @@
 
 using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
+using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Evaluator;
 using MahjongCore.Riichi.Helpers;
 using System;
@@ -350,11 +351,14 @@ namespace MahjongCore.Riichi.Impl.SaveState
             target.NagashiWin               = LoadAttributeBool(saveElement, SAVE_NAGASHIWIN_ATTR, RequiredAttribute.Required);
 
             // Setup the more in depth GameStateImpl values.
-            XmlNodeList tileElements = saveElement.GetElementsByTagName(TILE_TAG);
-            CommonHelpers.Check((tileElements.Count == TileHelpers.TOTAL_TILE_COUNT), ("Expected 136 tiles in the wall in the save state, found: " + tileElements.Count));
-            for (int i = 0; i < tileElements.Count; ++i)
             {
-                LoadTile((tileElements.Item(i) as XmlElement), target.WallRaw[i], i, Location.Wall);
+                CommonHelpers.Check(CommonHelpers.TryGetFirstElement(saveElement, WALL_TAG, out XmlElement wallElement), "Expected wall element.");
+                int wallTileCount = CommonHelpers.CountChildElements(wallElement, TILE_TAG);
+                CommonHelpers.Check((wallTileCount == TileHelpers.TOTAL_TILE_COUNT), ("Expected 136 tiles in the wall in the save state, found: " + wallTileCount));
+                CommonHelpers.TryIterateTagElements(wallElement, TILE_TAG, (XmlElement tileElement, int i) =>
+                {
+                    LoadTile(tileElement, target.WallRaw[i], i, Location.Wall);
+                });
             }
 
             CommonHelpers.TryIterateTagElements(saveElement, SETTINGS_TAG, (XmlElement settings) => { LoadSettings(settings, target.Settings); }, IterateCount.One);
@@ -368,12 +372,12 @@ namespace MahjongCore.Riichi.Impl.SaveState
             }, IterateCount.One);
 
             // Setup the hands.
-            XmlNodeList handElements = saveElement.GetElementsByTagName(HAND_TAG);
-            CommonHelpers.Check((handElements.Count == 4), ("Expected 4 hand elements in the save state, found: " + handElements.Count));
-            LoadHand((handElements.Item(0) as XmlElement), target.Player1HandRaw);
-            LoadHand((handElements.Item(1) as XmlElement), target.Player2HandRaw);
-            LoadHand((handElements.Item(2) as XmlElement), target.Player3HandRaw);
-            LoadHand((handElements.Item(3) as XmlElement), target.Player4HandRaw);
+            int handCount = CommonHelpers.CountChildElements(saveElement, HAND_TAG);
+            CommonHelpers.Check((handCount == 4), ("Expected 4 hand elements in the save state, found: " + handCount));
+            CommonHelpers.TryIterateTagElements(saveElement, HAND_TAG, (XmlElement handElement, int i) =>
+            {
+                LoadHand(handElement, GameStateHelpers.GetHandZeroIndex(target, i) as HandImpl);
+            });
 
             // Done! Return the state.
             target.FixPostStateLoad();
@@ -392,8 +396,30 @@ namespace MahjongCore.Riichi.Impl.SaveState
         {
             CommonHelpers.TryIterateTagElements(settingsElement, SETTING_TAG, (XmlElement settingElement) =>
             {
+                // Get the key as a GameOption.
                 LoadTuple(settingElement, out string key, out string value);
-                //...
+                CommonHelpers.Check(EnumHelper.TryGetEnumByString(key, out GameOption option), "Key for settings didn't parse to a GameOption: " + key);
+
+                // Determine the type that 'value' should be.
+                Type valueType = EnumAttributes.GetAttributeValue<OptionValueType, Type>(option);
+
+                // Parse 'value' based on the given type... this may be difficult to work out property for 
+                // all types, but if everything is ints, bools, and enums, then this will work. If more
+                // types are added in the future then this'll be a problem, but there probably won't be.
+                if (valueType == typeof(int))
+                {
+                    CommonHelpers.Check(int.TryParse(value, out int intValue), ("Value for key: " + key + " didn't parse as int: " + value));
+                    settings.SetSetting(option, intValue);
+                }
+                else if (valueType == typeof(bool))
+                {
+                    CommonHelpers.Check(bool.TryParse(value, out bool boolValue), ("Value for key: " + key + " didn't parse as int: " + value));
+                    settings.SetSetting(option, boolValue);
+                }
+                else if (EnumHelper.TryGetEnumObjectByString(valueType, value, out object enumValue))
+                {
+                    settings.SetSetting(option, enumValue);
+                }
             });
         }
 
@@ -402,8 +428,38 @@ namespace MahjongCore.Riichi.Impl.SaveState
             CommonHelpers.TryIterateTagElements(extraSettingsElement, EXTRASETTING_TAG, (XmlElement extraSettingElement) =>
             {
                 LoadTuple(extraSettingElement, out string key, out string value);
-                //...
+                if (bool.TryParse(value, out bool boolValue))
+                {
+                    if      (key.Equals(EXTRASETTING_DISABLEANYDISARD_KEY))    { settings.DisableAnyDiscard = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLECALL_KEY))         { settings.DisableCall = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLECALLING_KEY))      { settings.DisableCalling = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLECALLPASS_KEY))     { settings.DisableCallPass = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLECPUWIN_KEY))       { settings.DisableCPUWin = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLECPUCALLING_KEY))   { settings.DisableCPUCalling = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLEPLAINDISCARD_KEY)) { settings.DisablePlainDiscard = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLERONPASS_KEY))      { settings.DisableRonPass = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLEREACH_KEY))        { settings.DisableReach = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLERED5_KEY))         { settings.DisableRed5 = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLENONREACH_KEY))     { settings.DisableNonReach = boolValue; }
+                    else if (key.Equals(EXTRASETTING_DISABLEABORTIVEDRAW_KEY)) { settings.DisableAbortiveDraw = boolValue; }
+                }
+
+                if (int.TryParse(value, out int intValue))
+                {
+                    if (key.Equals(EXTRASETTING_OVERRIDEDICEROLL_KEY))
+                    {
+                        settings.OverrideDiceRoll = intValue;
+                    }
+                }
             });
+
+            if (CommonHelpers.TryGetFirstElement(extraSettingsElement, EXTRASETTING_RESTRICTDISCARDTILES_TAG, out XmlElement restrictDiscardTilesElement))
+            {
+                CommonHelpers.TryIterateTagElements(restrictDiscardTilesElement, TILE_TAG, (XmlElement tileElement) =>
+                {
+                    settings.RestrictDiscardTiles.Add(LoadTile(tileElement));
+                });
+            }
         }
 
         private static void LoadHand(XmlElement handElement, HandImpl hand)
@@ -423,58 +479,42 @@ namespace MahjongCore.Riichi.Impl.SaveState
             hand.CouldSuufurendan     = LoadAttributeBool(handElement, HAND_COULDSUUFURENDAN_ATTR);
             hand.OverrideNoReachFlag  = LoadAttributeBool(handElement, HAND_OVERRIDENOREACH_ATTR);
             hand.HasTemporaryTile     = LoadAttributeBool(handElement, HAND_HASTEMPORARYTILE_ATTR);
+            hand.ActiveRiichiKanTiles = new TileType[4];
 
             // Load more complicated values.
-            XmlNodeList tileElements = handElement.GetElementsByTagName(TILE_TAG);
-            int? tileElementCount = (tileElements == null) ? null : new int?(tileElements.Count);
-            CommonHelpers.Check(((tileElements != null) && (tileElementCount.Value == hand.TileCount)), ("Unexpected hand tile could, found " + tileElementCount));
-            for (int i = 0; i < hand.TileCount; ++i)
+            int activeTileCount = CommonHelpers.CountChildElements(handElement, TILE_TAG);
+            CommonHelpers.Check((activeTileCount == hand.TileCount), ("Unexpected hand tile could, found " + activeTileCount));
+            CommonHelpers.TryIterateTagElements(handElement, TILE_TAG, (XmlElement tileElement, int i) =>
             {
-                LoadTile((tileElements.Item(i) as XmlElement), hand.ActiveHandRaw[i], i, Location.Hand);
-            }
+                LoadTile(tileElement, hand.ActiveHandRaw[i], i, Location.Hand);
+            });
 
-            XmlNodeList meldElements = handElement.GetElementsByTagName(MELD_TAG);
-            if ((meldElements != null) && (meldElements.Count > 0))
+            CommonHelpers.TryIterateTagElements(handElement, MELD_TAG, (XmlElement meldElement, int i) =>
             {
-                for (int i = 0; i < meldElements.Count; ++i)
-                {
-                    LoadMeld(meldElements.Item(i) as XmlElement, hand.MeldsRaw[i], hand.Player);
-                }
-            }
+                LoadMeld(meldElement, hand.MeldsRaw[i], hand.Player);
+            });
 
-            LoadActiveTileWaits(handElement.GetElementsByTagName(ACTIVETILEWAITS_TAG).Item(0) as XmlElement, hand.ActiveTileWaits);
-            LoadRiichiKanTilesPerSlot(handElement.GetElementsByTagName(RIICHIKANTILESPERSLOT_TAG).Item(0) as XmlElement, hand.RiichiKanTilesPerSlot);
-            TileType[] activeRiichiKanTiles = new TileType[4];
-            LoadActiveRiichiKanTiles(handElement.GetElementsByTagName(ACTIVERIICHIKANTILES_TAG).Item(0) as XmlElement, activeRiichiKanTiles);
-            hand.ActiveRiichiKanTiles = activeRiichiKanTiles;
+            if (CommonHelpers.TryGetFirstElement(handElement, ACTIVETILEWAITS_TAG, out XmlElement activeTileWaitsElement))             { LoadActiveTileWaits(activeTileWaitsElement, hand.ActiveTileWaits); }
+            if (CommonHelpers.TryGetFirstElement(handElement, RIICHIKANTILESPERSLOT_TAG, out XmlElement riichiKanTilesPerSlotElement)) { LoadRiichiKanTilesPerSlot(riichiKanTilesPerSlotElement, hand.RiichiKanTilesPerSlot); }
+            if (CommonHelpers.TryGetFirstElement(handElement, ACTIVERIICHIKANTILES_TAG, out XmlElement activeRiichiKanTilesElement))   { LoadActiveRiichiKanTiles(activeRiichiKanTilesElement, hand.ActiveRiichiKanTiles); }
+            if (CommonHelpers.TryGetFirstElement(handElement, WINNINGHANDCACHE_TAG, out XmlElement winningHandCacheElement))           { hand.WinningHandCache = LoadWinningHandCache(winningHandCacheElement, hand.Player); }
+            if (CommonHelpers.TryGetFirstElement(handElement, CACHEDMELD_TAG, out XmlElement cachedMeldElement))                       { hand.CachedCall = LoadMeld(cachedMeldElement, null, hand.Player); }
 
-            CommonHelpers.TryIterateTagElements(handElement, DRAWSANDKANS_TAG, (XmlElement drawsAndKansElement) =>
+            if (CommonHelpers.TryGetFirstElement(handElement, DRAWSANDKANS_TAG, out XmlElement drawsAndKansElement))
             {
                 CommonHelpers.TryIterateTagElements(drawsAndKansElement, COMMAND_TAG, (XmlElement commandElement) =>
                 {
                     hand.DrawsAndKans.Add(LoadCommand(commandElement));
                 });
-            }, IterateCount.One);
+            }
 
-            CommonHelpers.TryIterateTagElements(handElement, CACHEDMELD_TAG, (XmlElement cachedMeldElement) =>
-            {
-                MeldImpl meld = new MeldImpl();
-                LoadMeld(cachedMeldElement, meld, hand.Player);
-                hand.CachedCall = meld;
-            }, IterateCount.One);
-
-            CommonHelpers.TryIterateTagElements(handElement, WAITTILES_TAG, (XmlElement waitTileElement) =>
+            if (CommonHelpers.TryGetFirstElement(handElement, WAITTILES_TAG, out XmlElement waitTileElement))
             {
                 CommonHelpers.TryIterateTagElements(waitTileElement, TILE_TAG, (XmlElement tileElement) =>
                 {
                     hand.Waits.Add(LoadTile(tileElement));
                 });
-            }, IterateCount.One);
-
-            CommonHelpers.TryIterateTagElements(handElement, WINNINGHANDCACHE_TAG, (XmlElement winningHandCacheElement) =>
-            {
-                hand.WinningHandCache = LoadWinningHandCache(winningHandCacheElement, hand.Player);
-            }, IterateCount.One);
+            }
         }
 
         private static ICommand LoadCommand(XmlElement commandElement)
@@ -511,23 +551,22 @@ namespace MahjongCore.Riichi.Impl.SaveState
                 LoadTile(pairTileElement, pairTile, 0, Location.Hand);
 
                 StandardCandidateHand scHand = new StandardCandidateHand(pairTile.Type, pairTile.WinningTile);
-                XmlNodeList meldList = candidateTypeElement.GetElementsByTagName(MELD_TAG);
-                for (int i = 0; i < meldList.Count; ++i)
+                CommonHelpers.TryIterateTagElements(candidateTypeElement, MELD_TAG, (XmlElement meldElement, int i) =>
                 {
-                    LoadMeld(meldList.Item(i) as XmlElement, scHand.Melds[i], owner);
-                }
+                    LoadMeld(meldElement, scHand.Melds[i], owner);
+                });
                 candidateHand = scHand;
             }
             else if (CommonHelpers.TryGetFirstElement(winningHandElement, SEVENPAIRSHAND_TAG, out candidateTypeElement))
             {
                 SevenPairsCandidateHand spHand = new SevenPairsCandidateHand();
-                XmlNodeList tileNodeList = candidateTypeElement.GetElementsByTagName(TILE_TAG);
-                CommonHelpers.Check(((tileNodeList != null) && (tileNodeList.Count == 7)), "Expected 7 seven pairs tiles");
 
-                for (int i = 0; i < 7; ++i)
+                int pairTileCount = CommonHelpers.CountChildElements(candidateTypeElement, TILE_TAG);
+                CommonHelpers.Check((pairTileCount == 7), ("Expected 7 seven pairs tiles, found: " + pairTileCount));
+                CommonHelpers.TryIterateTagElements(candidateTypeElement, TILE_TAG, (XmlElement tileElement, int i) =>
                 {
-                    LoadTile(tileNodeList.Item(i) as XmlElement, spHand.PairTiles[i], i, Location.Hand);
-                }
+                    LoadTile(tileElement, spHand.PairTiles[i], i, Location.Hand);
+                });
                 candidateHand = spHand;
             }
             else
@@ -565,49 +604,35 @@ namespace MahjongCore.Riichi.Impl.SaveState
 
         private static void LoadActiveRiichiKanTiles(XmlElement activeRiichiKanTilesElement, TileType[] activeRiichiKanTiles)
         {
-            XmlNodeList tileNodes = activeRiichiKanTilesElement.GetElementsByTagName(TILE_TAG);
-            CommonHelpers.Check((tileNodes.Count == 4), ("Expected 4 activeRiichiKanTiles, found: " + tileNodes.Count));
-
-            for (int i = 0; i < tileNodes.Count; ++i)
-            {
-                activeRiichiKanTiles[i] = LoadTile(tileNodes.Item(i) as XmlElement);
-            }
+            int tileCount = CommonHelpers.CountChildElements(activeRiichiKanTilesElement, TILE_TAG);
+            CommonHelpers.Check((tileCount == 4), ("Expected 4 activeRiichiKanTiles, found: " + tileCount));
+            CommonHelpers.TryIterateTagElements(activeRiichiKanTilesElement, TILE_TAG, (XmlElement tileElement, int i) => { activeRiichiKanTiles[i] = LoadTile(tileElement); });
         }
 
         private static void LoadRiichiKanTilesPerSlot(XmlElement riichiKanTilesPerSlotElement, TileType[][] riichiKanTilesPerSlot)
         {
-            XmlNodeList waitTilesList = riichiKanTilesPerSlotElement.GetElementsByTagName(WAITTILES_TAG);
-            CommonHelpers.Check((waitTilesList.Count == riichiKanTilesPerSlot.Length), ("Not enough waittile groups found, found " + waitTilesList.Count));
-
-            for (int i = 0; i < riichiKanTilesPerSlot.Length; ++i)
-            {
-                LoadWaitTiles((waitTilesList.Item(i) as XmlElement), riichiKanTilesPerSlot[i]);
-            }
+            int kanTileGroupCount = CommonHelpers.CountChildElements(riichiKanTilesPerSlotElement, KANTILES_TAG);
+            CommonHelpers.Check((kanTileGroupCount == riichiKanTilesPerSlot.Length), ("Not enough kantiles groups found, found " + kanTileGroupCount));
+            CommonHelpers.TryIterateTagElements(riichiKanTilesPerSlotElement, KANTILES_TAG, (XmlElement kanTilesElement, int i) => { LoadKanTiles(kanTilesElement, riichiKanTilesPerSlot[i]); });
         }
 
-        private static void LoadWaitTiles(XmlElement waitTilesElement, TileType[] waitTiles)
+        private static void LoadKanTiles(XmlElement kanTilesElement, TileType[] kanTiles)
         {
-            XmlNodeList tileList = waitTilesElement.GetElementsByTagName(TILE_TAG);
-            CommonHelpers.Check((tileList.Count == 4), ("WaitTiles expected 4, found " + tileList.Count));
-
-            for (int i = 0; i < 4; ++i)
-            {
-                waitTiles[i] = LoadTile(tileList.Item(i) as XmlElement);
-            }
+            int kanTileCount = CommonHelpers.CountChildElements(kanTilesElement, TILE_TAG);
+            CommonHelpers.Check((kanTileCount == 4), ("KanTiles expected 4, found " + kanTileCount));
+            CommonHelpers.TryIterateTagElements(kanTilesElement, TILE_TAG, (XmlElement tileElement, int i) => { kanTiles[i] = LoadTile(tileElement); });
         }
 
-        private static void LoadMeld(XmlElement meldElement, MeldImpl meld, Player owner)
+        private static MeldImpl LoadMeld(XmlElement meldElement, MeldImpl meld, Player owner)
         {
+            meld = meld ?? new MeldImpl();
             meld.Owner = owner;
             meld.Target = LoadAttributeEnum<Player>(meldElement, MELD_TARGET_ATTR);
             meld.State = LoadAttributeEnum<MeldState>(meldElement, MELD_STATE_ATTR);
             meld.Direction = LoadAttributeEnum<CalledDirection>(meldElement, MELD_DIRECTION_ATTR);
 
-            XmlNodeList meldTileList = meldElement.GetElementsByTagName(TILE_TAG);
-            for (int i = 0; i < meldTileList.Count; ++i)
-            {
-                LoadTile((meldTileList.Item(i) as XmlElement), meld.TilesRaw[i], i, Location.Call);
-            }
+            CommonHelpers.TryIterateTagElements(meldElement, TILE_TAG, (XmlElement meldTileElement, int i) => { LoadTile(meldTileElement, meld.TilesRaw[i], i, Location.Call); });
+            return meld;
         }
 
         private static void LoadTile(XmlElement tileElement, TileImpl tile, int? slot, Location? location)
@@ -728,6 +753,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
             {
                 wallElement.AppendChild(MarshalTileElement(content, tile));
             }
+            saveElement.AppendChild(wallElement);
 
             saveElement.AppendChild(MarshalGameSettings(content, state.Settings as GameSettingsImpl));
             saveElement.AppendChild(MarshalExtraSettings(content, state.ExtraSettings as ExtraSettingsImpl));
@@ -1009,7 +1035,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
 
             if (settings.OverrideDiceRoll != null)
             {
-                extraSettingsElement.AppendChild(MarshalTupleElement(document, SETTING_TAG, EXTRASETTING_OVERRIDEDICEROLL_KEY, settings.OverrideDiceRoll.ToString()));
+                extraSettingsElement.AppendChild(MarshalTupleElement(document, EXTRASETTING_TAG, EXTRASETTING_OVERRIDEDICEROLL_KEY, settings.OverrideDiceRoll.ToString()));
             }
             return extraSettingsElement;
         }
