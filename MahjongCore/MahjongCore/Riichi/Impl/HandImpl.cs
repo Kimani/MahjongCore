@@ -122,6 +122,31 @@ namespace MahjongCore.Riichi.Impl
             Sort(true);
         }
 
+        // IComparable<IHand>
+        public int CompareTo(IHand other)
+        {
+            int value = Player.CompareTo(other.Player);                         if (value != 0) { return value; }
+            value = Reach.CompareTo(other.Reach);                               if (value != 0) { return value; }
+            value = Score.CompareTo(other.Score);                               if (value != 0) { return value; }
+            value = TileCount.CompareTo(other.TileCount);                       if (value != 0) { return value; }
+            value = Streak.CompareTo(other.Streak);                             if (value != 0) { return value; }
+            value = Tempai.CompareTo(other.Tempai);                             if (value != 0) { return value; }
+            value = Furiten.CompareTo(other.Furiten);                           if (value != 0) { return value; }
+            value = Yakitori.CompareTo(other.Yakitori);                         if (value != 0) { return value; }
+            value = CouldIppatsu.CompareTo(other.CouldIppatsu);                 if (value != 0) { return value; }
+            value = CouldDoubleReach.CompareTo(other.CouldDoubleReach);         if (value != 0) { return value; }
+            value = CouldKyuushuuKyuuhai.CompareTo(other.CouldKyuushuuKyuuhai); if (value != 0) { return value; }
+            value = CouldSuufurendan.CompareTo(other.CouldSuufurendan);         if (value != 0) { return value; }
+            value = Discards.Count.CompareTo(other.Discards.Count);             if (value != 0) { return value; }
+            value = DrawsAndKans.Count.CompareTo(other.DrawsAndKans.Count);     if (value != 0) { return value; }
+
+            for (int i = 0; i < TileCount; ++i)          { value = ActiveHandRaw[i].CompareTo(other.Tiles[i]);             if (value != 0) { return value; } }
+            for (int i = 0; i < MeldCount; ++i)          { value = Melds[i].CompareTo(other.Melds[i]);                     if (value != 0) { return value; } }
+            for (int i = 0; i < Discards.Count; ++i)     { value = (Discards[i] as TileImpl).CompareTo(other.Discards[i]); if (value != 0) { return value; } }
+            for (int i = 0; i < DrawsAndKans.Count; ++i) { value = DrawsAndKans[i].CompareTo(other.DrawsAndKans[i]);       if (value != 0) { return value; } }
+            return 0;
+        }
+
         // HandImpl
         internal ICandidateHand   WinningHandCache                             { get; set; } = null;
         internal IMeld            CachedCall                                   { get; set; } = null;

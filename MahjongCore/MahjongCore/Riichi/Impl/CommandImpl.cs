@@ -16,6 +16,16 @@ namespace MahjongCore.Riichi
         // ICloneable
         public object Clone() { return new CommandImpl(Command, Tile, TileB, TileC); }
 
+        // IComparable<ICommand>
+        public int CompareTo(ICommand other)
+        {
+            int value = Command.CompareTo(other.Command);     if (value != 0) { return value; }
+            value = (Tile as TileImpl).CompareTo(other.Tile); if (value != 0) { return value; }
+            value = TileB.CompareTo(other.TileB);             if (value != 0) { return value; }
+            value = TileC.CompareTo(other.TileC);             if (value != 0) { return value; }
+            return 0;
+        }
+
         // CommandImpl
         public CommandImpl(CommandType ct, ITile tile)    : this(ct, tile, TileType.None, TileType.None)                      { }
         public CommandImpl(CommandType ct, TileType tile) : this(ct, new TileImpl(tile), TileType.None, TileType.None, false) { }

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace MahjongCore.Riichi
 {
-    public interface IHand
+    public interface IHand : IComparable<IHand>
     {
         event Action<Player>                   Sorted;
         event Action<Player, ITile[]>          TilesAdded;

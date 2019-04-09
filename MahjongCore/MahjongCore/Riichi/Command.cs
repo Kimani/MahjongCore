@@ -27,7 +27,7 @@ namespace MahjongCore.Riichi
         }
     #endregion
 
-    public interface ICommand : ICloneable
+    public interface ICommand : ICloneable, IComparable<ICommand>
     {
         CommandType Command { get; }
         ITile       Tile    { get; }

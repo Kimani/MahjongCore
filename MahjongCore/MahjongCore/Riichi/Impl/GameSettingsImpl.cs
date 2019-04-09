@@ -5,6 +5,7 @@ using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MahjongCore.Riichi.Impl
 {
@@ -58,6 +59,22 @@ namespace MahjongCore.Riichi.Impl
 
         // ICloneable
         public object Clone() { return new GameSettingsImpl(_CustomSettings) { Locked = Locked }; }
+
+        // IComparable<IGameSettings>
+        public int CompareTo(IGameSettings other)
+        {
+            if (other is GameSettingsImpl otherImpl)
+            {
+                int value = _CustomSettings.Count.CompareTo(otherImpl._CustomSettings.Count); if (value != 0) { return value; }
+                for (int i = 0; i < _CustomSettings.Count; ++i)
+                {
+                    value = _CustomSettings.Keys.ElementAt(i).CompareTo(otherImpl._CustomSettings.Keys.ElementAt(i));                           if (value != 0) { return value; }
+                    value = _CustomSettings.Values.ElementAt(i).ToString().CompareTo(otherImpl._CustomSettings.Values.ElementAt(i).ToString()); if (value != 0) { return value; }
+                }
+                return 0;
+            }
+            return -1;
+        }
 
         // GameSettingsImpl
         internal bool Locked { get; set; } = false;

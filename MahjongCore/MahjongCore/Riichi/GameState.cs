@@ -113,7 +113,7 @@ namespace MahjongCore.Riichi
         }
     #endregion
 
-    public interface IGameState
+    public interface IGameState : IComparable<IGameState>
     {
         event Action<Player,int>               WallPicking;
         event Action<ITile[], TileSource>      WallPicked;

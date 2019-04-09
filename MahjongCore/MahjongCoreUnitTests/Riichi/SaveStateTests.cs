@@ -8,6 +8,8 @@ namespace MahjongCore.Riichi.UnitTests
     [TestClass]
     public class SaveStateTests
     {
+        private bool CompareStates(IGameState stateA, IGameState stateB) { return stateA.CompareTo(stateB) == 0; }
+
         [TestInitialize]
         public void SaveStateTestSetup()
         {
@@ -36,11 +38,6 @@ namespace MahjongCore.Riichi.UnitTests
 
             // Compare the original and loaded stats to ensure they are the same.
             Assert.IsTrue(CompareStates(originalState, loadedState));
-        }
-
-        private bool CompareStates(IGameState stateA, IGameState stateB)
-        {
-            return false;
         }
     }
 }

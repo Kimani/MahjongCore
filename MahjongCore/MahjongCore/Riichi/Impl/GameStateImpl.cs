@@ -146,6 +146,33 @@ namespace MahjongCore.Riichi.Impl
             }
         }
 
+        // IComparable<IGameState>
+        public int CompareTo(IGameState other)
+        {
+            int value = Round.CompareTo(other.Round);               if (value != 0) { return value; }
+            value = FirstDealer.CompareTo(other.FirstDealer);       if (value != 0) { return value; }
+            value = Dealer.CompareTo(other.Dealer);                 if (value != 0) { return value; }
+            value = Current.CompareTo(other.Current);               if (value != 0) { return value; }
+            value = Wareme.CompareTo(other.Wareme);                 if (value != 0) { return value; }
+            value = State.CompareTo(other.State);                   if (value != 0) { return value; }
+            value = NextAction.CompareTo(other.NextAction);         if (value != 0) { return value; }
+            value = PreviousAction.CompareTo(other.PreviousAction); if (value != 0) { return value; }
+            value = Player1Hand.CompareTo(other.Player1Hand);       if (value != 0) { return value; }
+            value = Player2Hand.CompareTo(other.Player2Hand);       if (value != 0) { return value; }
+            value = Player3Hand.CompareTo(other.Player3Hand);       if (value != 0) { return value; }
+            value = Player4Hand.CompareTo(other.Player4Hand);       if (value != 0) { return value; }
+            value = Settings.CompareTo(other.Settings);             if (value != 0) { return value; }
+            value = ExtraSettings.CompareTo(other.ExtraSettings);   if (value != 0) { return value; }
+            value = Lapped.CompareTo(other.Lapped);                 if (value != 0) { return value; }
+            value = Offset.CompareTo(other.Offset);                 if (value != 0) { return value; }
+            value = TilesRemaining.CompareTo(other.TilesRemaining); if (value != 0) { return value; }
+            value = Bonus.CompareTo(other.Bonus);                   if (value != 0) { return value; }
+            value = Pool.CompareTo(other.Pool);                     if (value != 0) { return value; }
+            value = DoraCount.CompareTo(other.DoraCount);           if (value != 0) { return value; }
+            value = Roll.CompareTo(other.Roll);                     if (value != 0) { return value; }
+            return 0;
+        }
+
         // GameStateImpl
         internal TileImpl[]       WallRaw                  { get; set; } = new TileImpl[TileHelpers.TOTAL_TILE_COUNT];
         internal TileImpl[]       DoraIndicatorsRaw        { get; set; } = new TileImpl[5];
