@@ -1,5 +1,6 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Evaluator;
@@ -411,6 +412,72 @@ namespace MahjongCore.Riichi
                     ((fourthMeld.State == MeldState.Pon) ||
                      (fourthMeld.State == MeldState.KanPromoted) ||
                      (fourthMeld.State == MeldState.KanOpen))) ? fourthMeld.Target : Player.None;
+        }
+    }
+
+    public class ResultCommandImpl : IResultCommand
+    {
+        // IResultCommand
+        public Player             Winner        { get; private set; } = Player.None;
+        public Player             Target        { get; private set; } = Player.None;
+        public ResultAction       Action        { get; private set; } = ResultAction.Invalid;
+        internal IResultCommand[] MultiWins     { get; private set; } = null;
+        internal bool             Player1Tempai { get; private set; } = false;
+        internal bool             Player2Tempai { get; private set; } = false;
+        internal bool             Player3Tempai { get; private set; } = false;
+        internal bool             Player4Tempai { get; private set; } = false;
+        internal int              Han           { get; private set; } = 0;
+        internal int              Fu            { get; private set; } = 0;
+
+        // ResultCommandImpl
+        public ResultCommandImpl()
+        {
+            Action = ResultAction.AbortiveDraw;
+        }
+
+        public ResultCommandImpl(Player chombo)
+        {
+            Winner = chombo;
+            Target = chombo;
+            Action = ResultAction.Chombo;
+        }
+
+        public ResultCommandImpl(IResultCommand[] wins)
+        {
+            CommonHelpers.Check((wins != null), "MultiWin command shouldn't provide null collection of wins!");
+            Action = ResultAction.MultiWin;
+            Winner = Player.Multiple;
+            Target = Player.Multiple;
+            MultiWins = wins;
+        }
+
+        public ResultCommandImpl(Player winner, int han, int fu)
+        {
+            Winner = winner;
+            Target = Player.Multiple;
+            Action = ResultAction.Tsumo;
+            Han = han;
+            Fu = fu;
+        }
+
+        public ResultCommandImpl(Player winner, Player target, int han, int fu)
+        {
+            Winner = winner;
+            Target = target;
+            Action = ResultAction.Ron;
+            Han = han;
+            Fu = fu;
+        }
+
+        public ResultCommandImpl(bool player1Tempai, bool player2Tempai, bool player3Tempai, bool player4Tempai)
+        {
+            Winner = Player.Multiple;
+            Target = Player.Multiple;
+            Action = ResultAction.Draw;
+            Player1Tempai = player1Tempai;
+            Player2Tempai = player2Tempai;
+            Player3Tempai = player3Tempai;
+            Player4Tempai = player4Tempai;
         }
     }
 }

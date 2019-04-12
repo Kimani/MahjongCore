@@ -84,6 +84,11 @@ namespace MahjongCore.Riichi.Impl
 
         public ISaveState Save() { return new SaveStateImpl(this); }
 
+        public void Start()
+        {
+            // ...
+        }
+
         public void Advance()
         {
             CommonHelpers.Check(CanAdvance, "Advance reentry detected! Cannot call advance at this time.");
@@ -145,6 +150,38 @@ namespace MahjongCore.Riichi.Impl
                 Advance();
             }
         }
+
+        public void SubmitResultCommand(IResultCommand command)
+        {
+            CommonHelpers.Check((command.Action != ResultAction.Invalid), "Found invalid command.");
+
+            // Process per command logic.
+            var commandImpl = command as ResultCommandImpl;
+            if      (commandImpl.Action == ResultAction.Tsumo)        { ProcessTsumoCommand(commandImpl.Winner, commandImpl.Han, commandImpl.Fu); }
+            else if (commandImpl.Action == ResultAction.Ron)          { ProcessRonCommand(commandImpl.Winner, commandImpl.Target, commandImpl.Han, commandImpl.Fu); }
+            else if (commandImpl.Action == ResultAction.Draw)         { ProcessExhaustiveDrawCommand(commandImpl.Player1Tempai, commandImpl.Player2Tempai, commandImpl.Player3Tempai, commandImpl.Player4Tempai); }
+            else if (commandImpl.Action == ResultAction.AbortiveDraw) { ProcessAbortiveDrawCommand(); }
+            else if (commandImpl.Action == ResultAction.Chombo)       { ProcessChomboCommand(commandImpl.Target); }
+            else if (commandImpl.Action == ResultAction.MultiWin)     { ProcessMultiWinCommand(commandImpl.MultiWins); }
+            else                                                      { throw new Exception("Unexpected result command."); }
+
+            // Advance to the next round all through table cleanup.
+            ExecutePostBreak_HandEnd();
+            ExecutePostBreak_TableCleanup();
+        }
+
+        public void SubmitOverride(OverrideState key, object value)
+        {
+            if      (key == OverrideState.Round)    { Round = (Round)value; }
+            else if (key == OverrideState.Pool)     { Pool = (int)value; }
+            else if (key == OverrideState.Bonus)    { Bonus = (int)value; }
+            else if (key == OverrideState.Dealer)   { Dealer = (Player)value; }
+            else if (key == OverrideState.Wareme)   { CommonHelpers.Check((((Player)value == Player.None) || Settings.GetSetting<bool>(GameOption.Wareme)), "Attempting to set wareme player while wareme is disabled!");
+                                                      Wareme = (Player)value; }
+            else if (key == OverrideState.Lapped)   { Lapped = (bool)value; }
+            else if (key == OverrideState.WallTile) { throw new NotImplementedException(); }
+            else                                    { throw new Exception("Unrecognized override option: " + key); }
+    }
 
         // IComparable<IGameState>
         public int CompareTo(IGameState other)
@@ -543,7 +580,7 @@ namespace MahjongCore.Riichi.Impl
             if (NextActionPlayer == Player.Multiple) { foreach (WinResultImpl result in multiWinResults) { ApplyWinResultsToPlayerScores(result); } }
             else                                     { ApplyWinResultsToPlayerScores(_WinResultCache); }
 
-            // Notify the sink.
+            // Notify listeners.
             if      (NextActionPlayer == Player.Multiple)   { MultiWin?.Invoke(multiWinResults); }
             else if (NextAction == GameAction.Tsumo)        { Tsumo?.Invoke(_WinResultCache); }
             else if (NextAction == GameAction.Ron)          { Ron?.Invoke(_WinResultCache); }
@@ -1360,6 +1397,36 @@ namespace MahjongCore.Riichi.Impl
 
             DiscardPlayerList.Push(Current);
             GetHand(Current).CouldIppatsu = false;
+        }
+
+        private void ProcessTsumoCommand(Player winner, int han, int fu)
+        {
+
+        }
+
+        private void ProcessRonCommand(Player winner, Player target, int han, int fu)
+        {
+
+        }
+
+        private void ProcessExhaustiveDrawCommand(bool player1Tempai, bool player2Tempai, bool player3Tempai, bool player4Tempai)
+        {
+
+        }
+
+        private void ProcessAbortiveDrawCommand()
+        {
+
+        }
+
+        private void ProcessChomboCommand(Player chombo)
+        {
+
+        }
+
+        private void ProcessMultiWinCommand(IResultCommand[] wins)
+        {
+            // TODO: this
         }
     }
 }

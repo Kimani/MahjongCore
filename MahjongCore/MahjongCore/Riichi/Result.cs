@@ -12,6 +12,17 @@ namespace MahjongCore.Riichi
         Draw
     }
 
+    public enum ResultAction
+    {
+        Invalid,
+        Ron,
+        Tsumo,
+        Draw,
+        AbortiveDraw,
+        Chombo,
+        MultiWin
+    }
+
     public enum LimitType
     {
         NonLimit,
@@ -32,6 +43,13 @@ namespace MahjongCore.Riichi
         int Fu           { get; }
         int Yakuman      { get; } // # of yakuman (not including kazoe yakuman): single, double etc. ex: Suuankou Tanki Machi will make this 2.
         IList<Yaku> Yaku { get; }
+    }
+
+    public interface IResultCommand
+    {
+        Player       Winner { get; }
+        Player       Target { get; }
+        ResultAction Action { get; }
     }
 
     public interface IWinResult
@@ -76,5 +94,14 @@ namespace MahjongCore.Riichi
         float  GetScore(Player p);
         float  GetScore(Placement p);
         Player GetPlayer(Placement p);
+    }
+
+    public static class ResultFactory
+    {
+        public static IResultCommand BuildTsumoResultCommand(Player winner, int han, int fu)                                                { return new ResultCommandImpl(winner, han, fu); }
+        public static IResultCommand BuildRonResultCommand(Player winner, Player target, int han, int fu)                                   { return new ResultCommandImpl(winner, target, han, fu); }
+        public static IResultCommand BuildDrawResultCommand(bool player1Tempai, bool player2Tempai, bool player3Tempai, bool player4Tempai) { return new ResultCommandImpl(player1Tempai, player2Tempai, player3Tempai, player4Tempai); }
+        public static IResultCommand BuildChomboResultCommand(Player chombo)                                                                { return new ResultCommandImpl(chombo); }
+        public static IResultCommand BuildMultiWinResultCommand(IResultCommand[] wins)                                                      { return new ResultCommandImpl(wins); } // TODO: this
     }
 }

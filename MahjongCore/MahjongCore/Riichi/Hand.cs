@@ -1,10 +1,19 @@
 ﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
 
+using MahjongCore.Riichi.Attributes;
 using System;
 using System.Collections.Generic;
 
 namespace MahjongCore.Riichi
 {
+    public enum OverrideHand
+    {
+        [OptionValueType(typeof(int))]         Score,
+        [OptionValueType(typeof(IndexedMeld))] Meld,
+        [OptionValueType(typeof(ReachType))]   Reach,
+        [OptionValueType(typeof(TileType[]))]  Waits
+    }
+
     public interface IHand : IComparable<IHand>
     {
         event Action<Player>                   Sorted;
@@ -46,5 +55,6 @@ namespace MahjongCore.Riichi
         void            MoveTileToEnd(TileType targetTile);
         void            ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd);
         IList<TileType> GetWaitsForDiscard(int slot);
+        void            SubmitOverride(OverrideHand key, object value);
     }
 }

@@ -26,7 +26,7 @@ namespace MahjongCore.Riichi.Impl
         public ITile[]         Tiles                 { get { return ActiveHandRaw; } }
         public IMeld[]         Melds                 { get { return MeldsRaw; } }
         public IList<ITile>    Discards              { get { return new List<ITile>(DiscardsRaw.Cast<ITile>()); } }
-        public IList<TileType> Waits                 { get; internal set; } = new List<TileType>();
+        public IList<TileType> Waits                 { get; internal set; } = new List<TileType>(); // TODO: Read only versions..
         public IList<ICommand> DrawsAndKans          { get; internal set; } = new List<ICommand>();
         public ReachType       Reach                 { get; internal set; } = ReachType.None;
         public int             Score                 { get; internal set; } = 0;
@@ -120,6 +120,43 @@ namespace MahjongCore.Riichi.Impl
                 // TODO: Update DrawsAndKans as well...
             }
             Sort(true);
+        }
+
+        public void SubmitOverride(OverrideHand key, object value)
+        {
+            if      (key == OverrideHand.Score) { Score = (int)value; }
+            else if (key == OverrideHand.Reach)
+            {
+                Reach = (ReachType)value;
+                // TODO: adjust scores and parent pool...
+            }
+            else if (key == OverrideHand.Waits)
+            {
+                Waits.Clear();
+
+                if (value != null)
+                {
+                    var waits = (TileType[])value;
+                    CommonHelpers.Check((waits.Length > 0), "Found waits array of length 0!");
+                    foreach (TileType waitTile in waits)
+                    {
+                        Waits.AddUnique(waitTile);
+                    }
+                }
+            }
+            else if (key == OverrideHand.Meld)
+            {
+                var iMeld = (IndexedMeld)value;
+                for (int i = 0; i < (iMeld.Index - 1); ++i)
+                {
+                    CommonHelpers.Check(MeldsRaw[i].State != MeldState.None, "Attempted to set meld at slot " + iMeld.Index + " but meld at slot " + i + " isn't even populated yet!");
+                }
+                MeldsRaw[iMeld.Index].Set(iMeld.Meld);
+            }
+            else
+            {
+                throw new Exception("Unrecognized override option: " + key);
+            }
         }
 
         // IComparable<IHand>

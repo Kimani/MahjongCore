@@ -113,6 +113,17 @@ namespace MahjongCore.Riichi
         }
     #endregion
 
+    public enum OverrideState
+    {
+        [OptionValueType(typeof(Round))]  Round,
+        [OptionValueType(typeof(int))]    Pool,
+        [OptionValueType(typeof(int))]    Bonus,
+        [OptionValueType(typeof(Player))] Dealer,
+        [OptionValueType(typeof(Player))] Wareme,
+        [OptionValueType(typeof(bool))]   Lapped,
+        [OptionValueType(typeof(ITile))]  WallTile
+    }
+
     public interface IGameState : IComparable<IGameState>
     {
         event Action<Player,int>               WallPicking;
@@ -166,6 +177,7 @@ namespace MahjongCore.Riichi
         int            DoraCount          { get; }
         int            Roll               { get; }
 
+        void       Start();
         void       Advance();
         void       Rewind();
         void       Pause();  // Can only be called in response to PreCheckAdvance/PreCheckRewind event.
@@ -173,6 +185,8 @@ namespace MahjongCore.Riichi
         ISaveState Save();
         void       SubmitDiscard(IDiscardDecision decision);
         void       SubmitPostDiscard(IPostDiscardDecision decision);
+        void       SubmitResultCommand(IResultCommand command);
+        void       SubmitOverride(OverrideState key, object value);
     }
 
     public static class GameStateFactory

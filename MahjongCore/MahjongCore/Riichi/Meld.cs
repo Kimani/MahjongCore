@@ -65,6 +65,12 @@ namespace MahjongCore.Riichi
         Right
     }
 
+    public struct IndexedMeld  // Consider just adding Slot to IMeld.
+    {
+        public IMeld Meld;
+        public int Index;
+    }
+
     public interface IMeld : ICloneable, IComparable<IMeld>
     {
         Player          Owner        { get; }
