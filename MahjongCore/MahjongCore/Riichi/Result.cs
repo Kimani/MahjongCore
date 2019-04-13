@@ -80,6 +80,10 @@ namespace MahjongCore.Riichi
         int       YakitoriDeltaPlayer2  { get; }
         int       YakitoriDeltaPlayer3  { get; }
         int       YakitoriDeltaPlayer4  { get; }
+        int       ChomboDeltaPlayer1    { get; }
+        int       ChomboDeltaPlayer2    { get; }
+        int       ChomboDeltaPlayer3    { get; }
+        int       ChomboDeltaPlayer4    { get; }
         Placement FinalPlacementPlayer1 { get; }
         Placement FinalPlacementPlayer2 { get; }
         Placement FinalPlacementPlayer3 { get; }
@@ -102,6 +106,7 @@ namespace MahjongCore.Riichi
         public static IResultCommand BuildRonResultCommand(Player winner, Player target, int han, int fu)                                   { return new ResultCommandImpl(winner, target, han, fu); }
         public static IResultCommand BuildDrawResultCommand(bool player1Tempai, bool player2Tempai, bool player3Tempai, bool player4Tempai) { return new ResultCommandImpl(player1Tempai, player2Tempai, player3Tempai, player4Tempai); }
         public static IResultCommand BuildChomboResultCommand(Player chombo)                                                                { return new ResultCommandImpl(chombo); }
-        public static IResultCommand BuildMultiWinResultCommand(IResultCommand[] wins)                                                      { return new ResultCommandImpl(wins); } // TODO: this
+        public static IResultCommand BuildMultiWinResultCommand(IResultCommand[] wins)                                                      { return new ResultCommandImpl(wins); }
+        public static IResultCommand BuildAbortiveDrawCommand()                                                                             { return new ResultCommandImpl(); } 
     }
 }

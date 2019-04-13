@@ -38,6 +38,7 @@ namespace MahjongCore.Riichi
         int             MeldCount            { get; }
         int             MeldedTileCount      { get; }
         int             KanCount             { get; }
+        int             Chombo               { get; }
         bool            Dealer               { get; }
         bool            Open                 { get; }
         bool            Closed               { get; }

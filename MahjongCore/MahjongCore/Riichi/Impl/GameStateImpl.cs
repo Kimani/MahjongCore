@@ -3,6 +3,7 @@
 using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
+using MahjongCore.Riichi.Evaluator;
 using MahjongCore.Riichi.Helpers;
 using System;
 using System.Collections.Generic;
@@ -48,10 +49,7 @@ namespace MahjongCore.Riichi.Impl
         public event Action                           TableCleared;
         public event Action                           PreCheckRewind;
         public event Action<Player, IMeld>            DecisionCancelled;
-
-#pragma warning disable 67
         public event Action<Player>                   Chombo;
-#pragma warning restore 67
 
         public ITile[]          Wall               { get { return WallRaw; } }
         public ITile[]          DoraIndicators     { get { return DoraIndicatorsRaw; } }
@@ -86,7 +84,10 @@ namespace MahjongCore.Riichi.Impl
 
         public void Start()
         {
-            // ...
+            CommonHelpers.Check(CanStart, "Can't call start!");
+            CanStart = false;
+            CanAdvance = true;
+            Advance();
         }
 
         public void Advance()
@@ -172,15 +173,29 @@ namespace MahjongCore.Riichi.Impl
 
         public void SubmitOverride(OverrideState key, object value)
         {
-            if      (key == OverrideState.Round)    { Round = (Round)value; }
-            else if (key == OverrideState.Pool)     { Pool = (int)value; }
-            else if (key == OverrideState.Bonus)    { Bonus = (int)value; }
-            else if (key == OverrideState.Dealer)   { Dealer = (Player)value; }
-            else if (key == OverrideState.Wareme)   { CommonHelpers.Check((((Player)value == Player.None) || Settings.GetSetting<bool>(GameOption.Wareme)), "Attempting to set wareme player while wareme is disabled!");
-                                                      Wareme = (Player)value; }
-            else if (key == OverrideState.Lapped)   { Lapped = (bool)value; }
-            else if (key == OverrideState.WallTile) { throw new NotImplementedException(); }
-            else                                    { throw new Exception("Unrecognized override option: " + key); }
+            if      (key == OverrideState.Pool)   { Pool = (int)value; }
+            else if (key == OverrideState.Bonus)  { Bonus = (int)value; }
+            else if (key == OverrideState.Lapped) { Lapped = (bool)value; }
+            else if (key == OverrideState.Round)
+            {
+                Round = (Round)value;
+                // TODO: Recalculate first dealer.
+            }            
+            else if (key == OverrideState.WallTile)
+            {
+                throw new NotImplementedException();  // TOOD: Used for BoardEditor.
+            }
+            else if (key == OverrideState.Dealer)
+            {
+                Dealer = (Player)value;
+                FirstDealer = Dealer.AddOffset(-Round.GetOffset());
+            }
+            else if (key == OverrideState.Wareme)
+            {
+                CommonHelpers.Check((((Player)value == Player.None) || Settings.GetSetting<bool>(GameOption.Wareme)), "Attempting to set wareme player while wareme is disabled!");
+                Wareme = (Player)value;
+            }
+            else { throw new Exception("Unrecognized override option: " + key); }
     }
 
         // IComparable<IGameState>
@@ -238,8 +253,9 @@ namespace MahjongCore.Riichi.Impl
         internal bool             HasExtraSettings         { get; set; } = false;
         internal bool             ExpectingPause           { get; set; } = false;
         internal bool             ShouldPause              { get; set; } = false;
-        internal bool             CanAdvance               { get; set; } = true;
+        internal bool             CanAdvance               { get; set; } = false;
         internal bool             CanResume                { get; set; } = false;
+        internal bool             CanStart                 { get; set; } = true;
         internal bool             ExpectingDiscard         { get; set; } = false;
         internal bool             NagashiWin               { get; set; } = false;
         internal int              NextActionSlot           { get; set; } = -1;
@@ -570,6 +586,50 @@ namespace MahjongCore.Riichi.Impl
                                          bonus,
                                          (consumePool ? ConsumePool() : 0));
             }
+            else if (NextAction == GameAction.Chombo)
+            {
+                // Reset all reaches.
+                int reachCount = (Player1Hand.Reach.IsReach() ? 1 : 0) + (Player2Hand.Reach.IsReach() ? 1 : 0) +
+                                 (Player3Hand.Reach.IsReach() ? 1 : 0) + (Player4Hand.Reach.IsReach() ? 1 : 0);
+                CommonHelpers.Check((reachCount >= Pool), "Reaches don't match pool!");
+                Pool -= reachCount;
+                Player1HandRaw.ResetForChombo();
+                Player2HandRaw.ResetForChombo();
+                Player3HandRaw.ResetForChombo();
+                Player4HandRaw.ResetForChombo();
+
+                // Adjust scores if it should be done now.
+                if (Settings.GetSetting<ChomboType>(GameOption.ChomboTypeOption) == ChomboType.BeforeRanking)
+                {
+                    var penaltyType = Settings.GetSetting<ChomboPenalty>(GameOption.ChomboPenaltyOption);
+                    if (penaltyType == ChomboPenalty.ReverseMangan)
+                    {
+                        GameStateHelpers.IterateHands(this, (IHand hand) => 
+                        {
+                            bool dealerScore = (Dealer == NextActionPlayer) || hand.Dealer;
+                            (hand as HandImpl).Score += (hand.Player == NextActionPlayer) ? -penaltyType.GetPointLoss() : (dealerScore ? 4000 : 2000);
+                        });
+                    }
+                    else if (penaltyType == ChomboPenalty.Reverse3000All)
+                    {
+                        GameStateHelpers.IterateHands(this, (IHand hand) => { (hand as HandImpl).Score += (hand.Player == NextActionPlayer) ? -penaltyType.GetPointLoss() : 3000; });
+                    }
+                    else if ((penaltyType == ChomboPenalty.Penalty8000) ||
+                             (penaltyType == ChomboPenalty.Penalty12000) ||
+                             (penaltyType == ChomboPenalty.Penalty20000))
+                    {
+                        GetHand(NextActionPlayer).Score -= penaltyType.GetPointLoss();
+                    }
+                    else
+                    {
+                        throw new Exception("Unrecognized chombo type");
+                    }
+                }
+
+                // Perform the chombo.
+                GetHand(NextActionPlayer).PerformChombo();
+                
+            }
             else if (NextAction == GameAction.Nothing)
             {
                 foreach (Player p in PlayerHelpers.Players) { GetHand(p).Streak = 0; }
@@ -586,6 +646,7 @@ namespace MahjongCore.Riichi.Impl
             else if (NextAction == GameAction.Ron)          { Ron?.Invoke(_WinResultCache); }
             else if (NextAction == GameAction.Nothing)      { ExhaustiveDraw?.Invoke(_WinResultCache); }
             else if (NextAction == GameAction.AbortiveDraw) { AbortiveDraw?.Invoke(Current, NextAbortiveDrawType); }
+            else if (NextAction == GameAction.Chombo)       { Chombo?.Invoke(NextActionPlayer); }
             else                                            { throw new Exception("Unexpected hand end state!"); }
         }
 
@@ -619,6 +680,7 @@ namespace MahjongCore.Riichi.Impl
                 // Determine bonus and dealer.
                 bool advanceBonus = (NextActionPlayer == Player.Multiple) ? GetNextAction(Dealer).IsAgari() :
                                     NextAction.IsAgari()                  ? (NextActionPlayer == Dealer) :
+                                    (NextAction == GameAction.Chombo)     ? false :
                                                                             true;
                 bool advanceDealer;
                 if (NextAction == GameAction.Nothing)
@@ -629,6 +691,10 @@ namespace MahjongCore.Riichi.Impl
                         advanceDealer &= GetHand(Dealer.GetNext()).Tempai;
                     }
                 }
+                else if (NextAction == GameAction.Chombo)
+                {
+                    advanceDealer = false;
+                }
                 else
                 {
                     if (NagashiWin && Settings.GetSetting<bool>(GameOption.NagashiBonusOnEastTempaiOnly))
@@ -638,7 +704,11 @@ namespace MahjongCore.Riichi.Impl
                     advanceDealer = !advanceBonus;
                 }
 
-                if (Settings.GetSetting<bool>(GameOption.EightWinRetire) && !advanceDealer && (Bonus >= 8))
+                if (Settings.GetSetting<bool>(GameOption.EightWinRetire) && 
+                    !advanceDealer &&
+                    (Bonus >= 8) && 
+                    (NextAction != GameAction.AbortiveDraw) &&
+                    (NextAction != GameAction.Chombo))
                 {
                     advanceDealer = true;
                     Bonus = 0;
@@ -751,7 +821,11 @@ namespace MahjongCore.Riichi.Impl
                                                     Player1Hand.Yakitori,
                                                     Player2Hand.Yakitori,
                                                     Player3Hand.Yakitori,
-                                                    Player4Hand.Yakitori));
+                                                    Player4Hand.Yakitori,
+                                                    Player1Hand.Chombo,
+                                                    Player2Hand.Chombo,
+                                                    Player3Hand.Chombo,
+                                                    Player4Hand.Chombo));
         }
 
         public void ExecuteRewindModeChange_DecideMove()
@@ -886,7 +960,8 @@ namespace MahjongCore.Riichi.Impl
             NextActionSlot = -1;
             ExpectingPause = false;
             ShouldPause = false;
-            CanAdvance = true;
+            CanStart = true;
+            CanAdvance = false;
             CanResume = false;
             ExpectingDiscard = false;
         }
@@ -970,6 +1045,7 @@ namespace MahjongCore.Riichi.Impl
             CommonHelpers.Check((state is SaveStateImpl), "SaveState not from MahjongCore, external save states not supported at this time.");
             (state as SaveStateImpl).PopulateState(this);
 
+            CanStart = false;
             CanResume = true;
         }
 
@@ -1401,27 +1477,47 @@ namespace MahjongCore.Riichi.Impl
 
         private void ProcessTsumoCommand(Player winner, int han, int fu)
         {
+            NextAction = GameAction.Tsumo;
+            NextActionPlayer = winner;
+            NextActionPlayerTarget = Player.Multiple;
+            PlayerRecentOpenKan = Player.None; // So no Sekinin Barai gets in the way.
 
+            HandImpl winningHand = GetHand(winner);
+            var candidateHand = new CandidateHand { Han = han, Fu = fu };
+            winningHand.WinningHandCache = candidateHand;
         }
 
         private void ProcessRonCommand(Player winner, Player target, int han, int fu)
         {
+            NextAction = GameAction.Ron;
+            NextActionPlayer = winner;
+            NextActionPlayerTarget = target;
+            PlayerRecentOpenKan = Player.None; // So no Sekinin Barai gets in the way.
 
+            HandImpl winningHand = GetHand(winner);
+            var candidateHand = new CandidateHand { Han = han, Fu = fu };
+            winningHand.WinningHandCache = candidateHand;
         }
 
         private void ProcessExhaustiveDrawCommand(bool player1Tempai, bool player2Tempai, bool player3Tempai, bool player4Tempai)
         {
-
+            NextAction = GameAction.Nothing;
+            Player1HandRaw.Tempai = player1Tempai;
+            Player2HandRaw.Tempai = player2Tempai;
+            Player3HandRaw.Tempai = player3Tempai;
+            Player4HandRaw.Tempai = player4Tempai;
         }
 
         private void ProcessAbortiveDrawCommand()
         {
-
+            NextAction = GameAction.AbortiveDraw;
+            NextAbortiveDrawType = AbortiveDrawType.Other;
         }
 
         private void ProcessChomboCommand(Player chombo)
         {
-
+            NextAction = GameAction.Chombo;
+            NextActionPlayer = chombo;
         }
 
         private void ProcessMultiWinCommand(IResultCommand[] wins)

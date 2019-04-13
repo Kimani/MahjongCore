@@ -34,11 +34,12 @@ namespace MahjongCore.Riichi.Evaluator
          * @param ignoreTileSlot  If you pass in -1 then this assumes that we don't have a full hand here, ie it's not our turn and we haven't picked up a tile.
          *                        If you pass in >= 0 then we will get our waits ignoring the given tile - getting our waits as if we discarded the given tile.
          */
-        public static List<TileType> GetWaits(IHand hand, int ignoreTileSlot, TileType[] approvedReachKanTiles)
+        public static void GetWaits(IHand hand, int ignoreTileSlot, TileType[] approvedReachKanTiles, IList<TileType> waits)
         {
             CommonHelpers.Check(((ignoreTileSlot >= -1) && (ignoreTileSlot < hand.TileCount)), ("Ignore slot needs to be valid index OR -1. ignoreTileSlot: " + ignoreTileSlot + " TileCount: " + hand.TileCount));
             CommonHelpers.Check(((ignoreTileSlot == -1) || hand.HasFullHand), ("Expected full hand when ignoreTileSlot is not -1. TileCount: " + hand.TileCount));
 
+            waits.Clear();
             TileType[] sublist = new TileType[(ignoreTileSlot == -1) ? 13 : (hand.TileCount - 1)];
             int target = 0;
             for (int i = 0; i < hand.TileCount; ++i)
@@ -50,21 +51,19 @@ namespace MahjongCore.Riichi.Evaluator
             IGameState state = hand.Parent;
             bool anyCalls = (state.Player1Hand.MeldCount > 0) || (state.Player2Hand.MeldCount > 0) ||
                             (state.Player3Hand.MeldCount > 0) || (state.Player4Hand.MeldCount > 0);
-            List<TileType> waits = GetWaits(sublist, approvedReachKanTiles, hand.Discards, anyCalls, out bool overrideNoReachFlag);
+            GetWaits(waits, sublist, approvedReachKanTiles, hand.Discards, anyCalls, out bool overrideNoReachFlag);
             if (hand is HandImpl handImpl)
             {
                 handImpl.OverrideNoReachFlag = overrideNoReachFlag;
             }
-            return waits;
         }
 
         private static TileType[] g_stashedSortedWaitingHand;
-        public static List<TileType> GetWaits(TileType[] sortedWaitingHand, TileType[] approvedReachKanTiles, IList<ITile> discards, bool anyCalls, out bool overrideNoReachFlag)
+        public static void GetWaits(IList<TileType> waits, TileType[] sortedWaitingHand, TileType[] approvedReachKanTiles, IList<ITile> discards, bool anyCalls, out bool overrideNoReachFlag)
         {
             overrideNoReachFlag = false;
 
             // Get the activeTileCount. If it's not of an expected value, we don't have any waits to speak of.
-            List<TileType> waitList = new List<TileType>();
             int activeTileCount = 0;
             for (int i = 0; i < sortedWaitingHand.Length; ++i)
             {
@@ -84,7 +83,7 @@ namespace MahjongCore.Riichi.Evaluator
                 (activeTileCount != 4) &&
                 (activeTileCount != 1))
             {
-                return waitList;
+                return;
             }
 
             g_stashedSortedWaitingHand = sortedWaitingHand;
@@ -162,7 +161,10 @@ namespace MahjongCore.Riichi.Evaluator
 
                         // Add the tiles to the wait list. Set OverrideNoReachFlag because we can't reach with this.
                         overrideNoReachFlag = true;
-                        waitList.AddRange(brokenWaitTiles);
+                        foreach (TileType tt in brokenWaitTiles)
+                        {
+                            waits.Add(tt);
+                        }
                     }
                 }
             }
@@ -211,36 +213,36 @@ namespace MahjongCore.Riichi.Evaluator
 
                 if (honorCount == 13)
                 {
-                    waitList.Add(TileType.Bamboo1);
-                    waitList.Add(TileType.Bamboo9);
-                    waitList.Add(TileType.Characters1);
-                    waitList.Add(TileType.Characters9);
-                    waitList.Add(TileType.Circles1);
-                    waitList.Add(TileType.Circles9);
-                    waitList.Add(TileType.East);
-                    waitList.Add(TileType.North);
-                    waitList.Add(TileType.South);
-                    waitList.Add(TileType.West);
-                    waitList.Add(TileType.Chun);
-                    waitList.Add(TileType.Haku);
-                    waitList.Add(TileType.Hatsu);
+                    waits.Add(TileType.Bamboo1);
+                    waits.Add(TileType.Bamboo9);
+                    waits.Add(TileType.Characters1);
+                    waits.Add(TileType.Characters9);
+                    waits.Add(TileType.Circles1);
+                    waits.Add(TileType.Circles9);
+                    waits.Add(TileType.East);
+                    waits.Add(TileType.North);
+                    waits.Add(TileType.South);
+                    waits.Add(TileType.West);
+                    waits.Add(TileType.Chun);
+                    waits.Add(TileType.Haku);
+                    waits.Add(TileType.Hatsu);
                 }
                 else if (honorCount == 12)
                 {
                     int bitFieldTile = ~bitFieldHonors & BITFIELD_KOKUSHI_ALL;
-                    if      (bitFieldTile == BITFIELD_KOKUSHI_1_BAM)  { waitList.Add(TileType.Bamboo1); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_9_BAM)  { waitList.Add(TileType.Bamboo9); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_1_CHAR) { waitList.Add(TileType.Characters1); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_9_CHAR) { waitList.Add(TileType.Characters9); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_1_CIRC) { waitList.Add(TileType.Circles1); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_9_CIRC) { waitList.Add(TileType.Circles9); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_NORTH)  { waitList.Add(TileType.North); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_SOUTH)  { waitList.Add(TileType.South); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_EAST)   { waitList.Add(TileType.East); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_WEST)   { waitList.Add(TileType.West); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_HATSU)  { waitList.Add(TileType.Hatsu); }
-                    else if (bitFieldTile == BITFIELD_KOKUSHI_HAKU)   { waitList.Add(TileType.Haku); }
-                    else                                              { waitList.Add(TileType.Chun); }
+                    if      (bitFieldTile == BITFIELD_KOKUSHI_1_BAM)  { waits.Add(TileType.Bamboo1); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_9_BAM)  { waits.Add(TileType.Bamboo9); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_1_CHAR) { waits.Add(TileType.Characters1); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_9_CHAR) { waits.Add(TileType.Characters9); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_1_CIRC) { waits.Add(TileType.Circles1); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_9_CIRC) { waits.Add(TileType.Circles9); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_NORTH)  { waits.Add(TileType.North); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_SOUTH)  { waits.Add(TileType.South); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_EAST)   { waits.Add(TileType.East); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_WEST)   { waits.Add(TileType.West); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_HATSU)  { waits.Add(TileType.Hatsu); }
+                    else if (bitFieldTile == BITFIELD_KOKUSHI_HAKU)   { waits.Add(TileType.Haku); }
+                    else                                              { waits.Add(TileType.Chun); }
                 }
             }
 
@@ -293,12 +295,12 @@ namespace MahjongCore.Riichi.Evaluator
 
                 if (singleTile != TileType.None)
                 {
-                    waitList.Add(singleTile);
+                    waits.Add(singleTile);
                 }
                 else if (fFound)
                 {
                     // If we didn't get an opportunity to find the single tile in the loop above, it's because it was the last tile in the list.
-                    waitList.Add(sortedWaitingHand[12]);
+                    waits.Add(sortedWaitingHand[12]);
                 }
             }
 
@@ -323,7 +325,7 @@ namespace MahjongCore.Riichi.Evaluator
                     if (lastTileLookedCount == 2)
                     {
                         TileType[] waitSubHand = GetSubhand(sortedWaitingHand, i, (i - 1));
-                        GetWaitsBranch(waitList, new WaitCandidateHand(waitSubHand, calledMeldCount, true), threeOfAKindTiles, threeInARowInHandTiles);
+                        GetWaitsBranch(waits, new WaitCandidateHand(waitSubHand, calledMeldCount, true), threeOfAKindTiles, threeInARowInHandTiles);
                     }
                 }
                 else
@@ -336,7 +338,7 @@ namespace MahjongCore.Riichi.Evaluator
                         {
                             WaitA = lastTileLookedAt
                         };
-                        GetWaitsBranch(waitList, wch, threeOfAKindTiles, threeInARowInHandTiles);
+                        GetWaitsBranch(waits, wch, threeOfAKindTiles, threeInARowInHandTiles);
                     }
 
                     lastTileLookedAt = sortedWaitingHand[i];
@@ -352,7 +354,7 @@ namespace MahjongCore.Riichi.Evaluator
                 {
                     WaitA = lastTileLookedAt
                 };
-                GetWaitsBranch(waitList, wch, threeOfAKindTiles, threeInARowInHandTiles);
+                GetWaitsBranch(waits, wch, threeOfAKindTiles, threeInARowInHandTiles);
             }
 
             if (approvedReachKanTiles != null)
@@ -364,13 +366,9 @@ namespace MahjongCore.Riichi.Evaluator
             }
 
             // Done! If we don't have any waits then return null. Otherwise we need to go through and remove doubles.
-            if (waitList.Count == 0)
+            if (waits.Count > 0)
             {
-                waitList = null;
-            }
-            else
-            {
-                SortAndRemoveDoubles(waitList);
+                SortAndRemoveDoubles(waits as List<TileType>);
                 SortAndRemoveDoubles(threeOfAKindTiles);
                 SortAndRemoveDoubles(threeInARowInHandTiles);
 
@@ -409,7 +407,6 @@ namespace MahjongCore.Riichi.Evaluator
 
             // Done!
             g_stashedSortedWaitingHand = null;
-            return waitList;
         }
 
         // Returns a complete hand regardless of ability to win on it or not. Just return the first result.
@@ -507,7 +504,7 @@ namespace MahjongCore.Riichi.Evaluator
             return subHand;
         }
 
-        private static void GetWaitsBranch(List<TileType> resultsBox, WaitCandidateHand wHand, List<TileType> threeOfAKindTiles, List<TileType> threeInARowInHandTiles)
+        private static void GetWaitsBranch(IList<TileType> resultsBox, WaitCandidateHand wHand, List<TileType> threeOfAKindTiles, List<TileType> threeInARowInHandTiles)
         {
             while (wHand.MeldCount < 4)
             {

@@ -26,7 +26,8 @@ namespace MahjongCore.Riichi
         [DescriptionName("Starting Points"),                          OptionValueType(typeof(int)),            DefaultOptionValue(25000)                              ] StartingPoints,
         [DescriptionName("Victory Points"),                           OptionValueType(typeof(int)),            DefaultOptionValue(30000)                              ] VictoryPoints,
         [DescriptionName("Dora"),                                     OptionValueType(typeof(bool)),           DefaultOptionValue(true)                               ] Dora,
-        [DescriptionName("ChomboPenalty"),                            OptionValueType(typeof(ChomboPenalty)),  DefaultOptionValue(ChomboPenalty.ReverseMangan)        ] ChomboPenaltyOption,
+        [DescriptionName("Chombo Penalty"),                           OptionValueType(typeof(ChomboPenalty)),  DefaultOptionValue(ChomboPenalty.ReverseMangan)        ] ChomboPenaltyOption,
+        [DescriptionName("Chombo Type"),                              OptionValueType(typeof(ChomboType)),     DefaultOptionValue(ChomboType.BeforeRanking)           ] ChomboTypeOption,
         [DescriptionName("Ura Dora"),                                 OptionValueType(typeof(bool)), DefaultOptionValue(true),  RuleValue(1), BitfieldMask(0x00000002)] UraDora,
         [DescriptionName("Kan Dora"),                                 OptionValueType(typeof(bool)), DefaultOptionValue(true),  RuleValue(1), BitfieldMask(0x00000004)] KanDora,
         [DescriptionName("Tonpussen"),                                OptionValueType(typeof(bool)), DefaultOptionValue(false), RuleValue(1), BitfieldMask(0x00000008)] Tonpussen,
@@ -68,7 +69,6 @@ namespace MahjongCore.Riichi
         [DescriptionName("Draw on Fourth Reach"),                     OptionValueType(typeof(bool)), DefaultOptionValue(true),  RuleValue(2), BitfieldMask(0x00000100)] FourReachDraw,
         [DescriptionName("Draw on Fourth Kan"),                       OptionValueType(typeof(bool)), DefaultOptionValue(true),  RuleValue(2), BitfieldMask(0x00000200)] FourKanDraw,
         [DescriptionName("Draw on Fifth Kan"),                        OptionValueType(typeof(bool)), DefaultOptionValue(true),  RuleValue(2), BitfieldMask(0x00000400)] FifthKanDraw,
-        [DescriptionName("Chombo Penalty applied Post Ranking"),      OptionValueType(typeof(bool)), DefaultOptionValue(true),  RuleValue(2), BitfieldMask(0x00000800)] ChomboPenaltyPostRank,
         [DescriptionName("Renhou Mangan"),                            OptionValueType(typeof(bool)), DefaultOptionValue(false), RuleValue(2), BitfieldMask(0x00001000)] RenhouMangan,
         [DescriptionName("Split Tie Uma"),                            OptionValueType(typeof(bool)), DefaultOptionValue(true),  RuleValue(2), BitfieldMask(0x00002000)] SplitTieUma,
         [DescriptionName("Use Integer Final Scores"),                 OptionValueType(typeof(bool)), DefaultOptionValue(false), RuleValue(2), BitfieldMask(0x00004000)] IntFinalScores,
@@ -356,6 +356,12 @@ namespace MahjongCore.Riichi
             public static int GetPointLoss(this ChomboPenalty cp) { return EnumAttributes.GetAttributeValue<PointLoss, int>(cp); }
         }
     #endregion
+
+    public enum ChomboType
+    {
+        BeforeRanking,
+        AfterRanking
+    }
 
     public interface IGameSettings : ICloneable, IComparable<IGameSettings>
     {

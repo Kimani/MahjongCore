@@ -94,6 +94,7 @@ namespace MahjongCore.Riichi
             [SkyValue(12), WinValue(WinType.None)]  ReplacementTilePick, // If set, we want to pick our tile from the dead wall instead of the regular wall.
             [SkyValue(13), WinValue(WinType.None)]  AbortiveDraw,        // If Kyuushuukyuuhai or too many kans.
             [SkyValue(14), WinValue(WinType.None)]  OpenRiichiDiscard,   // Will need to update marshalling if this goes over 0xf
+            [SkyValue(15), WinValue(WinType.None)]  Chombo,
         }
 
         public static class GameActionExtentionMethods

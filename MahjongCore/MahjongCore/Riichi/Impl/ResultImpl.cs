@@ -4,6 +4,7 @@ using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Evaluator;
+using MahjongCore.Riichi.Helpers;
 using MahjongCore.Riichi.Impl;
 using System;
 using System.Collections.Generic;
@@ -47,6 +48,10 @@ namespace MahjongCore.Riichi
         public int       YakitoriDeltaPlayer2  { get; internal set; }
         public int       YakitoriDeltaPlayer3  { get; internal set; }
         public int       YakitoriDeltaPlayer4  { get; internal set; }
+        public int       ChomboDeltaPlayer1    { get; internal set; }
+        public int       ChomboDeltaPlayer2    { get; internal set; }
+        public int       ChomboDeltaPlayer3    { get; internal set; }
+        public int       ChomboDeltaPlayer4    { get; internal set; }
         public Placement FinalPlacementPlayer1 { get; internal set; }
         public Placement FinalPlacementPlayer2 { get; internal set; }
         public Placement FinalPlacementPlayer3 { get; internal set; }
@@ -109,7 +114,11 @@ namespace MahjongCore.Riichi
                               bool yakitoriP1,
                               bool yakitoriP2,
                               bool yakitoriP3,
-                              bool yakitoriP4)
+                              bool yakitoriP4,
+                              int chomboP1,
+                              int chomboP2,
+                              int chomboP3,
+                              int chomboP4)
         {
             int finalScoreP1 = pointsP1;
             int finalScoreP2 = pointsP2;
@@ -184,11 +193,55 @@ namespace MahjongCore.Riichi
             ranks[2].Score = scores[2];
             ranks[3].Score = scores[3];
 
+            // Apply post-ranking chombos.
+            if (settings.GetSetting<ChomboType>(GameOption.ChomboTypeOption) == ChomboType.AfterRanking)
+            {
+                var penaltyType = settings.GetSetting<ChomboPenalty>(GameOption.ChomboPenaltyOption);
+                ApplyChomboDeltas(Player.Player1, ChomboDeltaPlayer1, penaltyType);
+                ApplyChomboDeltas(Player.Player2, ChomboDeltaPlayer2, penaltyType);
+                ApplyChomboDeltas(Player.Player3, ChomboDeltaPlayer3, penaltyType);
+                ApplyChomboDeltas(Player.Player4, ChomboDeltaPlayer4, penaltyType);
+            }
+
             // Generate a GameResult and submit it to GameComplete.
             SetPlayerData(ranks[0], Placement.Place1);
             SetPlayerData(ranks[1], Placement.Place2);
             SetPlayerData(ranks[2], Placement.Place3);
             SetPlayerData(ranks[3], Placement.Place4);
+        }
+
+        private void ApplyChomboDeltas(Player chomboPlayer, int chomboCount, ChomboPenalty penalty)
+        {
+            if (chomboCount > 0)
+            {
+                int[] otherPlayerDeltas = new int[3];
+                ApplyChomboDeltasImpl(chomboPlayer, chomboCount, penalty, out int chomboDelta, out otherPlayerDeltas[0], out otherPlayerDeltas[1], out otherPlayerDeltas[2]);
+
+                int otherIndex = 0;
+                ChomboDeltaPlayer1 += (chomboPlayer == Player.Player1) ? chomboDelta : otherPlayerDeltas[otherIndex++];
+                ChomboDeltaPlayer2 += (chomboPlayer == Player.Player2) ? chomboDelta : otherPlayerDeltas[otherIndex++];
+                ChomboDeltaPlayer3 += (chomboPlayer == Player.Player3) ? chomboDelta : otherPlayerDeltas[otherIndex++];
+                ChomboDeltaPlayer4 += (chomboPlayer == Player.Player4) ? chomboDelta : otherPlayerDeltas[otherIndex++];
+            }
+        }
+
+        private void ApplyChomboDeltasImpl(Player chomboPlayer, int chomboCount, ChomboPenalty penalty, out int chomboDelta, out int otherPlayerDelta1, out int otherPlayerDelta2, out int otherPlayerDelta3)
+        {
+            chomboDelta = -(chomboCount * penalty.GetPointLoss());
+            otherPlayerDelta1 = 0;
+            otherPlayerDelta2 = 0;
+            otherPlayerDelta3 = 0;
+
+            if (penalty == ChomboPenalty.ReverseMangan)
+            {
+                throw new NotImplementedException(); // Tricky, need to keep track of dealers.
+            }
+            else if (penalty == ChomboPenalty.Reverse3000All)
+            {
+                otherPlayerDelta1 = 3000;
+                otherPlayerDelta2 = 3000;
+                otherPlayerDelta3 = 3000;
+            }
         }
 
         private void SetPlayerData(RankOrder data, Placement place)
