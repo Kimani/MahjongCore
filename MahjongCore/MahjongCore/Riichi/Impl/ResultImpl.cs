@@ -193,21 +193,31 @@ namespace MahjongCore.Riichi
             ranks[2].Score = scores[2];
             ranks[3].Score = scores[3];
 
-            // Apply post-ranking chombos.
-            if (settings.GetSetting<ChomboType>(GameOption.ChomboTypeOption) == ChomboType.AfterRanking)
-            {
-                var penaltyType = settings.GetSetting<ChomboPenalty>(GameOption.ChomboPenaltyOption);
-                ApplyChomboDeltas(Player.Player1, ChomboDeltaPlayer1, penaltyType);
-                ApplyChomboDeltas(Player.Player2, ChomboDeltaPlayer2, penaltyType);
-                ApplyChomboDeltas(Player.Player3, ChomboDeltaPlayer3, penaltyType);
-                ApplyChomboDeltas(Player.Player4, ChomboDeltaPlayer4, penaltyType);
-            }
-
-            // Generate a GameResult and submit it to GameComplete.
+            // Set the final scores from the RankOrder objects onto the final results.
             SetPlayerData(ranks[0], Placement.Place1);
             SetPlayerData(ranks[1], Placement.Place2);
             SetPlayerData(ranks[2], Placement.Place3);
             SetPlayerData(ranks[3], Placement.Place4);
+
+            // Apply post-ranking chombos.
+            if (settings.GetSetting<ChomboType>(GameOption.ChomboTypeOption) == ChomboType.AfterRanking)
+            {
+                var penaltyType = settings.GetSetting<ChomboPenalty>(GameOption.ChomboPenaltyOption);
+                ApplyChomboDeltas(Player.Player1, chomboP1, penaltyType);
+                ApplyChomboDeltas(Player.Player2, chomboP2, penaltyType);
+                ApplyChomboDeltas(Player.Player3, chomboP3, penaltyType);
+                ApplyChomboDeltas(Player.Player4, chomboP4, penaltyType);
+
+                FinalPointsPlayer1 += ChomboDeltaPlayer1;
+                FinalPointsPlayer2 += ChomboDeltaPlayer2;
+                FinalPointsPlayer3 += ChomboDeltaPlayer3;
+                FinalPointsPlayer4 += ChomboDeltaPlayer4;
+
+                FinalScorePlayer1 += ChomboDeltaPlayer1 / 1000;
+                FinalScorePlayer2 += ChomboDeltaPlayer2 / 1000;
+                FinalScorePlayer3 += ChomboDeltaPlayer3 / 1000;
+                FinalScorePlayer4 += ChomboDeltaPlayer4 / 1000;
+            }
         }
 
         private void ApplyChomboDeltas(Player chomboPlayer, int chomboCount, ChomboPenalty penalty)

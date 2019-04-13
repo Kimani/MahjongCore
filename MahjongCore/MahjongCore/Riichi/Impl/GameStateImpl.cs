@@ -180,10 +180,11 @@ namespace MahjongCore.Riichi.Impl
             {
                 Round = (Round)value;
                 // TODO: Recalculate first dealer.
-            }            
+            }
             else if (key == OverrideState.WallTile)
             {
-                throw new NotImplementedException();  // TOOD: Used for BoardEditor.
+                // TOOD: Used for BoardEditor.
+                throw new NotImplementedException();
             }
             else if (key == OverrideState.Dealer)
             {
