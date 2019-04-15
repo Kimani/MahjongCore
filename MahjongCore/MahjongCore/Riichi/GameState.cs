@@ -122,10 +122,11 @@ namespace MahjongCore.Riichi
         [OptionValueType(typeof(Player))] Dealer,
         [OptionValueType(typeof(Player))] Wareme,
         [OptionValueType(typeof(bool))]   Lapped,
-        [OptionValueType(typeof(ITile))]  WallTile
+        [OptionValueType(typeof(ITile))]  WallTile,
+        [OptionValueType(typeof(int))]    DoraCount
     }
 
-    public interface IGameState : IComparable<IGameState>
+    public interface IGameState : IComparable<IGameState>, ICloneable
     {
         event Action<Player,int>               WallPicking;
         event Action<ITile[], TileSource>      WallPicked;
@@ -179,10 +180,10 @@ namespace MahjongCore.Riichi
         int            Roll               { get; }
 
         void       Start();
-        void       Advance();
+        void       Advance(); // TODO: RIP?
         void       Rewind();
-        void       Pause();  // Can only be called in response to PreCheckAdvance/PreCheckRewind event.
-        void       Resume(); // Can only be called if Pause was called successfully.
+        void       Pause();   // Can only be called in response to PreCheckAdvance/PreCheckRewind event.
+        void       Resume();  // Can only be called if Pause was called successfully OR loading from a SaveState.
         ISaveState Save();
         void       SubmitDiscard(IDiscardDecision decision);
         void       SubmitPostDiscard(IPostDiscardDecision decision);

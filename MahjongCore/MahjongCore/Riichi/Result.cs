@@ -1,4 +1,4 @@
-﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
+﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2019
 
 using System.Collections.Generic;
 
@@ -20,7 +20,8 @@ namespace MahjongCore.Riichi
         Draw,
         AbortiveDraw,
         Chombo,
-        MultiWin
+        MultiWin,
+        FireGameResult
     }
 
     public enum LimitType
@@ -107,6 +108,7 @@ namespace MahjongCore.Riichi
         public static IResultCommand BuildDrawResultCommand(bool player1Tempai, bool player2Tempai, bool player3Tempai, bool player4Tempai) { return new ResultCommandImpl(player1Tempai, player2Tempai, player3Tempai, player4Tempai); }
         public static IResultCommand BuildChomboResultCommand(Player chombo)                                                                { return new ResultCommandImpl(chombo); }
         public static IResultCommand BuildMultiWinResultCommand(IResultCommand[] wins)                                                      { return new ResultCommandImpl(wins); }
-        public static IResultCommand BuildAbortiveDrawCommand()                                                                             { return new ResultCommandImpl(); } 
+        public static IResultCommand BuildAbortiveDrawCommand()                                                                             { return new ResultCommandImpl(ResultAction.AbortiveDraw); }
+        public static IResultCommand BuildFireGameResultCommand()                                                                           { return new ResultCommandImpl(ResultAction.FireGameResult); }
     }
 }

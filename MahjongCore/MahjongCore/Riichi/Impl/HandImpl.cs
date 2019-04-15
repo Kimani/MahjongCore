@@ -128,7 +128,8 @@ namespace MahjongCore.Riichi.Impl
 
         public void SubmitOverride(OverrideHand key, object value)
         {
-            if      (key == OverrideHand.Score) { Score = (int)value; }
+            if      (key == OverrideHand.Score)  { Score = (int)value; }
+            else if (key == OverrideHand.Chombo) { Chombo = (int)value; }
             else if (key == OverrideHand.Reach)
             {
                 var incomingReach = (ReachType)value;

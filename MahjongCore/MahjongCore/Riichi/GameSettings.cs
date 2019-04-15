@@ -363,6 +363,18 @@ namespace MahjongCore.Riichi
         AfterRanking
     }
 
+    public enum Ruleset
+    {
+        SKY,
+        WRC,
+        EMA,
+        JPML_A,
+        JPML_B,
+        Original,
+        Tenhou,
+        Ron2
+    }
+
     public interface IGameSettings : ICloneable, IComparable<IGameSettings>
     {
         T    GetSetting<T>(GameOption option);
@@ -373,6 +385,7 @@ namespace MahjongCore.Riichi
 
     public static class GameSettingsFactory
     {
-        public static IGameSettings BuildGameSettings() { return new GameSettingsImpl(); }
+        public static IGameSettings BuildGameSettings()              { return new GameSettingsImpl(); }
+        public static IGameSettings BuildGameSettings(Ruleset rules) { return new GameSettingsImpl(); }
     }
 }

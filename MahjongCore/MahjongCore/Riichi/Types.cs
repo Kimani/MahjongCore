@@ -57,7 +57,9 @@ namespace MahjongCore.Riichi
 
         public static class WindExtensionMethods
         {
-            public static TileType GetTile(this Wind w) { return EnumAttributes.GetAttributeValue<Tile, TileType>(w); }
+            public static TileType GetTile(this Wind w)     { return EnumAttributes.GetAttributeValue<Tile, TileType>(w); }
+            public static Wind     GetNext(this Wind w)     { return EnumAttributes.GetAttributeValue<WindNext, Wind>(w); }
+            public static Wind     GetPrevious(this Wind w) { return EnumAttributes.GetAttributeValue<WindPrevious, Wind>(w); }
 
             public static Wind GetWind(Player current, Player dealer)
             {
@@ -144,6 +146,15 @@ namespace MahjongCore.Riichi
                         (p.GetNext() == target)         ? CalledDirection.Right :
                         (p.GetPrevious() == target)     ? CalledDirection.Left :
                                                           CalledDirection.Across;
+            }
+
+            public static Player GetTargetPlayer(this Player p, CalledDirection direction)
+            {
+                return !p.IsPlayer()                          ? Player.None :
+                        (direction == CalledDirection.Right)  ? p.GetNext() :
+                        (direction == CalledDirection.Across) ? p.GetNext().GetNext() :
+                        (direction == CalledDirection.Left)   ? p.GetPrevious() :
+                                                                Player.None;
             }
 
             public static Player AddOffset(this Player p, int offset)

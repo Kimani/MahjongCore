@@ -157,18 +157,24 @@ namespace MahjongCore.Riichi.Impl
             CommonHelpers.Check((command.Action != ResultAction.Invalid), "Found invalid command.");
 
             // Process per command logic.
+            bool advanceRounds = false;
+
             var commandImpl = command as ResultCommandImpl;
-            if      (commandImpl.Action == ResultAction.Tsumo)        { ProcessTsumoCommand(commandImpl.Winner, commandImpl.Han, commandImpl.Fu); }
-            else if (commandImpl.Action == ResultAction.Ron)          { ProcessRonCommand(commandImpl.Winner, commandImpl.Target, commandImpl.Han, commandImpl.Fu); }
-            else if (commandImpl.Action == ResultAction.Draw)         { ProcessExhaustiveDrawCommand(commandImpl.Player1Tempai, commandImpl.Player2Tempai, commandImpl.Player3Tempai, commandImpl.Player4Tempai); }
-            else if (commandImpl.Action == ResultAction.AbortiveDraw) { ProcessAbortiveDrawCommand(); }
-            else if (commandImpl.Action == ResultAction.Chombo)       { ProcessChomboCommand(commandImpl.Target); }
-            else if (commandImpl.Action == ResultAction.MultiWin)     { ProcessMultiWinCommand(commandImpl.MultiWins); }
-            else                                                      { throw new Exception("Unexpected result command."); }
+            if      (commandImpl.Action == ResultAction.Tsumo)          { advanceRounds = true; ProcessTsumoCommand(commandImpl.Winner, commandImpl.Han, commandImpl.Fu); }
+            else if (commandImpl.Action == ResultAction.Ron)            { advanceRounds = true; ProcessRonCommand(commandImpl.Winner, commandImpl.Target, commandImpl.Han, commandImpl.Fu); }
+            else if (commandImpl.Action == ResultAction.Draw)           { advanceRounds = true; ProcessExhaustiveDrawCommand(commandImpl.Player1Tempai, commandImpl.Player2Tempai, commandImpl.Player3Tempai, commandImpl.Player4Tempai); }
+            else if (commandImpl.Action == ResultAction.AbortiveDraw)   { advanceRounds = true; ProcessAbortiveDrawCommand(); }
+            else if (commandImpl.Action == ResultAction.Chombo)         { advanceRounds = true; ProcessChomboCommand(commandImpl.Target); }
+            else if (commandImpl.Action == ResultAction.MultiWin)       { advanceRounds = true; ProcessMultiWinCommand(commandImpl.MultiWins); }
+            else if (commandImpl.Action == ResultAction.FireGameResult) { FireGameResultNow(); }
+            else                                                        { throw new Exception("Unexpected result command."); }
 
             // Advance to the next round all through table cleanup.
-            ExecutePostBreak_HandEnd();
-            ExecutePostBreak_TableCleanup();
+            if (advanceRounds)
+            {
+                ExecutePostBreak_HandEnd();
+                ExecutePostBreak_TableCleanup();
+            }
         }
 
         public void SubmitOverride(OverrideState key, object value)
@@ -176,6 +182,12 @@ namespace MahjongCore.Riichi.Impl
             if      (key == OverrideState.Pool)   { Pool = (int)value; }
             else if (key == OverrideState.Bonus)  { Bonus = (int)value; }
             else if (key == OverrideState.Lapped) { Lapped = (bool)value; }
+            else if (key == OverrideState.DoraCount)
+            {
+                var intVal = (int)value;
+                CommonHelpers.Check(intVal >= 0, "Can't be below zero.");
+                DoraCount = intVal;
+            }
             else if (key == OverrideState.Round)
             {
                 Round = (Round)value;
@@ -183,8 +195,9 @@ namespace MahjongCore.Riichi.Impl
             }
             else if (key == OverrideState.WallTile)
             {
-                // TOOD: Used for BoardEditor.
-                throw new NotImplementedException();
+                ITile tile = (ITile)value;
+                WallRaw[tile.Slot].Type = tile.Type;
+                // TODO: Fix up entire wall to correct for this tile getting set specifically.
             }
             else if (key == OverrideState.Dealer)
             {
@@ -225,6 +238,9 @@ namespace MahjongCore.Riichi.Impl
             value = Roll.CompareTo(other.Roll);                     if (value != 0) { return value; }
             return 0;
         }
+
+        // IClonable
+        public object Clone() { return new GameStateImpl(Save()); }
 
         // GameStateImpl
         internal TileImpl[]       WallRaw                  { get; set; } = new TileImpl[TileHelpers.TOTAL_TILE_COUNT];
@@ -1524,6 +1540,11 @@ namespace MahjongCore.Riichi.Impl
         private void ProcessMultiWinCommand(IResultCommand[] wins)
         {
             // TODO: this
+        }
+
+        private void FireGameResultNow()
+        {
+            ExecutePostBreak_GameEnd();
         }
     }
 }

@@ -4,7 +4,6 @@ using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
 using MahjongCore.Riichi.Attributes;
 using MahjongCore.Riichi.Evaluator;
-using MahjongCore.Riichi.Helpers;
 using MahjongCore.Riichi.Impl;
 using System;
 using System.Collections.Generic;
@@ -493,9 +492,9 @@ namespace MahjongCore.Riichi
         internal int              Fu            { get; private set; } = 0;
 
         // ResultCommandImpl
-        public ResultCommandImpl()
+        public ResultCommandImpl(ResultAction action)
         {
-            Action = ResultAction.AbortiveDraw;
+            Action = action;
         }
 
         public ResultCommandImpl(Player chombo)

@@ -11,7 +11,8 @@ namespace MahjongCore.Riichi
         [OptionValueType(typeof(int))]         Score,
         [OptionValueType(typeof(IndexedMeld))] Meld,
         [OptionValueType(typeof(ReachType))]   Reach,
-        [OptionValueType(typeof(TileType[]))]  Waits
+        [OptionValueType(typeof(TileType[]))]  Waits,
+        [OptionValueType(typeof(int))]         Chombo
     }
 
     public interface IHand : IComparable<IHand>
@@ -53,8 +54,8 @@ namespace MahjongCore.Riichi
 
         bool            WouldMakeFuriten(int slot);
         int             GetTileSlot(TileType tile, bool matchRed);
-        void            MoveTileToEnd(TileType targetTile);
-        void            ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd);
+        void            MoveTileToEnd(TileType targetTile);                                // TODO: Replace with SubmitOverride
+        void            ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd); // TODO: Replace with SubmitOverride
         IList<TileType> GetWaitsForDiscard(int slot);
         void            SubmitOverride(OverrideHand key, object value);
     }

@@ -97,6 +97,108 @@ namespace MahjongCore.Riichi.Helpers
             return sortedTiles;
         }
 
+        private static void AddPossibleChiiVariants(IList<IMeld> melds, TileType tileCalled, TileType tileLo, TileType tileHi, Player target, IGameSettings settings)
+        {
+            melds.Add(MeldFactory.BuildChii(target, TileFactory.BuildTile(tileCalled), tileLo, tileHi, 0, 0));
+            if (settings.GetSetting<RedDora>(GameOption.RedDoraOption) != RedDora.RedDora_0)
+            {
+                if (tileLo.GetValue() == 5) { melds.Add(MeldFactory.BuildChii(target, TileFactory.BuildTile(tileCalled), tileLo.GetRedDoraVersion(), tileHi, 0, 0)); }
+                if (tileHi.GetValue() == 5) { melds.Add(MeldFactory.BuildChii(target, TileFactory.BuildTile(tileCalled), tileLo, tileHi.GetRedDoraVersion(), 0, 0)); }
+            }
+        }
+
+        public static IList<IMeld> GetPossibleMelds(TileType calledTile, Player caller, Player target, IGameSettings settings)
+        {
+            IList<IMeld> melds = new List<IMeld>();
+
+            // Calculate chiis.
+            if (!calledTile.IsHonor())
+            {
+                // calledTile is the lowest value tile in the run.
+                if (calledTile.GetValue() <= 7)
+                {
+                    TileType tileLo = calledTile.GetNext().GetNonRedDoraVersion();
+                    TileType tileHi = tileLo.GetNext().GetNonRedDoraVersion();
+                    AddPossibleChiiVariants(melds, calledTile, tileLo, tileHi, target, settings);
+                }
+
+                // calledTile is the middle value tile in the run.
+                if (!calledTile.IsTerminal())
+                {
+                    TileType tileLo = calledTile.GetPrev().GetNonRedDoraVersion();
+                    TileType tileHi = calledTile.GetNext().GetNonRedDoraVersion();
+                    AddPossibleChiiVariants(melds, calledTile, tileLo, tileHi, target, settings);
+                }
+
+                // calledTile is the highest value tile in the run.
+                if (calledTile.GetValue() >= 3)
+                {
+                    TileType tileHi = calledTile.GetPrev().GetNonRedDoraVersion();
+                    TileType tileLo = tileHi.GetPrev().GetNonRedDoraVersion();
+                    AddPossibleChiiVariants(melds, calledTile, tileLo, tileHi, target, settings);
+                }
+            }
+
+            // Calculate non-chiis.
+            RedDora redDoraOption = settings.GetSetting<RedDora>(GameOption.RedDoraOption);
+            if ((redDoraOption != RedDora.RedDora_0) && (calledTile.GetValue() == 5))
+            {
+                int extraRedDoraCount = ((calledTile.GetSuit() == Suit.Bamboo)  ? redDoraOption.GetRedDoraSouzu() :
+                                         (calledTile.GetSuit() == Suit.Circles) ? redDoraOption.GetRedDoraPinzu() :
+                                                                                  redDoraOption.GetRedDoraManzu()) -
+                                        (calledTile.IsRedDora() ? 1 : 0);
+
+                TileType tileRed = calledTile.GetRedDoraVersion();
+                TileType tileNonRed = calledTile.GetNonRedDoraVersion();
+                if (extraRedDoraCount == 2)
+                {
+                    // EditorCalledTile is non-red and there's two red. Multiple ways to make pons.
+                    melds.Add(MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), tileRed, tileNonRed, 0, 0));
+                    melds.Add(MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), tileRed, tileRed, 0, 0));
+                    melds.Add(MeldFactory.BuildOpenKan(target, caller, TileFactory.BuildTile(calledTile), tileRed, tileRed, tileNonRed, 0, 0, 0));
+                    melds.Add(MeldFactory.BuildClosedKan(caller, calledTile, tileRed, tileRed, tileNonRed, 0, 0, 0, 0));
+
+                    IMeld pkan = MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), tileRed, tileRed, 0, 0);
+                    pkan.Promote(tileNonRed, 0);
+                    melds.Add(pkan);
+                }
+                else if (extraRedDoraCount == 1)
+                {
+                    // Two possibilities, either there's 1 red five total and it's not EditorCalledTile, or there's two red fives and one of them is EditorCalledTile.
+                    melds.Add(MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), tileRed, tileNonRed, 0, 0));
+                    melds.Add(MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), tileNonRed, tileNonRed, 0, 0));
+                    melds.Add(MeldFactory.BuildOpenKan(target, caller, TileFactory.BuildTile(calledTile), tileRed, tileNonRed, tileNonRed, 0, 0, 0));
+                    melds.Add(MeldFactory.BuildClosedKan(caller, tileNonRed, tileRed, calledTile, tileNonRed, 0, 0, 0, 0));
+
+                    IMeld pkan = MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), tileRed, tileNonRed, 0, 0);
+                    pkan.Promote(tileNonRed, 0);
+                    melds.Add(pkan);
+                }
+                else
+                {
+                    // Only one red 5 and it's EditorCalledTile.
+                    melds.Add(MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), tileNonRed, tileNonRed, 0, 0));
+                    melds.Add(MeldFactory.BuildOpenKan(target, caller, TileFactory.BuildTile(calledTile), tileNonRed, tileNonRed, tileNonRed, 0, 0, 0));
+                    melds.Add(MeldFactory.BuildClosedKan(caller, tileNonRed, calledTile, tileNonRed, tileNonRed, 0, 0, 0, 0));
+
+                    IMeld pkan = MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), tileNonRed, tileNonRed, 0, 0);
+                    pkan.Promote(tileNonRed, 0);
+                    melds.Add(pkan);
+                }
+            }
+            else
+            {
+                melds.Add(MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), calledTile, calledTile, 0, 0));
+                melds.Add(MeldFactory.BuildOpenKan(target, caller, TileFactory.BuildTile(calledTile), calledTile, calledTile, calledTile, 0, 0, 0));
+                melds.Add(MeldFactory.BuildClosedKan(caller, calledTile, calledTile, calledTile, calledTile, 0, 0, 0, 0));
+
+                IMeld pkan = MeldFactory.BuildPon(target, caller, TileFactory.BuildTile(calledTile), calledTile, calledTile, 0, 0);
+                pkan.Promote(calledTile, 0);
+                melds.Add(pkan);
+            }
+            return melds;
+        }
+
         internal static List<IMeld> GetCalls(HandImpl hand)
         {
             GameStateImpl state = hand.Parent as GameStateImpl;
