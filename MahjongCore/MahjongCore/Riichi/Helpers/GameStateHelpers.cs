@@ -38,6 +38,40 @@ namespace MahjongCore.Riichi.Helpers
             if (stashedException != null) { throw stashedException; }
         }
 
+        public static void AdvanceToNextDiscard(IGameState state)
+        {
+            // Stash the AI so we can clear them and put them back when we're done.
+            IPlayerAI player1AI = state.Player1AI;
+            IPlayerAI player2AI = state.Player2AI;
+            IPlayerAI player3AI = state.Player3AI;
+            IPlayerAI player4AI = state.Player4AI;
+            state.Player1AI = null;
+            state.Player2AI = null;
+            state.Player3AI = null;
+            state.Player4AI = null;
+
+            // Advance to first discard. If we end up finishing the game, we're also done.
+            Exception stashedException = null;
+            bool discardRequestedOrGameEnded = false;
+            void discardAction(IDiscardInfo info) { discardRequestedOrGameEnded = true; }
+            void gameEndAction(IGameResult result) { discardRequestedOrGameEnded = true; }
+            state.DiscardRequested += discardAction;
+            state.GameComplete += gameEndAction;
+
+            try { state.Resume(); }
+            catch (Exception e) { stashedException = e; }
+            Global.Assert(discardRequestedOrGameEnded);
+
+            // Clean up.
+            state.DiscardRequested -= discardAction;
+            state.GameComplete -= gameEndAction;
+            state.Player1AI = player1AI;
+            state.Player2AI = player2AI;
+            state.Player3AI = player3AI;
+            state.Player4AI = player4AI;
+            if (stashedException != null) { throw stashedException; }
+        }
+
         public static int GetOffset(Player dealer, int roll)
         {
             int offset = (dealer == Player.Player1) ? 0 :               // bottom wall, right side, top tile

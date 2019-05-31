@@ -8,8 +8,7 @@ namespace MahjongCore.Common.Attributes
     {
         public static bool TryGetEnumByCode<T, R>(string codeString, out T enumResult) where T : struct, IComparable
         {
-            int code;
-            bool found = int.TryParse(codeString, out code);
+            bool found = int.TryParse(codeString, out int code);
             if (found)
             {
                 T? gaResult = GetEnumValueFromAttribute<T, R, int>(code);

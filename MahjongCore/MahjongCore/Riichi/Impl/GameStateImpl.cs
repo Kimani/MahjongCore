@@ -1,4 +1,4 @@
-﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
+﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2019
 
 using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
@@ -174,6 +174,9 @@ namespace MahjongCore.Riichi.Impl
             {
                 ExecutePostBreak_HandEnd();
                 ExecutePostBreak_TableCleanup();
+
+                DetermineAdvanceState(AdvanceAction, out PlayState nextState, out bool dummy);
+                State = nextState;
             }
         }
 
@@ -1159,21 +1162,29 @@ namespace MahjongCore.Riichi.Impl
 
             switch (action)
             {
-                case AdvanceAction.Done:            state = PlayState.NA;
-                                                    break;
+                case AdvanceAction.Done:             state = PlayState.NA;
+                                                     break;
 
-                case AdvanceAction.Advance:         state = State.GetNext();
-                                                    advancePlayer = EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(state);
-                                                    break;
+                case AdvanceAction.Advance:          state = State.GetNext();
+                                                     advancePlayer = EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(state);
+                                                     break;
 
-                case AdvanceAction.GatherDecisions: state = PlayState.GatherDecisions;
-                                                    break;
+                case AdvanceAction.GatherDecisions:  state = PlayState.GatherDecisions;
+                                                     break;
 
-                case AdvanceAction.PrePickTile:     state = PlayState.PrePickTile;
-                                                    advancePlayer = true;
-                                                    break;
+                case AdvanceAction.PrePickTile:      state = PlayState.PrePickTile;
+                                                     advancePlayer = true;
+                                                     break;
 
-                default:                            throw new Exception("Unexpected AdvanceAction");
+                case AdvanceAction.RandomizingBreak: state = PlayState.RandomizingBreak;
+                                                     // TODO: more?
+                                                     break;
+
+                case AdvanceAction.GameEnd:          state = PlayState.GameEnd;
+                                                     // TODO: more?
+                                                     break;
+
+                default:                             throw new Exception("Unexpected AdvanceAction");
             }
         }
 

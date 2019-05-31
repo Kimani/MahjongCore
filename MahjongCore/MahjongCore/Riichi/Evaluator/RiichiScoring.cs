@@ -8,28 +8,29 @@ namespace MahjongCore.Riichi.Evaluator
     {
         private static int RoundUpToNextHundred(int input) { return (int)(Math.Ceiling(((double)(input)) / 100.0) * 100); }
 
-        public static void GetWinningScore(IGameSettings settings,
-                                           Player winner,
-                                           Player dealer,
-                                           Player target,
-                                           Player pao1,
-                                           Player pao2,
-                                           Player wareme,
-                                           int finalHan,
-                                           int fu,
-                                           int bonus,
-                                           int pool,
-                                           out int scoreHi,
-                                           out int scoreLo,
-                                           out int player1Delta,
-                                           out int player2Delta,
-                                           out int player3Delta,
-                                           out int player4Delta,
-                                           out int player1PoolDelta,
-                                           out int player2PoolDelta,
-                                           out int player3PoolDelta,
-                                           out int player4PoolDelta,
-                                           out LimitType limit)
+        public static void GetWinningScore(
+            IGameSettings settings,
+            Player winner,
+            Player dealer,
+            Player target,
+            Player pao1,
+            Player pao2,
+            Player wareme,
+            int finalHan,
+            int fu,
+            int bonus,
+            int pool,
+            out int scoreHi,
+            out int scoreLo,
+            out int player1Delta,
+            out int player2Delta,
+            out int player3Delta,
+            out int player4Delta,
+            out int player1PoolDelta,
+            out int player2PoolDelta,
+            out int player3PoolDelta,
+            out int player4PoolDelta,
+            out LimitType limit)
         {
             Global.Assert(winner.IsPlayer());
             Global.Assert(dealer.IsPlayer());

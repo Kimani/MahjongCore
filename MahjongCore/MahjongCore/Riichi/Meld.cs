@@ -164,9 +164,9 @@ namespace MahjongCore.Riichi
             };
 
             TileImpl tileImplCalled, tileImplA, tileImplB;
-            if (meld.Direction == CalledDirection.Left) { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; }
+            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; }
             else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.TilesRaw[1]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[2]; }
-            else { tileImplCalled = meld.TilesRaw[2]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; }
+            else                                               { tileImplCalled = meld.TilesRaw[2]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; }
 
             tileImplCalled.Type = tileCalled.Type;
             tileImplCalled.Location = Location.Call;
@@ -219,9 +219,9 @@ namespace MahjongCore.Riichi
             };
 
             TileImpl tileImplCalled, tileImplA, tileImplB, tileImplC;
-            if (meld.Direction == CalledDirection.Left) { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; tileImplC = meld.TilesRaw[3]; }
+            if      (meld.Direction == CalledDirection.Left)   { tileImplCalled = meld.TilesRaw[0]; tileImplA = meld.TilesRaw[1]; tileImplB = meld.TilesRaw[2]; tileImplC = meld.TilesRaw[3]; }
             else if (meld.Direction == CalledDirection.Across) { tileImplCalled = meld.TilesRaw[1]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[2]; tileImplC = meld.TilesRaw[3]; }
-            else { tileImplCalled = meld.TilesRaw[3]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; tileImplC = meld.TilesRaw[2]; }
+            else                                               { tileImplCalled = meld.TilesRaw[3]; tileImplA = meld.TilesRaw[0]; tileImplB = meld.TilesRaw[1]; tileImplC = meld.TilesRaw[2]; }
 
             tileImplCalled.Type = tileCalled.Type;
             tileImplCalled.Location = Location.Call;
