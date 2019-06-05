@@ -94,7 +94,7 @@ namespace MahjongCore.Riichi.Evaluator
             // Make sure the winning player's score is zero at this juncture.
             // Tally up all the points and give them to the winning player.
             delta[winner.GetZeroIndex()] = -(delta[0] + delta[1] + delta[2] + delta[3]);
-            poolDelta[winner.GetZeroIndex()] = pool;
+            poolDelta[winner.GetZeroIndex()] = pool * 1000;
 
             player1Delta = delta[0];
             player2Delta = delta[1];
