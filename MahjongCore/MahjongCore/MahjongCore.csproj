@@ -65,6 +65,7 @@
     <Compile Include="Riichi\Decision.cs" />
     <Compile Include="Riichi\GameState.cs" />
     <Compile Include="Riichi\Hand.cs" />
+    <Compile Include="Riichi\Impl\BoardTemplateImpl.cs" />
     <Compile Include="Riichi\Impl\DecisionImpl.cs" />
     <Compile Include="Riichi\Impl\GameSettingsImpl.cs" />
     <Compile Include="Riichi\Impl\SaveState\SaveStateV2.cs" />

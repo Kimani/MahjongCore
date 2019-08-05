@@ -225,6 +225,7 @@ namespace MahjongCore.Riichi.Impl
         internal TileType         GetSuufurendanTile()                         { return CouldSuufurendan ? _Parent.GetHand(_Parent.Dealer).DiscardsRaw[0].Type : TileType.None; }
         internal ITile            AddTile(ITile wallTile, bool rewind = false) { return AddTile(wallTile.Type, rewind); }
         internal void             AddTileCompleted(ITile[] ts)                 { TilesAdded?.Invoke(Player, ts); }
+        internal void UpdateTemporaryFuriten(TileType tile)                    { Furiten |= ((Waits != null) && Waits.Contains(tile.GetNonRedDoraVersion())); }
 
         private GameStateImpl _Parent;
 
@@ -967,11 +968,6 @@ namespace MahjongCore.Riichi.Impl
                 return true;
             }
             return false;
-        }
-
-        internal void UpdateTemporaryFuriten(TileType tile)
-        {
-            Furiten |= ((Waits != null) && Waits.Contains(tile.GetNonRedDoraVersion()));
         }
 
         private void RebuildFuriten()

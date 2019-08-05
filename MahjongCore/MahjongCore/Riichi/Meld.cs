@@ -1,4 +1,4 @@
-﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
+﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2019
 
 using MahjongCore.Common;
 using MahjongCore.Common.Attributes;

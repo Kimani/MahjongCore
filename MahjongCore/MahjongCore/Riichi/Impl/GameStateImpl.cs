@@ -80,7 +80,8 @@ namespace MahjongCore.Riichi.Impl
         public int              DoraCount          { get; internal set; } = 0;
         public int              Roll               { get; internal set; } = 0;
 
-        public ISaveState Save() { return new SaveStateImpl(this); }
+        public ISaveState Save()         { return new SaveStateImpl(this); }
+        private void FireGameResultNow() { ExecutePostBreak_GameEnd(); }
 
         public void Start()
         {
@@ -207,10 +208,19 @@ namespace MahjongCore.Riichi.Impl
                 Dealer = (Player)value;
                 FirstDealer = Dealer.AddOffset(-Round.GetOffset());
             }
+            else if (key == OverrideState.FirstDealer)
+            {
+                FirstDealer = (Player)value;
+                Dealer = FirstDealer.AddOffset(Round.GetOffset());
+            }
             else if (key == OverrideState.Wareme)
             {
                 CommonHelpers.Check((((Player)value == Player.None) || Settings.GetSetting<bool>(GameOption.Wareme)), "Attempting to set wareme player while wareme is disabled!");
                 Wareme = (Player)value;
+            }
+            else if (key == OverrideState.Board)
+            {
+                ProcessBoardOverride((IBoardTemplate)value);
             }
             else { throw new Exception("Unrecognized override option: " + key); }
     }
@@ -846,6 +856,7 @@ namespace MahjongCore.Riichi.Impl
                                                     Player2Hand.Chombo,
                                                     Player3Hand.Chombo,
                                                     Player4Hand.Chombo));
+            AdvanceAction = AdvanceAction.Done;
         }
 
         public void ExecuteRewindModeChange_DecideMove()
@@ -1162,29 +1173,33 @@ namespace MahjongCore.Riichi.Impl
 
             switch (action)
             {
-                case AdvanceAction.Done:             state = PlayState.NA;
-                                                     break;
+                case AdvanceAction.Done:               state = PlayState.NA;
+                                                       break;
 
-                case AdvanceAction.Advance:          state = State.GetNext();
-                                                     advancePlayer = EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(state);
-                                                     break;
+                case AdvanceAction.Advance:            state = State.GetNext();
+                                                       advancePlayer = EnumAttributes.GetAttributeValue<AdvancePlayer, bool>(state);
+                                                       break;
 
-                case AdvanceAction.GatherDecisions:  state = PlayState.GatherDecisions;
-                                                     break;
+                case AdvanceAction.GatherDecisions:    state = PlayState.GatherDecisions;
+                                                       break;
 
-                case AdvanceAction.PrePickTile:      state = PlayState.PrePickTile;
-                                                     advancePlayer = true;
-                                                     break;
+                case AdvanceAction.PrePickTile:        state = PlayState.PrePickTile;
+                                                       advancePlayer = true;
+                                                       break;
 
-                case AdvanceAction.RandomizingBreak: state = PlayState.RandomizingBreak;
-                                                     // TODO: more?
-                                                     break;
+                case AdvanceAction.RandomizingBreak:   state = PlayState.RandomizingBreak;
+                                                       // TODO: more?
+                                                       break;
 
-                case AdvanceAction.GameEnd:          state = PlayState.GameEnd;
-                                                     // TODO: more?
-                                                     break;
+                case AdvanceAction.GameEnd:            state = PlayState.GameEnd;
+                                                       // TODO: more?
+                                                       break;
 
-                default:                             throw new Exception("Unexpected AdvanceAction");
+                case AdvanceAction.DecidePostCallMove: state = PlayState.DecideMove;
+                                                       break;
+
+                default:                               Global.LogExtra("Unexpected advance action? Action: " + action + " current play state: " + State);
+                                                       throw new Exception("Unexpected AdvanceAction");
             }
         }
 
@@ -1553,9 +1568,9 @@ namespace MahjongCore.Riichi.Impl
             // TODO: this
         }
 
-        private void FireGameResultNow()
+        private void ProcessBoardOverride(IBoardTemplate template)
         {
-            ExecutePostBreak_GameEnd();
+
         }
     }
 }

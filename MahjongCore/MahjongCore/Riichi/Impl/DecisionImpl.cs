@@ -153,10 +153,7 @@ namespace MahjongCore.Riichi.Impl
         public ITile               Tile     { get; internal set; }
 
         // DiscardDecisionImpl
-        internal DiscardDecisionImpl()
-        {
-            Reset();
-        }
+        internal DiscardDecisionImpl() { Reset(); }
 
         internal DiscardDecisionImpl(DiscardDecisionType decision, ITile tile)
         {

@@ -114,16 +114,33 @@ namespace MahjongCore.Riichi
         }
     #endregion
 
+    public interface IBoardTemplate
+    {
+        IReadOnlyList<ITile> Wall         { get; }
+        IReadOnlyList<ITile> Hand1        { get; }
+        IReadOnlyList<ITile> Hand2        { get; }
+        IReadOnlyList<ITile> Hand3        { get; }
+        IReadOnlyList<ITile> Hand4        { get; }
+        IReadOnlyList<ITile> Discards1    { get; }
+        IReadOnlyList<ITile> Discards2    { get; }
+        IReadOnlyList<ITile> Discards3    { get; }
+        IReadOnlyList<ITile> Discards4    { get; }
+        IReadOnlyList<IMeld> Melds        { get; }
+        int                  DiscardCount { get; }
+    }
+
     public enum OverrideState
     {
-        [OptionValueType(typeof(Round))]  Round,
-        [OptionValueType(typeof(int))]    Pool,
-        [OptionValueType(typeof(int))]    Bonus,
-        [OptionValueType(typeof(Player))] Dealer,
-        [OptionValueType(typeof(Player))] Wareme,
-        [OptionValueType(typeof(bool))]   Lapped,
-        [OptionValueType(typeof(ITile))]  WallTile,
-        [OptionValueType(typeof(int))]    DoraCount
+        [OptionValueType(typeof(Round))]          Round,
+        [OptionValueType(typeof(int))]            Pool,
+        [OptionValueType(typeof(int))]            Bonus,
+        [OptionValueType(typeof(Player))]         Dealer,
+        [OptionValueType(typeof(Player))]         FirstDealer,
+        [OptionValueType(typeof(Player))]         Wareme,
+        [OptionValueType(typeof(bool))]           Lapped,
+        [OptionValueType(typeof(ITile))]          WallTile,
+        [OptionValueType(typeof(int))]            DoraCount,
+        [OptionValueType(typeof(IBoardTemplate))] Board,
     }
 
     public interface IGameState : IComparable<IGameState>, ICloneable
@@ -219,5 +236,24 @@ namespace MahjongCore.Riichi
     public static class SaveStateFactory
     {
         public static ISaveState Unmarshal(string state) { return new SaveStateImpl(state); }
+    }
+
+    public static class BoardTemplateFactory
+    {
+        public static IBoardTemplate BuildTemplate(
+            IReadOnlyList<ITile> wall,
+            IReadOnlyList<ITile> hand1,
+            IReadOnlyList<ITile> hand2,
+            IReadOnlyList<ITile> hand3,
+            IReadOnlyList<ITile> hand4,
+            IReadOnlyList<ITile> discards1,
+            IReadOnlyList<ITile> discards2,
+            IReadOnlyList<ITile> discards3,
+            IReadOnlyList<ITile> discards4,
+            IReadOnlyList<IMeld> melds,
+            int discardCount)
+        {
+            return new BoardTemplateImpl(wall, hand1, hand2, hand3, hand4, discards1, discards2, discards3, discards4, melds, discardCount);
+        }
     }
 }

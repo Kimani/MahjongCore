@@ -54,13 +54,23 @@ namespace MahjongCore.Common
             return targetList;
         }
 
-        public static List<T> SafeCopyByValue<T>(List<T> sourceList)
+        public static IReadOnlyList<T> SafeCopy<T>(IReadOnlyList<T> sourceList) where T : ICloneable
         {
             List<T> targetList = new List<T>();
             if (sourceList != null)
             {
-                targetList.AddRange(sourceList);
+                foreach (T t in sourceList)
+                {
+                    targetList.Add((T)t.Clone());
+                }
             }
+            return targetList.AsReadOnly();
+        }
+
+        public static List<T> SafeCopyByValue<T>(List<T> sourceList)
+        {
+            List<T> targetList = new List<T>();
+            if (sourceList != null) { targetList.AddRange(sourceList); }
             return targetList;
         }
 
@@ -82,11 +92,44 @@ namespace MahjongCore.Common
         {
             if (sourceList != null)
             {
-                foreach (T item in sourceList)
+                foreach (T item in sourceList) { callback(item); }
+            }
+        }
+
+        public static bool Iterate<T>(IList<T> sourceList, Action<T, int> callback)
+        {
+            bool foundItems = false;
+            if (sourceList != null)
+            {
+                int count = sourceList.Count;
+                if (count > 0)
                 {
-                    callback(item);
+                    foundItems = true;
+                    for (int i = 0; i < sourceList.Count; ++i)
+                    {
+                        callback(sourceList[i], i);
+                    }
                 }
             }
+            return foundItems;
+        }
+
+        public static bool Iterate<T>(IReadOnlyList<T> sourceList, Action<T, int> callback)
+        {
+            bool foundItems = false;
+            if (sourceList != null)
+            {
+                int count = sourceList.Count;
+                if (count > 0)
+                {
+                    foundItems = true;
+                    for (int i = 0; i < sourceList.Count; ++i)
+                    {
+                        callback(sourceList[i], i);
+                    }
+                }
+            }
+            return foundItems;
         }
 
         public static void IterateDictionary<T, U>(IDictionary<T, U> sourceDictionary, Action<T, U> callback)
@@ -151,10 +194,7 @@ namespace MahjongCore.Common
             int count = 0;
             foreach (XmlElement child in root.ChildNodes)
             {
-                if (child.Name.Equals(name))
-                {
-                    ++count;
-                }
+                if (child.Name.Equals(name)) { ++count; }
             }
             return count;
         }

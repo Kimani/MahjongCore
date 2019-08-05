@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common\GlobalHandlers.cs" />
+    <Compile Include="Riichi\BoardOverrideTests.cs" />
     <Compile Include="Riichi\GameStateTests.cs" />
     <Compile Include="Riichi\SaveStateTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
