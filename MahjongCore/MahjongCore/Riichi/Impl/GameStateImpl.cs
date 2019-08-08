@@ -186,6 +186,7 @@ namespace MahjongCore.Riichi.Impl
             if      (key == OverrideState.Pool)   { Pool = (int)value; }
             else if (key == OverrideState.Bonus)  { Bonus = (int)value; }
             else if (key == OverrideState.Lapped) { Lapped = (bool)value; }
+            else if (key == OverrideState.Roll)   { Roll = (int)value; }
             else if (key == OverrideState.DoraCount)
             {
                 var intVal = (int)value;
@@ -1568,9 +1569,165 @@ namespace MahjongCore.Riichi.Impl
             // TODO: this
         }
 
+        private class AssignedTile
+        {
+            public TileType Tile;
+            public bool     Assigned;
+
+            public AssignedTile(TileType type)
+            {
+                Tile = type;
+                Assigned = false;
+            }
+        }
+
         private void ProcessBoardOverride(IBoardTemplate template)
         {
+            if (template is BoardTemplateImpl templateImpl) { templateImpl.VerifyOrThrow(this); }
 
+            // Build a wall in a very contrived way. All tiles that a player needs in order to fulfull its called melds are in the player's haipai.
+            // For concealed kans, the first three tiles are in the player's haipai. The fourth is the tile drawn on that player's turn.
+            // Be careful to grab that from the dead wall in the case of kans. Closed kans happen as soon as possible.
+            // TODO: Make this more random and less contrived. Would need one heck of an algorithm.
+
+            // Initialize a the wall with all the tiles that have been set. Reset the ones that have not yet been set.
+            foreach (TileImpl tile in WallRaw) { tile.Type = TileType.None; }
+            CommonHelpers.Iterate(template.Wall, (ITile wallTile, int i) => { WallRaw[wallTile.Slot].Type = wallTile.Type; });
+
+            // Initialize a set of slots for all the initial draws.
+            var playerAvailableWallSlots = new Dictionary<Player, List<int>>
+            {
+                [Player.Player1] = new List<int>(),
+                [Player.Player2] = new List<int>(),
+                [Player.Player3] = new List<int>(),
+                [Player.Player4] = new List<int>()
+            };
+
+            int offset = Offset;
+            Player currPlayer = Dealer;
+            for (int i = 0; i < 12; ++i) { ProcessBoardOverride_AddSlotsForPlayer(playerAvailableWallSlots[currPlayer], offset, out offset, 4); currPlayer = currPlayer.GetNext(); } // Grab 4 tiles for each player.
+            for (int i = 0; i < 4; ++i) { ProcessBoardOverride_AddSlotsForPlayer(playerAvailableWallSlots[currPlayer], offset, out offset, 1); currPlayer = currPlayer.GetNext(); } // Grab 1 tile for each player.
+
+            // Get a list of defined tiles, initially populated by any slots already populated in the wall thus far for us.
+            // Set them to not-yet-assigned, which means they're available to be designated for a future purpose.
+            // For example, lets say Player1 makes a closed kan of 4p. We can go through each 4p and assign slots to 4p, and then
+            // set them to assigned. That we we know on the 3rd closed kan tile that we've already allocated and assigned 2 4pins,
+            // and we need another one. These get consumed later when it's time to actually make the closed kan by them being removed from
+            // the list.
+            var playerAllocatedTiles = new Dictionary<Player, List<AssignedTile>>
+            {
+                [Player.Player1] = new List<AssignedTile>(),
+                [Player.Player2] = new List<AssignedTile>(),
+                [Player.Player3] = new List<AssignedTile>(),
+                [Player.Player4] = new List<AssignedTile>()
+            };
+
+            CommonHelpers.Iterate(playerAvailableWallSlots[Player.Player1] as IList<int>, (int slot, int i) => { if (WallRaw[slot].Type.IsTile()) { playerAllocatedTiles[Player.Player1].Add(new AssignedTile(WallRaw[slot].Type)); } });
+            CommonHelpers.Iterate(playerAvailableWallSlots[Player.Player2] as IList<int>, (int slot, int i) => { if (WallRaw[slot].Type.IsTile()) { playerAllocatedTiles[Player.Player2].Add(new AssignedTile(WallRaw[slot].Type)); } });
+            CommonHelpers.Iterate(playerAvailableWallSlots[Player.Player3] as IList<int>, (int slot, int i) => { if (WallRaw[slot].Type.IsTile()) { playerAllocatedTiles[Player.Player3].Add(new AssignedTile(WallRaw[slot].Type)); } });
+            CommonHelpers.Iterate(playerAvailableWallSlots[Player.Player4] as IList<int>, (int slot, int i) => { if (WallRaw[slot].Type.IsTile()) { playerAllocatedTiles[Player.Player4].Add(new AssignedTile(WallRaw[slot].Type)); } });
+
+            // Remove available slots if they're already populated.
+            foreach (TileImpl tile in WallRaw)
+            {
+                if (tile.Type.IsTile())
+                {
+                    playerAvailableWallSlots[Player.Player1].Remove(tile.Slot);
+                    playerAvailableWallSlots[Player.Player2].Remove(tile.Slot);
+                    playerAvailableWallSlots[Player.Player3].Remove(tile.Slot);
+                    playerAvailableWallSlots[Player.Player4].Remove(tile.Slot);
+                }
+            }
+
+            // Best effort try to populate slots now with all the tiles we need to perform calls.
+            // If we already have the tiles then we don't need to consume anything.
+            // If there's truly no available slots then we'll try to pick them up later.
+            foreach (IMeld meld in template.Melds)
+            {
+                var availableWallSlots = playerAvailableWallSlots[meld.Owner];
+                var allocatedTiles = playerAllocatedTiles[meld.Owner];
+
+                var handMeldTiles = new List<TileType>();
+                if (meld.State == MeldState.KanConcealed)
+                {
+                    // Player starts with the first three of the tiles. We'll figure out the 4th tile as needed later, possibly the tile drawn at that time.
+                    ProcessBoardOverride_TryAssigningTile(availableWallSlots, allocatedTiles, meld.Tiles[0].Type);
+                    ProcessBoardOverride_TryAssigningTile(availableWallSlots, allocatedTiles, meld.Tiles[1].Type);
+                    ProcessBoardOverride_TryAssigningTile(availableWallSlots, allocatedTiles, meld.Tiles[2].Type);
+                }
+                else
+                {
+                    MeldHelpers.IterateTiles(meld, (ITile meldTile) =>
+                    {
+                        if (!meldTile.Called) { ProcessBoardOverride_TryAssigningTile(availableWallSlots, allocatedTiles, meldTile.Type); }
+                    });
+                }
+            }
+
+            // Alright, now start stepping through the game unitl we have the desired number of discards.
+            // If discards are defined, then make sure we allocate, assign, and consume them. If we run into
+            // calls then we should consume assigned tiles, and if needed allocate them.
+            // If we cant allocate then we're 100% hosed, the requested board is impossible.
+            int discardCount = 0;
+            while (discardCount < template.DiscardCount)
+            {
+
+            }
+
+            // Finally, try to assign tiles defined for the player's hand.
+
+            // Final step: elaborate the rest of the wall with whatever tiles remain.
+            var randomBoard = new List<ITile>(TileHelpers.GetRandomBoard(null, Settings.GetSetting<RedDora>(GameOption.RedDoraOption)));
+            foreach (TileImpl wallTile in WallRaw)
+            {
+                if (wallTile.Type.IsTile())
+                {
+                    for (int i = 0; i < randomBoard.Count; ++i)
+                    {
+                        if (randomBoard[i].Type.IsEqual(wallTile.Type, true))
+                        {
+                            randomBoard.RemoveAt(i);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            foreach (TileImpl wallTile in WallRaw)
+            {
+                if (!wallTile.Type.IsTile())
+                {
+                    var randomTile = randomBoard.Pop();
+                    wallTile.Type = randomTile.Type;
+                }
+            }
+            CommonHelpers.Check((randomBoard.Count == 0), "Should have exactly consumed all remaining random tiles.");
+        }
+
+        private void ProcessBoardOverride_TryAssigningTile(List<int> availableWallSlots, List<AssignedTile> allocatedTiles, TileType tile)
+        {
+            // If we have an allocated tile that matches 'tile' that hasn't been assigned yet, assign it.
+            foreach (AssignedTile allocatedTile in allocatedTiles)
+            {
+                if (allocatedTile.Tile.IsEqual(tile, true) && !allocatedTile.Assigned)
+                {
+                    allocatedTile.Assigned = true;
+                    return;
+                }
+            }
+
+            // Otherwise take the first available slot and allocate/assign it. If we don't have any wall slots then oh well.
+            if (availableWallSlots.Count > 0)
+            {
+                WallRaw[availableWallSlots.Pop()].Type = tile;
+                allocatedTiles.Add(new AssignedTile(tile) { Assigned = true });
+            }
+        }
+
+        private void ProcessBoardOverride_AddSlotsForPlayer(List<int> slots, int offsetStart, out int finalOffset, int count)
+        {
+            for (int i = 0; i < count; ++i) { slots.Add(TileHelpers.ClampTile(offsetStart + i)); }
+            finalOffset = TileHelpers.ClampTile(offsetStart + count);
         }
     }
 }

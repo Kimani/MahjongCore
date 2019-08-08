@@ -140,6 +140,7 @@ namespace MahjongCore.Riichi
         [OptionValueType(typeof(bool))]           Lapped,
         [OptionValueType(typeof(ITile))]          WallTile,
         [OptionValueType(typeof(int))]            DoraCount,
+        [OptionValueType(typeof(int))]            Roll,
         [OptionValueType(typeof(IBoardTemplate))] Board,
     }
 

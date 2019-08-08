@@ -64,8 +64,7 @@ namespace MahjongCore.Riichi.Helpers
             CommonHelpers.Check(((existingArray == null) || existingArray is TileImpl[]), "Supplied tile array must consist of inbox ITile implementations.");
             CommonHelpers.Check(((existingArray == null) || (existingArray.Length == TOTAL_TILE_COUNT)), "Supplied tile array must be " + TOTAL_TILE_COUNT + " tiles.");
 
-            TileImpl[] targetArray = existingArray as TileImpl[];
-            if (targetArray == null)
+            if (!(existingArray is TileImpl[] targetArray))
             {
                 targetArray = new TileImpl[TOTAL_TILE_COUNT];
                 for (int i = 0; i < TOTAL_TILE_COUNT; ++i)
