@@ -129,7 +129,7 @@ namespace MahjongCore.Riichi.Impl
             CommonHelpers.Check(ExpectingDiscard, "Not expecting discard decision at this time!");
             ExpectingDiscard = false;
 
-            // If we're currently processing DecideMove (evidenced by the _CanAdvance reentry flag being cleared)
+            // If we're currently processing DecideMove (evidenced by the CanAdvance reentry flag being cleared)
             // then we want to setup _AdvanceAction. Otherwise we want to pump state advancement at this time.
             AdvanceAction = ProcessDiscardDecision(decision);
             if (CanAdvance)
@@ -144,7 +144,7 @@ namespace MahjongCore.Riichi.Impl
             CommonHelpers.Check(((GetNextAction(decision.Player) == GameAction.DecisionPending) && (State == PlayState.GatherDecisions)),
                                 "Not expecting post discard decision at this time.");
 
-            // If we're currently processing DecideMove (evidenced by the _CanAdvance reentry flag being cleared)
+            // If we're currently processing DecideMove (evidenced by the CanAdvance reentry flag being cleared)
             // then we just want to leave _AdvanceAction set. Otherwise we want to pump state advancement at this time.
             AdvanceAction = ProcessPostDiscardDecision(decision);
             if (CanAdvance && (AdvanceAction == AdvanceAction.Advance))
@@ -1199,6 +1199,9 @@ namespace MahjongCore.Riichi.Impl
                 case AdvanceAction.DecidePostCallMove: state = PlayState.DecideMove;
                                                        break;
 
+                case AdvanceAction.KanChosenTile:      state = PlayState.KanChosenTile;
+                                                       break;
+
                 default:                               Global.LogExtra("Unexpected advance action? Action: " + action + " current play state: " + State);
                                                        throw new Exception("Unexpected AdvanceAction");
             }
@@ -1590,88 +1593,149 @@ namespace MahjongCore.Riichi.Impl
             // Be careful to grab that from the dead wall in the case of kans. Closed kans happen as soon as possible.
             // TODO: Make this more random and less contrived. Would need one heck of an algorithm.
 
-            // Initialize a the wall with all the tiles that have been set. Reset the ones that have not yet been set.
-            foreach (TileImpl tile in WallRaw) { tile.Type = TileType.None; }
+            // Initialize the wall with all the tiles that have been set. Reset the ones that have not yet been set.
+            foreach (TileImpl tile in WallRaw)                              { tile.Type = TileType.None; }
             CommonHelpers.Iterate(template.Wall, (ITile wallTile, int i) => { WallRaw[wallTile.Slot].Type = wallTile.Type; });
 
-            // Initialize a set of slots for all the initial draws.
-            var playerAvailableWallSlots = new Dictionary<Player, List<int>>
+            // Create a second GameState that we will use to iterate through the game. This can have whatever tiles, the only
+            // important thing is that it tells us who goes, who discards, who draws, and what tile in the wall/etc they do so from.
+            var sampleGame = new GameStateImpl(Settings);
+            GameStateHelpers.AdvanceToDiceRolled(sampleGame);
+            sampleGame.SubmitOverride(OverrideState.Round, Round);
+            sampleGame.SubmitOverride(OverrideState.Dealer, Dealer);
+            sampleGame.Roll = Roll;
+            sampleGame.Offset = GameStateHelpers.GetOffset(Dealer, Roll);
+            bool pauseOnNextState = false;
+            sampleGame.PreCheckAdvance += () => { if (pauseOnNextState) { pauseOnNextState = false; sampleGame.Pause(); } };
+
+            // For each tile that is drawn, check if the tile in the wall has a value already.
+            // If so:  add the tile to the player's set of "Allocated tiles": tiles the player 'has' that may or may not have been 'assigned' to a call or discard yet.
+            // If not: add the slot to the player's set of "Available Wall Slots". Later, if we need to ensure that a player has a tile
+            //         to fulfill a discard, we can Allocate one of the wall slots to have been that tile.
+            var playerAllocatedTiles = new Dictionary<Player, List<AssignedTile>>();
+            var playerAvailableWallSlots = new Dictionary<Player, List<int>>();
+            foreach (Player p in PlayerHelpers.Players)
             {
-                [Player.Player1] = new List<int>(),
-                [Player.Player2] = new List<int>(),
-                [Player.Player3] = new List<int>(),
-                [Player.Player4] = new List<int>()
-            };
-
-            int offset = Offset;
-            Player currPlayer = Dealer;
-            for (int i = 0; i < 12; ++i) { ProcessBoardOverride_AddSlotsForPlayer(playerAvailableWallSlots[currPlayer], offset, out offset, 4); currPlayer = currPlayer.GetNext(); } // Grab 4 tiles for each player.
-            for (int i = 0; i < 4; ++i) { ProcessBoardOverride_AddSlotsForPlayer(playerAvailableWallSlots[currPlayer], offset, out offset, 1); currPlayer = currPlayer.GetNext(); } // Grab 1 tile for each player.
-
-            // Get a list of defined tiles, initially populated by any slots already populated in the wall thus far for us.
-            // Set them to not-yet-assigned, which means they're available to be designated for a future purpose.
-            // For example, lets say Player1 makes a closed kan of 4p. We can go through each 4p and assign slots to 4p, and then
-            // set them to assigned. That we we know on the 3rd closed kan tile that we've already allocated and assigned 2 4pins,
-            // and we need another one. These get consumed later when it's time to actually make the closed kan by them being removed from
-            // the list.
-            var playerAllocatedTiles = new Dictionary<Player, List<AssignedTile>>
-            {
-                [Player.Player1] = new List<AssignedTile>(),
-                [Player.Player2] = new List<AssignedTile>(),
-                [Player.Player3] = new List<AssignedTile>(),
-                [Player.Player4] = new List<AssignedTile>()
-            };
-
-            CommonHelpers.Iterate(playerAvailableWallSlots[Player.Player1] as IList<int>, (int slot, int i) => { if (WallRaw[slot].Type.IsTile()) { playerAllocatedTiles[Player.Player1].Add(new AssignedTile(WallRaw[slot].Type)); } });
-            CommonHelpers.Iterate(playerAvailableWallSlots[Player.Player2] as IList<int>, (int slot, int i) => { if (WallRaw[slot].Type.IsTile()) { playerAllocatedTiles[Player.Player2].Add(new AssignedTile(WallRaw[slot].Type)); } });
-            CommonHelpers.Iterate(playerAvailableWallSlots[Player.Player3] as IList<int>, (int slot, int i) => { if (WallRaw[slot].Type.IsTile()) { playerAllocatedTiles[Player.Player3].Add(new AssignedTile(WallRaw[slot].Type)); } });
-            CommonHelpers.Iterate(playerAvailableWallSlots[Player.Player4] as IList<int>, (int slot, int i) => { if (WallRaw[slot].Type.IsTile()) { playerAllocatedTiles[Player.Player4].Add(new AssignedTile(WallRaw[slot].Type)); } });
-
-            // Remove available slots if they're already populated.
-            foreach (TileImpl tile in WallRaw)
-            {
-                if (tile.Type.IsTile())
-                {
-                    playerAvailableWallSlots[Player.Player1].Remove(tile.Slot);
-                    playerAvailableWallSlots[Player.Player2].Remove(tile.Slot);
-                    playerAvailableWallSlots[Player.Player3].Remove(tile.Slot);
-                    playerAvailableWallSlots[Player.Player4].Remove(tile.Slot);
-                }
+                playerAllocatedTiles[p] = new List<AssignedTile>();
+                playerAvailableWallSlots[p] = new List<int>();
             }
 
-            // Best effort try to populate slots now with all the tiles we need to perform calls.
-            // If we already have the tiles then we don't need to consume anything.
-            // If there's truly no available slots then we'll try to pick them up later.
-            foreach (IMeld meld in template.Melds)
+            sampleGame.WallPicked += (ITile[] tiles, TileSource source) =>
             {
-                var availableWallSlots = playerAvailableWallSlots[meld.Owner];
-                var allocatedTiles = playerAllocatedTiles[meld.Owner];
-
-                var handMeldTiles = new List<TileType>();
-                if (meld.State == MeldState.KanConcealed)
+                foreach (ITile tile in tiles)
                 {
-                    // Player starts with the first three of the tiles. We'll figure out the 4th tile as needed later, possibly the tile drawn at that time.
-                    ProcessBoardOverride_TryAssigningTile(availableWallSlots, allocatedTiles, meld.Tiles[0].Type);
-                    ProcessBoardOverride_TryAssigningTile(availableWallSlots, allocatedTiles, meld.Tiles[1].Type);
-                    ProcessBoardOverride_TryAssigningTile(availableWallSlots, allocatedTiles, meld.Tiles[2].Type);
+                    if (WallRaw[tile.Slot].Type.IsTile()) { playerAllocatedTiles[sampleGame.Current].Add(new AssignedTile(WallRaw[tile.Slot].Type)); }
+                    else                                  { playerAvailableWallSlots[sampleGame.Current].Add(tile.Slot); }
                 }
-                else
+            };
+
+            // Process all the requested discards.
+            bool forceAnotherDiscard = false;
+            for (int remainingDiscards = template.DiscardCount; 
+                 (((remainingDiscards > 0) || forceAnotherDiscard) && // Loop if there are more discards to do or if we must do another discard because of a call.
+                  (sampleGame.TilesRemaining >= 0) &&                 // Don't loop if there are no more tiles in the wall...
+                  (sampleGame.State != PlayState.HandEnd) &&          // Don't loop if the hand is over. 
+                  (sampleGame.State != PlayState.GameEnd));)          // Don't loop if the game is over.
+            {
+                // Consume the flag.
+                forceAnotherDiscard = false;
+
+                // At the start of each loop, we are in a state where we're awaiting drawing a tile. It might be a previous players turn, we might still be on randomizing break, etc.
+                // This is because we want to end our processing in a position where noone has their 14th tile. So the first thing to do is advance to our next discard decision.
+                ProcessBoardOverride_AdvanceToDiscardDecision(sampleGame);
+
+                // Check if we have closed kans in the queue. If so, perform them now.
+                Player currentPlayer = sampleGame.Current;
+                IHand hand = GameStateHelpers.GetHand(sampleGame, currentPlayer);
+
+                while ((BoardTemplateHelpers.GetNextPlayerMeld(template, sampleGame, currentPlayer) is IMeld closedKanMeld) &&
+                       (closedKanMeld.State == MeldState.KanConcealed))
                 {
-                    MeldHelpers.IterateTiles(meld, (ITile meldTile) =>
+                    // Perform a closed kan. If we have unassigned allocated tiles, use them. Otherwise use available wall slots. We need to gather all four tiles at this time.
+                    ProcessBoardOverride_AssignAndEnsureHandHasTiles(
+                        sampleGame,
+                        hand,
+                        playerAvailableWallSlots[closedKanMeld.Owner],
+                        playerAllocatedTiles[closedKanMeld.Owner],
+                        new TileType[] {
+                            closedKanMeld.Tiles[0].Type, closedKanMeld.Tiles[1].Type,
+                            closedKanMeld.Tiles[2].Type, closedKanMeld.Tiles[3].Type });
+
+                    // Setup the eventing and submit the meld. We want to advance through to the next discard decision.
+                    // Set this up so that we can make another closed kan if such is requested.
+                    pauseOnNextState = true;
+                    bool callObserved = false;
+                    void calledVerifier(Player p, IMeld m)       { callObserved = true; }
+                    void breakOnPerformDecision()                { if (sampleGame.State == PlayState.PerformDecision) { sampleGame.Pause(); } }
+                    void passOnChankanRon(IPostDiscardInfo info) { sampleGame.SubmitPostDiscard(DecisionFactory.BuildPostDiscardDecision(info.Hand.Player, PostDiscardDecisionType.Nothing, null)); }
+
+                    hand.Called += calledVerifier;
+                    sampleGame.PreCheckAdvance += breakOnPerformDecision;
+                    sampleGame.PostDiscardRequested += passOnChankanRon;
+                    sampleGame.SubmitDiscard(
+                        DecisionFactory.BuildDiscardDecision(
+                            DiscardDecisionType.ClosedKan,
+                            hand.Tiles[hand.GetTileSlot(closedKanMeld.Tiles[0].Type, true)]));
+                    hand.Called -= calledVerifier;
+                    sampleGame.PreCheckAdvance -= breakOnPerformDecision;
+                    sampleGame.PostDiscardRequested -= passOnChankanRon;
+
+                    CommonHelpers.Check(callObserved, "Didn't observe a closed kan even though we submitted a closed kan!");
+                }
+
+                // Check if we need to make a specific discard. If so, allocate the tile, but also check if that tile is going to
+                // be called to make a meld. If so, we need to make sure the caller has all the tiles to make the meld so that when
+                // we submit the discard, the call lights up as an option.
+                ITile specifiedDiscard = BoardTemplateHelpers.GetNextPlayerDiscard(template, sampleGame, currentPlayer);
+                IMeld nextCall = BoardTemplateHelpers.GetMeld(template, specifiedDiscard, currentPlayer);
+
+                if (specifiedDiscard != null)
+                {
+                    ProcessBoardOverride_AssignAndEnsureHandHasTiles(
+                        sampleGame,
+                        hand,
+                        playerAvailableWallSlots[sampleGame.Current],
+                        playerAllocatedTiles[sampleGame.Current],
+                        new TileType[] { specifiedDiscard.Type });
+
+                    if (nextCall != null)
                     {
-                        if (!meldTile.Called) { ProcessBoardOverride_TryAssigningTile(availableWallSlots, allocatedTiles, meldTile.Type); }
-                    });
+                        var handMeldTiles = new List<TileType>();
+                        MeldHelpers.IterateTiles(nextCall, (ITile tile) => { if (!tile.Called) { handMeldTiles.Add(tile.Type); } });
+                    }
                 }
-            }
 
-            // Alright, now start stepping through the game unitl we have the desired number of discards.
-            // If discards are defined, then make sure we allocate, assign, and consume them. If we run into
-            // calls then we should consume assigned tiles, and if needed allocate them.
-            // If we cant allocate then we're 100% hosed, the requested board is impossible.
-            int discardCount = 0;
-            while (discardCount < template.DiscardCount)
-            {
+                // Now discard the tile we need to discard if its specific. Otherwise just discard anything, it doesn't really matter
+                // since we're not using sampleGame directly, just as a sample to measure discard counts and perform online sanity checking.
+                // If post discard decisions get requested, cancel in all scenarios unless it's a call we are supposed to be making.
+                TileType tileToDiscard = (specifiedDiscard != null) ? specifiedDiscard.Type : hand.Tiles[hand.TileCount-1].Type;
 
+                void wallPickingPause(Player p, int i) { pauseOnNextState = true; }
+                void postRequested(IPostDiscardInfo info)
+                {
+                    IMeld meldToCall = null;
+                    CommonHelpers.Iterate(info.Calls, (IMeld meld, int i) =>
+                    {
+                        if (meld.CompareTo(nextCall) == 0)
+                        {
+                            meldToCall = meld;
+                            forceAnotherDiscard = true;
+                        }
+                    });
+
+                    sampleGame.SubmitPostDiscard(DecisionFactory.BuildPostDiscardDecision(
+                        info.Hand.Player,
+                        (meldToCall != null ? PostDiscardDecisionType.Call : PostDiscardDecisionType.Nothing),
+                        meldToCall));
+                }
+
+                sampleGame.WallPicking += wallPickingPause;
+                sampleGame.PostDiscardRequested += postRequested;
+                sampleGame.SubmitDiscard(DecisionFactory.BuildDiscardDecision(
+                    (specifiedDiscard?.Reach.IsReach() ?? false) ? DiscardDecisionType.RiichiDiscard : DiscardDecisionType.Discard,
+                    hand.Tiles[hand.GetTileSlot(tileToDiscard, true)]));
+                sampleGame.WallPicking -= wallPickingPause;
+                sampleGame.PostDiscardRequested -= postRequested;
             }
 
             // Finally, try to assign tiles defined for the player's hand.
@@ -1704,7 +1768,19 @@ namespace MahjongCore.Riichi.Impl
             CommonHelpers.Check((randomBoard.Count == 0), "Should have exactly consumed all remaining random tiles.");
         }
 
-        private void ProcessBoardOverride_TryAssigningTile(List<int> availableWallSlots, List<AssignedTile> allocatedTiles, TileType tile)
+        private void ProcessBoardOverride_AdvanceToDiscardDecision(IGameState sampleGame)
+        {
+            bool discardRequested = false;
+            void discardAction(IDiscardInfo info) { discardRequested = true; }
+
+            sampleGame.DiscardRequested += discardAction;
+            sampleGame.Resume();
+            CommonHelpers.Check(discardRequested, "Resume should have resulted in us breaking after a discard was requested...");
+            CommonHelpers.Check((sampleGame.State == PlayState.DecideMove), "When we stopped we should have stopped on the PerformDecision state...");
+            sampleGame.DiscardRequested += discardAction;
+        }
+
+        private void ProcessBoardOverride_AssignTileOrThrow(List<int> availableWallSlots, List<AssignedTile> allocatedTiles, TileType tile)
         {
             // If we have an allocated tile that matches 'tile' that hasn't been assigned yet, assign it.
             foreach (AssignedTile allocatedTile in allocatedTiles)
@@ -1721,13 +1797,68 @@ namespace MahjongCore.Riichi.Impl
             {
                 WallRaw[availableWallSlots.Pop()].Type = tile;
                 allocatedTiles.Add(new AssignedTile(tile) { Assigned = true });
+                return;
             }
+
+            // Couldn't assign the tile! We should have been able to. Throw!
+            throw new Exception("Couldn't assign tile, none allocated and no available wall slots!");
         }
 
-        private void ProcessBoardOverride_AddSlotsForPlayer(List<int> slots, int offsetStart, out int finalOffset, int count)
+        private void ProcessBoardOverride_AssignAndEnsureHandHasTiles(
+            IGameState state,
+            IHand playerHand,
+            List<int> availableWallSlots,
+            List<AssignedTile> allocatedTiles,
+            TileType[] tiles)
         {
-            for (int i = 0; i < count; ++i) { slots.Add(TileHelpers.ClampTile(offsetStart + i)); }
-            finalOffset = TileHelpers.ClampTile(offsetStart + count);
+            // Assign the tiles.
+            CommonHelpers.Iterate(tiles, (TileType type) => { ProcessBoardOverride_AssignTileOrThrow(availableWallSlots, allocatedTiles, type); });
+
+            // Ensure that playerHand has all of the tiles in 'tiles' in it.
+            bool[] tilesFound = new bool[tiles.Length];
+            for (int i = 0; i < tilesFound.Length; ++i) { tilesFound[i] = false; }
+
+            HandHelpers.IterateTiles(playerHand, (TileType handTile) =>
+            {
+                for (int i = 0; i < tiles.Length; ++i)
+                {
+                    if (!tilesFound[i] && tiles[i].IsEqual(handTile, true))
+                    {
+                        tilesFound[i] = true;
+                        break;
+                    }
+                }
+            });
+
+            bool anyTilesNotFound = false;
+            foreach (bool tileFound in tilesFound)
+            {
+                if (!tileFound)
+                {
+                    anyTilesNotFound = true;
+                    break;
+                }
+            }
+
+            if (anyTilesNotFound)
+            {
+                List<TileType> tilesRemove = new List<TileType>();
+                List<TileType> tilesAdd = new List<TileType>();
+                HandHelpers.IterateTiles(playerHand, (TileType handTile) =>
+                {
+                    for (int i = 0; i < tiles.Length; ++i)
+                    {
+                        if (!tilesFound[i] && !tiles[i].IsEqual(handTile, true))
+                        {
+                            tilesFound[i] = true;
+                            tilesRemove.Add(handTile);
+                            tilesAdd.Add(tiles[i]);
+                            break;
+                        }
+                    }
+                });
+                playerHand.ReplaceTiles(tilesRemove, tilesAdd);
+            }
         }
     }
 }

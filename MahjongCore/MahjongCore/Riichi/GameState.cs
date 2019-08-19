@@ -1,4 +1,4 @@
-﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
+﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2019
 
 using MahjongCore.Common;
 using MahjongCore.Common.Attributes;
@@ -127,6 +127,9 @@ namespace MahjongCore.Riichi
         IReadOnlyList<ITile> Discards4    { get; }
         IReadOnlyList<IMeld> Melds        { get; }
         int                  DiscardCount { get; }
+
+        IReadOnlyList<ITile> GetDiscards(Player player);
+        IReadOnlyList<ITile> GetHand(Player player);
     }
 
     public enum OverrideState

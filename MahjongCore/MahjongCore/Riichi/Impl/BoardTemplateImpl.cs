@@ -22,6 +22,24 @@ namespace MahjongCore.Riichi.Impl
         public IReadOnlyList<IMeld> Melds        { get; private set; }
         public int                  DiscardCount { get; private set; }
 
+        public IReadOnlyList<ITile> GetDiscards(Player player)
+        {
+            return (player == Player.Player1) ? Discards1 :
+                   (player == Player.Player2) ? Discards2 :
+                   (player == Player.Player3) ? Discards3 :
+                   (player == Player.Player4) ? Discards4 :
+                                                null;
+        }
+
+        public IReadOnlyList<ITile> GetHand(Player player)
+        {
+            return (player == Player.Player1) ? Hand1 :
+                   (player == Player.Player2) ? Hand2 :
+                   (player == Player.Player3) ? Hand3 :
+                   (player == Player.Player4) ? Hand4 :
+                                                null;
+        }
+
         // BoardTemplateImpl
         public BoardTemplateImpl(
             IReadOnlyList<ITile> wall,

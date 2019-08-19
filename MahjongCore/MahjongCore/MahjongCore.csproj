@@ -58,6 +58,7 @@
     <Compile Include="Riichi\Attributes\WinValue.cs" />
     <Compile Include="Riichi\Command.cs" />
     <Compile Include="Riichi\ExtraSettings.cs" />
+    <Compile Include="Riichi\Helpers\BoardTemplateHelpers.cs" />
     <Compile Include="Riichi\Helpers\MeldHelpers.cs" />
     <Compile Include="Riichi\Impl\AI\AIRandom.cs" />
     <Compile Include="Riichi\Attributes\PlayerNext.cs" />

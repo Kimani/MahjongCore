@@ -1,4 +1,4 @@
-﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
+﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2019
 
 using MahjongCore.Riichi.Attributes;
 using System;
@@ -53,7 +53,7 @@ namespace MahjongCore.Riichi
         bool            CouldSuufurendan     { get; }
 
         bool            WouldMakeFuriten(int slot);
-        int             GetTileSlot(TileType tile, bool matchRed);
+        int             GetTileSlot(TileType tile, bool matchRed);      // TODO: Make this just GetTile...
         void            MoveTileToEnd(TileType targetTile);                                // TODO: Replace with SubmitOverride
         void            ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd); // TODO: Replace with SubmitOverride
         IList<TileType> GetWaitsForDiscard(int slot);
