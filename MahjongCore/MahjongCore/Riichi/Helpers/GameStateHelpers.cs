@@ -162,6 +162,16 @@ namespace MahjongCore.Riichi.Helpers
                               state.Player4Hand;
         }
 
+        public static IPlayerAI GetAI(IGameState state, Player p)
+        {
+            CommonHelpers.Check(p.IsPlayer(), "Tried to get hand for non-player: " + p);
+            return (p == Player.Player1) ? state.Player1AI :
+                   (p == Player.Player2) ? state.Player2AI :
+                   (p == Player.Player3) ? state.Player3AI :
+                                           state.Player4AI;
+        }
+
+
         public static void IterateHands(IGameState state, Action<IHand> callback)
         {
             callback(state.Player1Hand);

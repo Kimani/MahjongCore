@@ -2,6 +2,8 @@
 
 using MahjongCore.Common;
 using MahjongCore.Riichi.Impl;
+using System.Collections.Generic;
+using System.Text;
 
 namespace MahjongCore.Riichi.Helpers
 {
@@ -20,6 +22,30 @@ namespace MahjongCore.Riichi.Helpers
         public static int MAX_DISCARD_PILE_SIZE = 32;
 
         private static readonly TileType[] TileSource = new TileType[TOTAL_TILE_COUNT];
+
+        public static string GetTileString(IList<TileType> tiles)
+        {
+            var sb = new StringBuilder();
+            TileType prevTile = TileType.None;
+            CommonHelpers.Iterate(tiles, (TileType tileType, int i) =>
+            {
+                tileType.GetSummary(sb, prevTile);
+                prevTile = tileType;
+            });
+            return sb.ToString();
+        }
+
+        public static string GetTileString(IList<ITile> tiles)
+        {
+            var sb = new StringBuilder();
+            TileType prevTile = TileType.None;
+            CommonHelpers.Iterate(tiles, (ITile tile, int i) =>
+            {
+                tile.Type.GetSummary(sb, prevTile);
+                prevTile = tile.Type;
+            });
+            return sb.ToString();
+        }
 
         public static TileType BuildTile(int skyValue)
         {

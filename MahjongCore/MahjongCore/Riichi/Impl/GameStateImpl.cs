@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 
 namespace MahjongCore.Riichi.Impl
 {
@@ -395,9 +396,8 @@ namespace MahjongCore.Riichi.Impl
             // Query the AI for the discard decision, or raise the event requesting for the discard decision. If we 
             // can query the AI or the discard decision is supplied immediately during the event, then _AdvanceAction
             // will get set. Otherwise, _AdvanceAction will be set to "Done".
-            IPlayerAI ai = GetAI(Current);
             ExpectingDiscard = true;
-            if (ai != null)
+            if (GameStateHelpers.GetAI(this, Current) is IPlayerAI ai)
             {
                 SubmitDiscard(ai.GetDiscardDecision(_DiscardInfoCache));
             }
@@ -417,7 +417,7 @@ namespace MahjongCore.Riichi.Impl
             // Poll decisions from AI, or query decisions from caller. If we populate all actions then _AdvanceAction
             // will get set. Otherwise a later call by the caller to SubmitPostDiscard will pump advancements.
             AdvanceAction = AdvanceAction.Done;
-            foreach (Player p in PlayerHelpers.Players) { QueryPostDiscardDecision(GetNextAction(p), GetHand(p), GetAI(p)); }
+            foreach (Player p in PlayerHelpers.Players) { QueryPostDiscardDecision(GetNextAction(p), GetHand(p), GameStateHelpers.GetAI(this, p)); }
         }
 
         public void ExecutePostBreak_PerformDecision()
@@ -1484,15 +1484,6 @@ namespace MahjongCore.Riichi.Impl
             return handTile;
         }
 
-        private IPlayerAI GetAI(Player p)
-        {
-            CommonHelpers.Check(p.IsPlayer(), "Tried to get hand for non-player: " + p);
-            return (p == Player.Player1) ? Player1AI :
-                   (p == Player.Player2) ? Player2AI :
-                   (p == Player.Player3) ? Player3AI :
-                                           Player4AI;
-        }
-
         private GameAction GetNextAction(Player p)
         {
             CommonHelpers.Check(p.IsPlayer(), "Tried to get action for non-player: " + p);
@@ -1626,6 +1617,7 @@ namespace MahjongCore.Riichi.Impl
                 {
                     if (WallRaw[tile.Slot].Type.IsTile()) { playerAllocatedTiles[sampleGame.Current].Add(new AssignedTile(WallRaw[tile.Slot].Type)); }
                     else                                  { playerAvailableWallSlots[sampleGame.Current].Add(tile.Slot); }
+                    ProcessBoardOverride_Log(("Wall Picked, tile #" + tile.Slot), this, playerAllocatedTiles, playerAvailableWallSlots);
                 }
             };
 
@@ -1691,12 +1683,15 @@ namespace MahjongCore.Riichi.Impl
 
                 if (specifiedDiscard != null)
                 {
+                    TileType specifiedDiscardToAssign = specifiedDiscard.Type;
+                    Global.LogExtra("About to assign tile for a specified discard: " + specifiedDiscardToAssign + " for player: " + sampleGame.Current);
                     ProcessBoardOverride_AssignAndEnsureHandHasTiles(
                         sampleGame,
                         hand,
                         playerAvailableWallSlots[sampleGame.Current],
                         playerAllocatedTiles[sampleGame.Current],
-                        new TileType[] { specifiedDiscard.Type });
+                        new TileType[] { specifiedDiscardToAssign });
+                    ProcessBoardOverride_Log(("Assigned tile for discard: " + specifiedDiscardToAssign), this, playerAllocatedTiles, playerAvailableWallSlots);
 
                     if (nextCall != null)
                     {
@@ -1716,7 +1711,7 @@ namespace MahjongCore.Riichi.Impl
                     IMeld meldToCall = null;
                     CommonHelpers.Iterate(info.Calls, (IMeld meld, int i) =>
                     {
-                        if (meld.CompareTo(nextCall) == 0)
+                        if ((nextCall != null) && (meld.CompareTo(nextCall) == 0))
                         {
                             meldToCall = meld;
                             forceAnotherDiscard = true;
@@ -1734,13 +1729,12 @@ namespace MahjongCore.Riichi.Impl
                 sampleGame.SubmitDiscard(DecisionFactory.BuildDiscardDecision(
                     (specifiedDiscard?.Reach.IsReach() ?? false) ? DiscardDecisionType.RiichiDiscard : DiscardDecisionType.Discard,
                     hand.Tiles[hand.GetTileSlot(tileToDiscard, true)]));
+                --remainingDiscards;
                 sampleGame.WallPicking -= wallPickingPause;
                 sampleGame.PostDiscardRequested -= postRequested;
             }
 
-            // Finally, try to assign tiles defined for the player's hand.
-
-            // Final step: elaborate the rest of the wall with whatever tiles remain.
+            // Now it's time to fill out this GameState. Start by getting a list of randomly organized tiles that remain.
             var randomBoard = new List<ITile>(TileHelpers.GetRandomBoard(null, Settings.GetSetting<RedDora>(GameOption.RedDoraOption)));
             foreach (TileImpl wallTile in WallRaw)
             {
@@ -1757,15 +1751,192 @@ namespace MahjongCore.Riichi.Impl
                 }
             }
 
+            // Next, populate discards, because we know what number of discards each player has and what they need to be. Assign each unspecified tile, or just use the ones from template.
+            foreach (Player player in PlayerHelpers.Players)
+            {
+                IHand sampleHand = GameStateHelpers.GetHand(sampleGame, player);
+                var actualDiscards = new List<ITile>();
+                for (int discardSlot = 0; discardSlot < sampleHand.Discards.Count; ++discardSlot)
+                {
+                    ITile specifiedTile = BoardTemplateHelpers.GetPlayerDiscardBySlot(template, player, discardSlot);
+                    if (specifiedTile != null)
+                    {
+                        actualDiscards.Add(TileFactory.BuildTile(specifiedTile.Type, discardSlot, specifiedTile.Called));
+                    }
+                    else
+                    {
+                        TileType randomTile = randomBoard.Pop().Type;
+                        ProcessBoardOverride_AssignTileOrThrow(
+                            playerAvailableWallSlots[player],
+                            playerAllocatedTiles[player],
+                            randomTile);
+                        ProcessBoardOverride_Log(("Assigned a random tile for a discard at slot: " + discardSlot + " should be tile: " + randomTile), this, playerAllocatedTiles, playerAvailableWallSlots);
+
+
+                        actualDiscards.Add(TileFactory.BuildTile(randomTile, discardSlot, false));
+                    }
+                }
+
+                IHand actualHand = GameStateHelpers.GetHand(this, player);
+                actualHand.SubmitOverride(OverrideHand.Discards, actualDiscards.ToArray());
+                ProcessBoardOverride_Log(("Submitted discards for player: " + player), this, playerAllocatedTiles, playerAvailableWallSlots);
+            }
+
+            // Next, Populate all the melds.
+            foreach (Player player in PlayerHelpers.Players)
+            {
+                GameStateHelpers.GetHand(this, player).SubmitOverride(
+                    OverrideHand.Melds,
+                    GameStateHelpers.GetHand(sampleGame, player).Melds);
+            }
+
+            // Next, try to assign tiles defined for the player's hand.
+            foreach (Player player in PlayerHelpers.Players)
+            {
+                IHand actualHand = GameStateHelpers.GetHand(this, player);
+                int handCount = 13 - (actualHand.MeldCount * 3);
+
+                var handTiles = new List<TileType>();
+                CommonHelpers.Iterate(template.GetHand(player), (ITile tile) => 
+                {
+                    Global.LogExtra("Need to add specified tile to hand for player " + player + ", tile: " + tile.Type);
+                    ProcessBoardOverride_AssignTileOrThrow(
+                        playerAvailableWallSlots[player],
+                        playerAllocatedTiles[player],
+                        tile.Type);
+                    handTiles.Add(tile.Type);
+
+                    ProcessBoardOverride_Log(("Assigned a specified tile " + tile.Type + " for player " + player + ", handTiles so far looks like: " + TileHelpers.GetTileString(handTiles)), this, playerAllocatedTiles, playerAvailableWallSlots);
+                });
+
+                while ((handTiles.Count < handCount) && ProcessBoardOverride_PeekAvailableAssignedTile(playerAllocatedTiles[player], out TileType availableAssignedTile))
+                {
+                    Global.LogExtra("Adding assigned but unapplied tile: " + availableAssignedTile + " for player: " + player);
+                    ProcessBoardOverride_AssignTileOrThrow(
+                        playerAvailableWallSlots[player],
+                        playerAllocatedTiles[player],
+                        availableAssignedTile);
+                    handTiles.Add(availableAssignedTile);
+
+                    ProcessBoardOverride_Log(("Added an assigned and then unapplied tile " + availableAssignedTile + " for player " + player + ", handTiles so far looks like: " + TileHelpers.GetTileString(handTiles)), this, playerAllocatedTiles, playerAvailableWallSlots);
+                }
+
+                while (handTiles.Count < handCount)
+                {
+                    TileType randomTile = randomBoard.Pop().Type;
+                    Global.LogExtra("Adding random tile to hand for player " + player + ", tile: " + randomTile);
+                    ProcessBoardOverride_AssignTileOrThrow(
+                        playerAvailableWallSlots[player],
+                        playerAllocatedTiles[player],
+                        randomTile);
+                    handTiles.Add(randomTile);
+
+                    ProcessBoardOverride_Log(("Assigned a random tile " + randomTile + " for player " + player + ", handTiles so far looks like: " + TileHelpers.GetTileString(handTiles)), this, playerAllocatedTiles, playerAvailableWallSlots);
+                }
+
+                actualHand.SubmitOverride(OverrideHand.Hand, handTiles.ToArray());
+                ProcessBoardOverride_Log(("Hand overridden for player: " + player), this, playerAllocatedTiles, playerAvailableWallSlots);
+            }
+
+            // Finally, elaborate the rest of the wall with whatever tiles remain.
             foreach (TileImpl wallTile in WallRaw)
             {
                 if (!wallTile.Type.IsTile())
                 {
                     var randomTile = randomBoard.Pop();
+                    Global.LogExtra("Popping a random tile: " + randomTile + " for slot# " + wallTile.Slot + " with remaining randomboard: " + TileHelpers.GetTileString(randomBoard));
                     wallTile.Type = randomTile.Type;
                 }
             }
             CommonHelpers.Check((randomBoard.Count == 0), "Should have exactly consumed all remaining random tiles.");
+
+            // Set the remaining fields from sampleGame
+            TilesRemaining = sampleGame.TilesRemaining;
+            DoraCount = sampleGame.DoraCount;
+        }
+
+        private bool ProcessBoardOverride_PeekAvailableAssignedTile(List<AssignedTile> allocatedTiles, out TileType availableAssigned)
+        {
+            availableAssigned = TileType.None;
+            foreach (AssignedTile aTile in allocatedTiles)
+            {
+                if (!aTile.Assigned)
+                {
+                    availableAssigned = aTile.Tile;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void ProcessBoardOverride_Log(
+            string message,
+            IGameState state,
+            Dictionary<Player, List<AssignedTile>> assignedTiles,
+            Dictionary<Player, List<int>> availbleWallSlots)
+        {
+            if (Global.CanLogExtra)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("* " + message);
+
+                // Output the wall.
+                {
+                    sb.Append("| Wall: ");
+                    var prevTile = TileType.None;
+                    CommonHelpers.Iterate(state.Wall, (ITile tile) =>
+                    {
+                        if (tile.Type.IsTile()) { tile.Type.GetSummary(sb, prevTile); }
+                        else                    { sb.Append("."); }
+                        prevTile = tile.Type;
+                    });
+                    sb.AppendLine();
+                }
+
+                // Output Player Stuff.
+                foreach (Player p in PlayerHelpers.Players)
+                {
+
+                    sb.Append("| " + p.ToString() + " hand: ");
+                    {
+                        var prevTile = TileType.None;
+                        HandHelpers.IterateTiles(GameStateHelpers.GetHand(state, p), (TileType tile) =>
+                        {
+                            tile.GetSummary(sb, prevTile);
+                            prevTile = tile;
+                        });
+                    }
+                    sb.AppendLine();
+
+                    sb.Append("| " + p.ToString() + " discards: ");
+                    {
+                        var prevTile = TileType.None;
+                        CommonHelpers.Iterate(GameStateHelpers.GetHand(state, p).Discards, (ITile tile, int i) =>
+                        {
+                            tile.Type.GetSummary(sb, prevTile);
+                            prevTile = tile.Type;
+                        });
+                    }
+                    sb.AppendLine();
+
+                    sb.Append("| " + p.ToString() + " wall slots: ");
+                    CommonHelpers.Iterate(availbleWallSlots[p], (int wallSlot) => { sb.Append(wallSlot + " "); });
+                    sb.AppendLine();
+
+                    sb.Append((p == Player.Player4) ? "\\" : "|");
+                    sb.Append(" " + p.ToString() + " assigned tiles: ");
+                    CommonHelpers.Iterate(assignedTiles[p], (AssignedTile aTile) => 
+                    {
+                        aTile.Tile.GetSummary(sb, null);
+                        sb.Append(aTile.Assigned);
+                        sb.Append(" ");
+                    });
+                    sb.AppendLine();
+                }
+
+                // Print out the log data.
+                Global.LogExtra(sb.ToString());
+            }
         }
 
         private void ProcessBoardOverride_AdvanceToDiscardDecision(IGameState sampleGame)

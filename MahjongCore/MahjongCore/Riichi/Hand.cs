@@ -12,7 +12,10 @@ namespace MahjongCore.Riichi
         [OptionValueType(typeof(IndexedMeld))] Meld,
         [OptionValueType(typeof(ReachType))]   Reach,
         [OptionValueType(typeof(TileType[]))]  Waits,
-        [OptionValueType(typeof(int))]         Chombo
+        [OptionValueType(typeof(int))]         Chombo,
+        [OptionValueType(typeof(ITile[]))]     Discards,
+        [OptionValueType(typeof(IMeld[]))]     Melds,
+        [OptionValueType(typeof(TileType[]))]  Hand,
     }
 
     public interface IHand : IComparable<IHand>
@@ -53,7 +56,7 @@ namespace MahjongCore.Riichi
         bool            CouldSuufurendan     { get; }
 
         bool            WouldMakeFuriten(int slot);
-        int             GetTileSlot(TileType tile, bool matchRed);      // TODO: Make this just GetTile...
+        int             GetTileSlot(TileType tile, bool matchRed);                         // TODO: Make this just GetTile...
         void            MoveTileToEnd(TileType targetTile);                                // TODO: Replace with SubmitOverride
         void            ReplaceTiles(List<TileType> tilesRemove, List<TileType> tilesAdd); // TODO: Replace with SubmitOverride
         IList<TileType> GetWaitsForDiscard(int slot);

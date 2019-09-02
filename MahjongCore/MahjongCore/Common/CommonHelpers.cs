@@ -122,6 +122,24 @@ namespace MahjongCore.Common
             return foundItems;
         }
 
+        public static bool Iterate<T>(T[] sourceList, Action<T, int> callback)
+        {
+            bool foundItems = false;
+            if (sourceList != null)
+            {
+                int count = sourceList.Length;
+                if (count > 0)
+                {
+                    foundItems = true;
+                    for (int i = 0; i < sourceList.Length; ++i)
+                    {
+                        callback(sourceList[i], i);
+                    }
+                }
+            }
+            return foundItems;
+        }
+
         public static bool Iterate<T>(IList<T> sourceList, Action<T, int> callback)
         {
             bool foundItems = false;
@@ -134,6 +152,24 @@ namespace MahjongCore.Common
                     for (int i = 0; i < sourceList.Count; ++i)
                     {
                         callback(sourceList[i], i);
+                    }
+                }
+            }
+            return foundItems;
+        }
+
+        public static bool Iterate<T>(IReadOnlyList<T> sourceList, Action<T> callback)
+        {
+            bool foundItems = false;
+            if (sourceList != null)
+            {
+                int count = sourceList.Count;
+                if (count > 0)
+                {
+                    foundItems = true;
+                    for (int i = 0; i < sourceList.Count; ++i)
+                    {
+                        callback(sourceList[i]);
                     }
                 }
             }

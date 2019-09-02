@@ -26,6 +26,13 @@ namespace MahjongCore.Riichi.Helpers
                 (ITile tile) => { return tile.Slot == nextDiscardSlot; });
         }
 
+        public static ITile GetPlayerDiscardBySlot(IBoardTemplate template, Player player, int slot)
+        {
+            return CommonHelpers.Find(
+                template.GetDiscards(player),
+                (ITile tile) => { return tile.Slot == slot; });
+        }
+
         public static IMeld GetMeld(IBoardTemplate template, ITile calledTile, Player targetPlayer)
         {
                 return (calledTile != null) ? CommonHelpers.Find(

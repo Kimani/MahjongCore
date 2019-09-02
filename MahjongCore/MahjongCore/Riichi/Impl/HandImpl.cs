@@ -128,7 +128,7 @@ namespace MahjongCore.Riichi.Impl
 
         public void SubmitOverride(OverrideHand key, object value)
         {
-            if      (key == OverrideHand.Score)  { Score = (int)value; }
+            if (key == OverrideHand.Score) { Score = (int)value; }
             else if (key == OverrideHand.Chombo) { Chombo = (int)value; }
             else if (key == OverrideHand.Reach)
             {
@@ -174,10 +174,24 @@ namespace MahjongCore.Riichi.Impl
                 }
                 MeldsRaw[iMeld.Index].Set(iMeld.Meld);
             }
-            else
+            else if (key == OverrideHand.Discards)
             {
-                throw new Exception("Unrecognized override option: " + key);
+                DiscardsRaw.Clear();
+                CommonHelpers.Iterate((ITile[])value, (ITile tile) => { DiscardsRaw.Add(tile.Clone() as TileImpl); });
             }
+            else if (key == OverrideHand.Melds)
+            {
+                foreach (MeldImpl meld in MeldsRaw) { meld.Reset(); }
+                CommonHelpers.Iterate((IMeld[])value, (IMeld meld, int i) => { MeldsRaw[i].Set(meld); });
+            }
+            else if (key == OverrideHand.Hand)
+            {
+                var tiles = value as TileType[];
+                foreach (TileImpl tileImpl in ActiveHandRaw)           { tileImpl.Type = TileType.None; }
+                CommonHelpers.Iterate(tiles, (TileType tile, int i) => { ActiveHandRaw[i].Type = tile; });
+                TileCount = tiles.Length;
+            }
+            else { throw new Exception("Unrecognized override option: " + key); }
         }
 
         // IComparable<IHand>
