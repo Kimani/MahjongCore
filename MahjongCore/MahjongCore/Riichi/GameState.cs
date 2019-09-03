@@ -138,6 +138,7 @@ namespace MahjongCore.Riichi
         [OptionValueType(typeof(int))]            Pool,
         [OptionValueType(typeof(int))]            Bonus,
         [OptionValueType(typeof(Player))]         Dealer,
+        [OptionValueType(typeof(Player))]         Current,
         [OptionValueType(typeof(Player))]         FirstDealer,
         [OptionValueType(typeof(Player))]         Wareme,
         [OptionValueType(typeof(bool))]           Lapped,

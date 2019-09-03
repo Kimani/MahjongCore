@@ -184,10 +184,12 @@ namespace MahjongCore.Riichi.Impl
 
         public void SubmitOverride(OverrideState key, object value)
         {
-            if      (key == OverrideState.Pool)   { Pool = (int)value; }
-            else if (key == OverrideState.Bonus)  { Bonus = (int)value; }
-            else if (key == OverrideState.Lapped) { Lapped = (bool)value; }
-            else if (key == OverrideState.Roll)   { Roll = (int)value; }
+            if      (key == OverrideState.Pool)    { Pool = (int)value; }
+            else if (key == OverrideState.Bonus)   { Bonus = (int)value; }
+            else if (key == OverrideState.Lapped)  { Lapped = (bool)value; }
+            else if (key == OverrideState.Roll)    { Roll = (int)value; }
+            else if (key == OverrideState.Board)   { ProcessBoardOverride((IBoardTemplate)value); }
+            else if (key == OverrideState.Current) { Current = (Player)value; }
             else if (key == OverrideState.DoraCount)
             {
                 var intVal = (int)value;
@@ -196,8 +198,12 @@ namespace MahjongCore.Riichi.Impl
             }
             else if (key == OverrideState.Round)
             {
+                Round oldRound = Round;
                 Round = (Round)value;
-                // TODO: Recalculate first dealer.
+
+                int playerOffsetDelta = Round.GetOffset() - oldRound.GetOffset();
+                Current = Current.AddOffset(playerOffsetDelta);
+                Dealer = Dealer.AddOffset(playerOffsetDelta);
             }
             else if (key == OverrideState.WallTile)
             {
@@ -219,10 +225,6 @@ namespace MahjongCore.Riichi.Impl
             {
                 CommonHelpers.Check((((Player)value == Player.None) || Settings.GetSetting<bool>(GameOption.Wareme)), "Attempting to set wareme player while wareme is disabled!");
                 Wareme = (Player)value;
-            }
-            else if (key == OverrideState.Board)
-            {
-                ProcessBoardOverride((IBoardTemplate)value);
             }
             else { throw new Exception("Unrecognized override option: " + key); }
     }
@@ -1591,9 +1593,10 @@ namespace MahjongCore.Riichi.Impl
             // Create a second GameState that we will use to iterate through the game. This can have whatever tiles, the only
             // important thing is that it tells us who goes, who discards, who draws, and what tile in the wall/etc they do so from.
             var sampleGame = new GameStateImpl(Settings);
-            GameStateHelpers.AdvanceToDiceRolled(sampleGame);
+            GameStateHelpers.InitializeToDiceRolled(sampleGame);
             sampleGame.SubmitOverride(OverrideState.Round, Round);
             sampleGame.SubmitOverride(OverrideState.Dealer, Dealer);
+            sampleGame.SubmitOverride(OverrideState.Current, Dealer);
             sampleGame.Roll = Roll;
             sampleGame.Offset = GameStateHelpers.GetOffset(Dealer, Roll);
             bool pauseOnNextState = false;
@@ -1620,6 +1623,12 @@ namespace MahjongCore.Riichi.Impl
                     ProcessBoardOverride_Log(("Wall Picked, tile #" + tile.Slot), this, playerAllocatedTiles, playerAvailableWallSlots);
                 }
             };
+
+            // If there are no discards, advance to randomizing break.
+            if (template.DiscardCount == 0)
+            {
+                GameStateHelpers.AdvanceToDeadWallMoved(sampleGame);
+            }
 
             // Process all the requested discards.
             bool forceAnotherDiscard = false;
@@ -1852,7 +1861,9 @@ namespace MahjongCore.Riichi.Impl
 
             // Set the remaining fields from sampleGame
             TilesRemaining = sampleGame.TilesRemaining;
+            Current = sampleGame.Current;
             DoraCount = sampleGame.DoraCount;
+            Offset = sampleGame.Offset;
         }
 
         private bool ProcessBoardOverride_PeekAvailableAssignedTile(List<AssignedTile> allocatedTiles, out TileType availableAssigned)

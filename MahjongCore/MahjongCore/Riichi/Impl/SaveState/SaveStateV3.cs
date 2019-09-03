@@ -66,6 +66,10 @@ namespace MahjongCore.Riichi.Impl.SaveState
     //           hastemporarytile="bool">
     //         <tile ... />
     //         ...
+    //         <discards>
+    //             <tile ... />
+    //             ...
+    //         </discards>
     //         <meld target="string" meldstate="string" direction="direction">
     //             <tile ... />
     //             ...
@@ -212,6 +216,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
         private static readonly string HAND_COULDSUUFURENDAN_ATTR            = "couldsuufuurendan";
         private static readonly string HAND_OVERRIDENOREACH_ATTR             = "overridenoreach";
         private static readonly string HAND_HASTEMPORARYTILE_ATTR            = "hastemporarytile";
+        private static readonly string DISCARDS_TAG                          = "discards";
         private static readonly string MELD_TAG                              = "meld";
         private static readonly string MELD_TARGET_ATTR                      = "target";
         private static readonly string MELD_STATE_ATTR                       = "state";
@@ -488,6 +493,16 @@ namespace MahjongCore.Riichi.Impl.SaveState
             {
                 LoadTile(tileElement, hand.ActiveHandRaw[i], i, Location.Hand);
             });
+
+            if (CommonHelpers.TryGetFirstElement(handElement, DISCARDS_TAG, out XmlElement discardsElement))
+            {
+                CommonHelpers.TryIterateTagElements(discardsElement, TILE_TAG, (XmlElement tileElement, int i) =>
+                {
+                    var discardTile = new TileImpl();
+                    LoadTile(tileElement, discardTile, i, Location.Discard);
+                    hand.DiscardsRaw.Add(discardTile);
+                });
+            }
 
             CommonHelpers.TryIterateTagElements(handElement, MELD_TAG, (XmlElement meldElement, int i) =>
             {
@@ -807,6 +822,10 @@ namespace MahjongCore.Riichi.Impl.SaveState
             handElement.AppendChild(MarshalActiveTileWaits(document, hand.ActiveTileWaits));
             handElement.AppendChild(MarshalActiveRiichiKanTiles(document, hand.ActiveRiichiKanTiles));
             handElement.AppendChild(MarshalRiichiKanTilesPerSlot(document, hand.RiichiKanTilesPerSlot));
+
+            XmlElement discardsElement = document.CreateElement(DISCARDS_TAG);
+            CommonHelpers.Iterate(hand.Discards, (ITile tile, int i) => { discardsElement.AppendChild(MarshalTileElement(document, tile as TileImpl)); });
+            handElement.AppendChild(discardsElement);
 
             if (hand.DrawsAndKans.Count > 0)
             {

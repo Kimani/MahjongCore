@@ -38,7 +38,7 @@ namespace MahjongCore.Riichi.Helpers
             if (stashedException != null) { throw stashedException; }
         }
 
-        public static void AdvanceToDiceRolled(IGameState state)
+        public static void InitializeToDiceRolled(IGameState state)
         {
             // Stash the AI so we can clear them and put them back when we're done.
             IPlayerAI player1AI = state.Player1AI;
@@ -68,6 +68,41 @@ namespace MahjongCore.Riichi.Helpers
             // Clean up.
             state.DiceRolled -= diceRollAction;
             state.GameComplete -= gameEndAction;
+            state.PreCheckAdvance -= advanceCheck;
+            state.Player1AI = player1AI;
+            state.Player2AI = player2AI;
+            state.Player3AI = player3AI;
+            state.Player4AI = player4AI;
+            if (stashedException != null) { throw stashedException; }
+        }
+
+        public static void AdvanceToDeadWallMoved(IGameState state)
+        {
+            // Stash the AI so we can clear them and put them back when we're done.
+            IPlayerAI player1AI = state.Player1AI;
+            IPlayerAI player2AI = state.Player2AI;
+            IPlayerAI player3AI = state.Player3AI;
+            IPlayerAI player4AI = state.Player4AI;
+            state.Player1AI = null;
+            state.Player2AI = null;
+            state.Player3AI = null;
+            state.Player4AI = null;
+
+            // Advance to randomize break.
+            Exception stashedException = null;
+            bool deadWallHasMoved = false;
+            void deadWallMoved() { deadWallHasMoved = true; }
+            void advanceCheck()  { if (deadWallHasMoved) { state.Pause(); } }
+
+            state.DeadWallMoved += deadWallMoved;
+            state.PreCheckAdvance += advanceCheck;
+
+            try { state.Advance(); }
+            catch (Exception e) { stashedException = e; }
+            Global.Assert(deadWallHasMoved);
+
+            // Clean up.
+            state.DeadWallMoved -= deadWallMoved;
             state.PreCheckAdvance -= advanceCheck;
             state.Player1AI = player1AI;
             state.Player2AI = player2AI;
