@@ -221,7 +221,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
         private static readonly string MELD_TARGET_ATTR                      = "target";
         private static readonly string MELD_STATE_ATTR                       = "state";
         private static readonly string MELD_DIRECTION_ATTR                   = "direction";
-        private static readonly string CACHEDMELD_TAG                        = "meld";
+        private static readonly string CACHEDMELD_TAG                        = "cachedmeld";
         private static readonly string WAITTILES_TAG                         = "waittiles";
         private static readonly string WAITTILES_SLOT_ATTR                   = "slot";
         private static readonly string DRAWSANDKANS_TAG                      = "drawsandkans";

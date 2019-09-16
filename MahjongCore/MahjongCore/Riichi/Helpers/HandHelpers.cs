@@ -112,7 +112,7 @@ namespace MahjongCore.Riichi.Helpers
             IList<IMeld> melds = new List<IMeld>();
 
             // Calculate chiis.
-            if (!calledTile.IsHonor())
+            if (!calledTile.IsHonor() && caller.GetPrevious().Equals(target))
             {
                 // calledTile is the lowest value tile in the run.
                 if (calledTile.GetValue() <= 7)

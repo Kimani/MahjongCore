@@ -1706,6 +1706,14 @@ namespace MahjongCore.Riichi.Impl
                     {
                         var handMeldTiles = new List<TileType>();
                         MeldHelpers.IterateTiles(nextCall, (ITile tile) => { if (!tile.Called) { handMeldTiles.Add(tile.Type); } });
+
+                        Player caller = nextCall.Owner;
+                        ProcessBoardOverride_AssignAndEnsureHandHasTiles(
+                            sampleGame,
+                            GameStateHelpers.GetHand(sampleGame, caller),
+                            playerAvailableWallSlots[caller],
+                            playerAllocatedTiles[caller],
+                            handMeldTiles.ToArray());
                     }
                 }
 
@@ -1770,7 +1778,8 @@ namespace MahjongCore.Riichi.Impl
                     ITile specifiedTile = BoardTemplateHelpers.GetPlayerDiscardBySlot(template, player, discardSlot);
                     if (specifiedTile != null)
                     {
-                        actualDiscards.Add(TileFactory.BuildTile(specifiedTile.Type, discardSlot, specifiedTile.Called));
+                        IMeld calledMeld = BoardTemplateHelpers.GetMeld(template, specifiedTile, player);
+                        actualDiscards.Add(TileFactory.BuildTile(specifiedTile.Type, discardSlot, specifiedTile.Called, (calledMeld?.Owner ?? Player.None)));
                     }
                     else
                     {
@@ -1780,7 +1789,6 @@ namespace MahjongCore.Riichi.Impl
                             playerAllocatedTiles[player],
                             randomTile);
                         ProcessBoardOverride_Log(("Assigned a random tile for a discard at slot: " + discardSlot + " should be tile: " + randomTile), this, playerAllocatedTiles, playerAvailableWallSlots);
-
 
                         actualDiscards.Add(TileFactory.BuildTile(randomTile, discardSlot, false));
                     }
@@ -1843,6 +1851,7 @@ namespace MahjongCore.Riichi.Impl
                     ProcessBoardOverride_Log(("Assigned a random tile " + randomTile + " for player " + player + ", handTiles so far looks like: " + TileHelpers.GetTileString(handTiles)), this, playerAllocatedTiles, playerAvailableWallSlots);
                 }
 
+                handTiles.Sort();
                 actualHand.SubmitOverride(OverrideHand.Hand, handTiles.ToArray());
                 ProcessBoardOverride_Log(("Hand overridden for player: " + player), this, playerAllocatedTiles, playerAvailableWallSlots);
             }

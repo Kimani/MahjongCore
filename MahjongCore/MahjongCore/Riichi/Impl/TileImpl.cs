@@ -2,6 +2,7 @@
 
 using MahjongCore.Common;
 using System;
+using System.Text;
 
 namespace MahjongCore.Riichi.Impl
 {
@@ -40,6 +41,15 @@ namespace MahjongCore.Riichi.Impl
 
         public TileImpl()              { }
         public TileImpl(TileType type) { Type = type; }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder(Type.ToString());
+            if (Reach.IsReach()) { sb.Append(" REACH"); }
+            if (Called)          { sb.Append(" CALLED"); }
+            if (WinningTile)     { sb.Append(" WIN"); }
+            return sb.ToString();
+        }
 
         internal void Reset(bool skipConstantFields = false)
         {

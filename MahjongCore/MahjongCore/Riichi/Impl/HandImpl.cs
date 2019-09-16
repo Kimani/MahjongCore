@@ -765,7 +765,7 @@ namespace MahjongCore.Riichi.Impl
             // We'll sort after. Manually delay the event until after we make the call.
             foreach (ITile meldTile in cached.Tiles)
             {
-                if (meldTile.Type.IsTile() && !meldTile.Ghost)
+                if (meldTile.Type.IsTile() && !meldTile.Called)
                 {
                     ActiveHandRaw[meldTile.Slot].Type = TileType.None;
                     ActiveHandRaw[meldTile.Slot].Ghost = true;

@@ -258,7 +258,7 @@ namespace MahjongCore.Riichi
 
     public static class TileFactory
     {
-        public static ITile BuildTile(TileType type, int slot = 0, bool called = false) { return new TileImpl(type) { Slot = slot, Called = called }; }
-        public static ITile BuildTile(string value)                                     { return TileImpl.GetTile(value); }
+        public static ITile BuildTile(TileType type, int slot = 0, bool called = false, Player ancillary = Player.None) { return new TileImpl(type) { Slot = slot, Called = called, Ancillary = ancillary }; }
+        public static ITile BuildTile(string value)                                                                     { return TileImpl.GetTile(value); }
     }
 }

@@ -206,6 +206,27 @@ namespace MahjongCore.Riichi.Helpers
                                            state.Player4AI;
         }
 
+        public static IMeld GetMeldFromDiscard(IGameState state, Player discardPlayer, uint slot)
+        {
+            IHand calleeHand = GameStateHelpers.GetHand(state, discardPlayer);
+            if ((slot < calleeHand.Discards.Count) && (calleeHand.Discards[(int)slot] is ITile calledTile) && calledTile.Called)
+            {
+                IHand callerHand = GameStateHelpers.GetHand(state, calledTile.Ancillary);
+                IMeld foundMeld = null;
+                HandHelpers.IterateMeldsOR(callerHand, (IMeld callerMeld) =>
+                {
+                    if ((callerMeld.Target == discardPlayer) && (callerMeld.CalledTile.Slot == slot))
+                    {
+                        foundMeld = callerMeld;
+                        return true;
+                    }
+                    return false;
+                });
+                Global.Assert(foundMeld != null, "Didn't find a meld that matches called tile? Strange.");
+                return foundMeld;
+            }
+            return null;
+        }
 
         public static void IterateHands(IGameState state, Action<IHand> callback)
         {
