@@ -646,7 +646,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
             meld.State = LoadAttributeEnum<MeldState>(meldElement, MELD_STATE_ATTR);
             meld.Direction = LoadAttributeEnum<CalledDirection>(meldElement, MELD_DIRECTION_ATTR);
 
-            CommonHelpers.TryIterateTagElements(meldElement, TILE_TAG, (XmlElement meldTileElement, int i) => { LoadTile(meldTileElement, meld.TilesRaw[i], i, Location.Call); });
+            CommonHelpers.TryIterateTagElements(meldElement, TILE_TAG, (XmlElement meldTileElement, int i) => { LoadTile(meldTileElement, meld.TilesRaw[i], null, Location.Call); });
             return meld;
         }
 
@@ -898,7 +898,7 @@ namespace MahjongCore.Riichi.Impl.SaveState
             MarshalAttribute(meldElement, MELD_TARGET_ATTR, meld.Target);
             MarshalAttribute(meldElement, MELD_STATE_ATTR, meld.State);
             MarshalAttribute(meldElement, MELD_DIRECTION_ATTR, meld.Direction);
-            MeldHelpers.IterateTiles(meld, (ITile tile) => { meldElement.AppendChild(MarshalTileElement(document, tile as TileImpl)); });
+            MeldHelpers.IterateTiles(meld, (ITile tile) => { meldElement.AppendChild(MarshalTileElement(document, tile as TileImpl, MarshalSlot.Include)); });
             return meldElement;
         }
 

@@ -1752,20 +1752,21 @@ namespace MahjongCore.Riichi.Impl
             }
 
             // Now it's time to fill out this GameState. Start by getting a list of randomly organized tiles that remain.
+            // Remove anything that is already assigned in the wall either by the previous discard/call process or via manual assignment.
+            // Also remove anything specified in the hands at this stage, which will will assign into the wall later.
             var randomBoard = new List<ITile>(TileHelpers.GetRandomBoard(null, Settings.GetSetting<RedDora>(GameOption.RedDoraOption)));
             foreach (TileImpl wallTile in WallRaw)
             {
-                if (wallTile.Type.IsTile())
+                if (wallTile.Type.IsTile()) { RemoveFromRandomTileCollection(randomBoard, wallTile.Type); }
+            }
+
+            foreach (Player player in PlayerHelpers.Players)
+            {
+                CommonHelpers.Iterate(template.GetHand(player), (ITile tile) =>
                 {
-                    for (int i = 0; i < randomBoard.Count; ++i)
-                    {
-                        if (randomBoard[i].Type.IsEqual(wallTile.Type, true))
-                        {
-                            randomBoard.RemoveAt(i);
-                            break;
-                        }
-                    }
-                }
+                    Global.Assert(tile.Type.IsTile());
+                    RemoveFromRandomTileCollection(randomBoard, tile.Type);
+                });
             }
 
             // Next, populate discards, because we know what number of discards each player has and what they need to be. Assign each unspecified tile, or just use the ones from template.
@@ -1887,6 +1888,18 @@ namespace MahjongCore.Riichi.Impl
                 }
             }
             return false;
+        }
+
+        private void RemoveFromRandomTileCollection(List<ITile> randomBoard, TileType tile)
+        {
+            for (int i = 0; i < randomBoard.Count; ++i)
+            {
+                if (randomBoard[i].Type.IsEqual(tile, true))
+                {
+                    randomBoard.RemoveAt(i);
+                    return;
+                }
+            }
         }
 
         private void ProcessBoardOverride_Log(

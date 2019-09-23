@@ -1,4 +1,4 @@
-﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2018
+﻿// [Ready Design Corps] - [Mahjong Core] - Copyright 2019
 
 using MahjongCore.Riichi.Helpers;
 using MahjongCore.Riichi.Impl;
@@ -14,19 +14,11 @@ namespace MahjongCore.Riichi.Evaluator
 
         public static int Evaluate(Yaku yaku, IHand hand, ICandidateHand candidateHand, bool ron)
         {
-            if (Evaluators.Count == 0)
-            {
-                Initialize();
-            }
+            if (Evaluators.Count == 0) { Initialize(); }
 
             var evaluator = Evaluators[yaku];
             Global.Assert(evaluator != null);
-            int han = 0;
-            if (evaluator != null)
-            {
-                han = evaluator.Invoke(hand, candidateHand, ron);
-            }
-            return han;
+            return evaluator?.Invoke(hand, candidateHand, ron) ?? 0;
         }
 
         private static void Initialize()
@@ -101,26 +93,17 @@ namespace MahjongCore.Riichi.Evaluator
 
         public static int Evaluate_Pinfu(IHand hand, ICandidateHand candidateHand, bool ron)
         {
-            if (hand.Open || (!hand.Parent.Settings.GetSetting<bool>(GameOption.PinfuTsumo) && !ron))
-            {
-                return 0;
-            }
+            if (hand.Open || (!hand.Parent.Settings.GetSetting<bool>(GameOption.PinfuTsumo) && !ron)) { return 0; }
 
             // Make sure each of the melds are runs.
             StandardCandidateHand scHand = candidateHand as StandardCandidateHand;
             for (int i = 0; i < 4; ++i)
             {
-                if (scHand.Melds[i].State == MeldState.Pon)
-                {
-                    return 0;
-                }
+                if (scHand.Melds[i].State == MeldState.Pon) { return 0; }
             }
 
             // Make sure the winning tile isn't the pair.
-            if (scHand.PairTile.WinningTile)
-            {
-                return 0;
-            }
+            if (scHand.PairTile.WinningTile) { return 0; }
 
             // Make sure the winning tile is one of the edges and isn't like, a 3 of a 1-2-3 or a 7 of a 7-8-9.
             for (int i = 0; i < 4; ++i)
@@ -598,7 +581,6 @@ namespace MahjongCore.Riichi.Evaluator
                 }
             }
 
-            
             foreach (ITile tile in hand.Tiles)
             {
                 if (tile.Type != TileType.None)
