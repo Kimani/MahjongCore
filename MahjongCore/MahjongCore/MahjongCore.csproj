@@ -55,6 +55,7 @@
     <Compile Include="Riichi\Attributes\Tile.cs" />
     <Compile Include="Riichi\Attributes\WindNext.cs" />
     <Compile Include="Riichi\Attributes\WindPrevious.cs" />
+    <Compile Include="Riichi\Attributes\WindValue.cs" />
     <Compile Include="Riichi\Attributes\WinValue.cs" />
     <Compile Include="Riichi\Command.cs" />
     <Compile Include="Riichi\ExtraSettings.cs" />

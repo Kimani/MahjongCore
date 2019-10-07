@@ -76,28 +76,30 @@ namespace MahjongCore.Riichi
     #region Round
         public enum Round
         {
-            [DescriptionName("East 1"),  TextValue("e1"), RoundOffset(0), NextRound(East2)]  East1,
-            [DescriptionName("East 2"),  TextValue("e2"), RoundOffset(1), NextRound(East3)]  East2,
-            [DescriptionName("East 3"),  TextValue("e3"), RoundOffset(2), NextRound(East4)]  East3,
-            [DescriptionName("East 4"),  TextValue("e4"), RoundOffset(3), NextRound(South1)] East4,
-            [DescriptionName("South 1"), TextValue("s1"), RoundOffset(0), NextRound(South2)] South1,
-            [DescriptionName("South 2"), TextValue("s2"), RoundOffset(1), NextRound(South3)] South2,
-            [DescriptionName("South 3"), TextValue("s3"), RoundOffset(2), NextRound(South4)] South3,
-            [DescriptionName("South 4"), TextValue("s4"), RoundOffset(3), NextRound(West1)]  South4,
-            [DescriptionName("West 1"),  TextValue("w1"), RoundOffset(0), NextRound(West2)]  West1,
-            [DescriptionName("West 2"),  TextValue("w2"), RoundOffset(1), NextRound(West3)]  West2,
-            [DescriptionName("West 3"),  TextValue("w3"), RoundOffset(2), NextRound(West4)]  West3,
-            [DescriptionName("West 4"),  TextValue("w4"), RoundOffset(3), NextRound(North1)] West4,
-            [DescriptionName("North 1"), TextValue("n1"), RoundOffset(0), NextRound(North2)] North1,
-            [DescriptionName("North 2"), TextValue("n2"), RoundOffset(1), NextRound(North3)] North2,
-            [DescriptionName("North 3"), TextValue("n3"), RoundOffset(2), NextRound(North4)] North3,
-            [DescriptionName("North 4"), TextValue("n4"), RoundOffset(3), NextRound(East1)]  North4
+            [DescriptionName("East 1"),  TextValue("e1"), RoundOffset(0), WindValue(Wind.East),  NextRound(East2)]  East1,
+            [DescriptionName("East 2"),  TextValue("e2"), RoundOffset(1), WindValue(Wind.East),  NextRound(East3)]  East2,
+            [DescriptionName("East 3"),  TextValue("e3"), RoundOffset(2), WindValue(Wind.East),  NextRound(East4)]  East3,
+            [DescriptionName("East 4"),  TextValue("e4"), RoundOffset(3), WindValue(Wind.East),  NextRound(South1)] East4,
+            [DescriptionName("South 1"), TextValue("s1"), RoundOffset(0), WindValue(Wind.South), NextRound(South2)] South1,
+            [DescriptionName("South 2"), TextValue("s2"), RoundOffset(1), WindValue(Wind.South), NextRound(South3)] South2,
+            [DescriptionName("South 3"), TextValue("s3"), RoundOffset(2), WindValue(Wind.South), NextRound(South4)] South3,
+            [DescriptionName("South 4"), TextValue("s4"), RoundOffset(3), WindValue(Wind.South), NextRound(West1)]  South4,
+            [DescriptionName("West 1"),  TextValue("w1"), RoundOffset(0), WindValue(Wind.West),  NextRound(West2)]  West1,
+            [DescriptionName("West 2"),  TextValue("w2"), RoundOffset(1), WindValue(Wind.West),  NextRound(West3)]  West2,
+            [DescriptionName("West 3"),  TextValue("w3"), RoundOffset(2), WindValue(Wind.West),  NextRound(West4)]  West3,
+            [DescriptionName("West 4"),  TextValue("w4"), RoundOffset(3), WindValue(Wind.West),  NextRound(North1)] West4,
+            [DescriptionName("North 1"), TextValue("n1"), RoundOffset(0), WindValue(Wind.North), NextRound(North2)] North1,
+            [DescriptionName("North 2"), TextValue("n2"), RoundOffset(1), WindValue(Wind.North), NextRound(North3)] North2,
+            [DescriptionName("North 3"), TextValue("n3"), RoundOffset(2), WindValue(Wind.North), NextRound(North4)] North3,
+            [DescriptionName("North 4"), TextValue("n4"), RoundOffset(3), WindValue(Wind.North), NextRound(East1)]  North4
         };
 
         public static class RoundExtensionMethods
         {
             public static Round  GetNext(this Round r)      { return EnumAttributes.GetAttributeValue<NextRound, Round>(r); }
+            public static Wind   GetWind(this Round r)      { return EnumAttributes.GetAttributeValue<WindValue, Wind>(r); }
             public static int    GetOffset(this Round r)    { return EnumAttributes.GetAttributeValue<RoundOffset, int>(r); }
+            public static int    GetNumber(this Round r)    { return EnumAttributes.GetAttributeValue<RoundOffset, int>(r) + 1; }
             public static string GetTextValue(this Round r) { return EnumAttributes.GetAttributeValue<TextValue, string>(r); }
             public static string GetDescName(this Round r)  { return EnumAttributes.GetAttributeValue<DescriptionName, string>(r); }
 

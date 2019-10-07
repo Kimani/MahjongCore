@@ -350,7 +350,6 @@ namespace MahjongCore.Riichi.Impl
         public void  ExecutePostBreak_TilePick15()                         { PickIntoPlayerHand(Current, 1); }
         public void  ExecutePostBreak_TilePick16()                         { PickIntoPlayerHand(Current, 1); }
         public void  ExecutePostBreak_PickTile()                           { PickIntoPlayerHand(Current, 1); }
-        private void FlipDora()                                            { DoraIndicatorFlipped?.Invoke(DoraIndicators[DoraCount++]); }
         private void ApplyWinResultsToPlayerScores(WinResultImpl win)      { foreach (Player p in PlayerHelpers.Players) { GetHand(p).Score += win.GetPlayerDelta(p) + win.GetPlayerPoolDelta(p); } }
         internal int GetNextWallDrawSlot(int offset = 0)                   { return TileHelpers.ClampTile(Offset + (TileHelpers.MAIN_WALL_TILE_COUNT - TilesRemaining) - Math.Max(0, (DoraCount - 1)) + offset); } // TODO: Fix for if kan dora are disabled...
 
@@ -1396,6 +1395,12 @@ namespace MahjongCore.Riichi.Impl
             return pause;
         }
 
+        private void FlipDora()
+        {
+            DoraIndicatorFlipped?.Invoke(DoraIndicators[DoraCount]);
+            DoraCount = DoraCount + 1;
+        }
+
         private int ConsumePool()
         {
             int poolValue = Pool;
@@ -1815,7 +1820,7 @@ namespace MahjongCore.Riichi.Impl
                 int handCount = 13 - (actualHand.MeldCount * 3);
 
                 var handTiles = new List<TileType>();
-                CommonHelpers.Iterate(template.GetHand(player), (ITile tile) => 
+                CommonHelpers.Iterate(template.GetHand(player), (ITile tile) =>
                 {
                     Global.LogExtra("Need to add specified tile to hand for player " + player + ", tile: " + tile.Type);
                     ProcessBoardOverride_AssignTileOrThrow(
@@ -1874,6 +1879,7 @@ namespace MahjongCore.Riichi.Impl
             Current = sampleGame.Current;
             DoraCount = sampleGame.DoraCount;
             Offset = sampleGame.Offset;
+            State = sampleGame.State;
         }
 
         private bool ProcessBoardOverride_PeekAvailableAssignedTile(List<AssignedTile> allocatedTiles, out TileType availableAssigned)

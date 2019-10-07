@@ -81,7 +81,6 @@ namespace MahjongCore.Common
             return targetList.AsReadOnly();
         }
 
-
         public static List<T> SafeCopyIfNotNull<T>(List<T> sourceList) where T : ICloneable
         {
             List<T> targetList = null;
