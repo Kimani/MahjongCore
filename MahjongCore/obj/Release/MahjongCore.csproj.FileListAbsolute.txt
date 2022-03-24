@@ -1,0 +1,11 @@
+D:\Projects\Git\MahjongSky\mahjongsky\Libraries\MahjongCore\MahjongCore\bin\Release\MahjongCore.dll
+D:\Projects\Git\MahjongSky\mahjongsky\Libraries\MahjongCore\MahjongCore\bin\Release\MahjongCore.pdb
+D:\Projects\Git\MahjongSky\mahjongsky\Libraries\MahjongCore\MahjongCore\obj\Release\MahjongCore.dll
+D:\Projects\Git\MahjongSky\mahjongsky\Libraries\MahjongCore\MahjongCore\obj\Release\MahjongCore.pdb
+D:\Projects\Git\MahjongSky\mahjongsky\Libraries\MahjongCore\MahjongCore\obj\Release\MahjongCore.csprojResolveAssemblyReference.cache
+D:\Projects\C#\MahjongCore\MahjongCore\MahjongCore\bin\Release\MahjongCore.dll
+D:\Projects\C#\MahjongCore\MahjongCore\MahjongCore\bin\Release\MahjongCore.pdb
+D:\Projects\C#\MahjongCore\MahjongCore\MahjongCore\obj\Release\MahjongCore.csproj.AssemblyReference.cache
+D:\Projects\C#\MahjongCore\MahjongCore\MahjongCore\obj\Release\MahjongCore.csproj.CoreCompileInputs.cache
+D:\Projects\C#\MahjongCore\MahjongCore\MahjongCore\obj\Release\MahjongCore.dll
+D:\Projects\C#\MahjongCore\MahjongCore\MahjongCore\obj\Release\MahjongCore.pdb
